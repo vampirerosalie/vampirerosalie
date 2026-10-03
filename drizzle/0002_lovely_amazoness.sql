@@ -1,0 +1,1 @@
+ALTER TABLE `rooms` ADD `battle` integer DEFAULT 1 NOT NULL;

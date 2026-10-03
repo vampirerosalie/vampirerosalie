@@ -1,0 +1,1 @@
+CREATE INDEX `idx_players_room_seen` ON `players` (`room_id`,`last_seen`);

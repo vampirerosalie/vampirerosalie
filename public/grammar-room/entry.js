@@ -1,0 +1,4 @@
+import {GAME_URL} from './config.js';
+const target=GAME_URL==='PASTE_GAME_URL_HERE'?new URL('index.html',location.href).href:GAME_URL;
+const qr=document.getElementById('qr');
+try{const url=new URL(target);if(!['http:','https:'].includes(url.protocol))throw Error('Use an HTTP or HTTPS game URL.');document.getElementById('enter-game').href=url.href;document.getElementById('url').textContent=url.href;new window.QRCode(qr,{text:url.href,width:240,height:240,colorDark:'#172838',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});const img=qr.querySelector('img');if(img)img.alt='Scan to enter The Grammar Room';if(['localhost','127.0.0.1'].includes(url.hostname))document.getElementById('url').textContent='Local preview. For phone scanning, use the published page or your computer’s LAN address.';}catch{qr.textContent='QR unavailable. Use “Enter the Game” below, or check GAME_URL in config.js.';}
