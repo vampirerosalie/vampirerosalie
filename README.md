@@ -8,7 +8,7 @@ This project deploys as one Cloudflare Worker with static assets and a D1 databa
 
 1. Install dependencies with `pnpm install --frozen-lockfile`.
 2. Create a D1 database named `grammartest-db`.
-3. Set `CLOUDFLARE_D1_DATABASE_ID` to that database's ID.
+3. The production D1 database ID is already configured. Set `CLOUDFLARE_D1_DATABASE_ID` only to override it for another Cloudflare account.
 4. Apply the SQL files in `drizzle/` in numerical order.
 5. Run `pnpm run deploy`.
 

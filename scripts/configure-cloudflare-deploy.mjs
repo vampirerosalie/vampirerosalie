@@ -1,11 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 const configPath = new URL('../dist/server/wrangler.json', import.meta.url);
-const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID || '__GRAMMARTEST_D1_DATABASE_ID__';
-
-if (databaseId.startsWith('__')) {
-  throw new Error('Set CLOUDFLARE_D1_DATABASE_ID before preparing the Cloudflare deployment.');
-}
+const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID || '56b62c86-4ad5-4cf0-a282-3c86a165d2c8';
 
 const config = JSON.parse(await readFile(configPath, 'utf8'));
 config.name = 'grammartest';
