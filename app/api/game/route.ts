@@ -5,7 +5,7 @@ import { BM_BOARD_ANSWERS } from '../../battle4-answers';
 import { BM_BOARD_QUESTIONS } from '../../battle4-data';
 import { POWER_CARDS, applyPowerCardEffect, categoryForSquare, createDefaultBoard, type BoardGame, type CardId } from '../../battle3-types';
 import { POTION_QUESTIONS } from '../../battle6-data';
-import { createPotionGame, type PotionGame } from '../../battle6-types';
+import { createPotionGame, type PotionGame, type PotionReveal } from '../../battle6-types';
 
 const ANSWER_SETS: Record<1 | 2, string[]> = {
   1: ['washes', 'were doing', 'is cooking', 'went', 'made', 'are returned', 'drives', 'was shopping', 'finished', 'were baked'],
@@ -39,7 +39,19 @@ type AnswerRow = { client_id: string; name: string; answer: string; correct: num
 type BoardMemberRow = { client_id: string; team_index: number; last_seen: number };
 type BoardAnswerRow = { team_index: number; answer: string; verdict: string | null };
 type BoardGameRow = { state_json: string; updated_at: number };
-type ServerPotionGame = Omit<PotionGame, 'teams'> & { teams: Array<PotionGame['teams'][number] & { poisonBottle: number | null }> };
+type ServerPotionGame = Omit<PotionGame, 'teams'> & {
+  teams: Array<PotionGame['teams'][number] & { poisonBottle: number | null }>;
+  treasureBottles: number[];
+  treasureStocked: boolean;
+};
+
+const POTION_COUNT = 40;
+const TREASURE_COUNT = 12;
+const POTION_PICK_MS = 10_000;
+
+function createServerPotionGame(teamCount = 7): ServerPotionGame {
+  return { ...createPotionGame(teamCount), treasureBottles: [], treasureStocked: false };
+}
 
 function database() {
   if (!env.DB) throw new Error('The game database is unavailable.');
@@ -104,6 +116,12 @@ async function readPotion(roomId: string) {
     const state = JSON.parse(row.state_json) as ServerPotionGame;
     state.version = row.updated_at;
     state.countdownEndsAt = Number.isFinite(state.countdownEndsAt) ? Number(state.countdownEndsAt) : null;
+    state.pickEndsAt = Number.isFinite(state.pickEndsAt) ? Number(state.pickEndsAt) : null;
+    state.picks = Array.from({ length: state.teamCount }, (_, index) => Number.isInteger(state.picks?.[index]) ? Number(state.picks[index]) : null);
+    state.roundReveals = Array.isArray(state.roundReveals) ? state.roundReveals : state.lastReveal ? [state.lastReveal] : [];
+    state.treasureBottles = Array.isArray(state.treasureBottles) ? state.treasureBottles.filter((number) => Number.isInteger(number) && number >= 1 && number <= POTION_COUNT) : [];
+    state.treasureStocked = Boolean(state.treasureStocked);
+    state.treasuresRemaining = state.treasureBottles.length;
     return state;
   } catch {
     return null;
@@ -120,10 +138,112 @@ function startPotionQuestion(game: ServerPotionGame) {
   game.currentQuestionId = game.deck[nextRound - 1] ?? null;
   game.phase = nextRound > 20 || !game.currentQuestionId ? 'finished' : 'question';
   game.eligible = [];
+  game.picks = Array.from({ length: game.teamCount }, () => null);
   game.picker = null;
   game.countdownEndsAt = null;
+  game.pickEndsAt = null;
   game.lastReveal = null;
+  game.roundReveals = [];
   if (game.phase === 'question') addPotionEvent(game, `Question ${nextRound} started.`);
+}
+
+function randomIndex(maxExclusive: number) {
+  if (maxExclusive <= 1) return 0;
+  const ceiling = Math.floor(0x1_0000_0000 / maxExclusive) * maxExclusive;
+  const value = new Uint32Array(1);
+  do crypto.getRandomValues(value); while (value[0] >= ceiling);
+  return value[0] % maxExclusive;
+}
+
+function secureShuffle(values: number[]) {
+  const shuffled = [...values];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swap = randomIndex(index + 1);
+    [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function activePoisonNumbers(game: ServerPotionGame) {
+  return new Set(game.teams.flatMap((team) => !team.needsPoison && team.poisonBottle ? [team.poisonBottle] : []));
+}
+
+function ensureTreasureLayout(game: ServerPotionGame) {
+  const poisonNumbers = activePoisonNumbers(game);
+  const opened = new Set(game.opened);
+  const target = game.treasureStocked ? game.treasureBottles.length : TREASURE_COUNT;
+  const valid = [...new Set(game.treasureBottles)].filter((number) => !opened.has(number) && !poisonNumbers.has(number));
+  const occupied = new Set([...valid, ...opened, ...poisonNumbers]);
+  const candidates = secureShuffle(Array.from({ length: POTION_COUNT }, (_, index) => index + 1).filter((number) => !occupied.has(number)));
+  game.treasureBottles = [...valid, ...candidates.slice(0, Math.max(0, target - valid.length))];
+  game.treasureStocked = true;
+  game.treasuresRemaining = game.treasureBottles.length;
+}
+
+function finishPotionSelections(game: ServerPotionGame) {
+  const selected = new Set(game.picks.filter((number): number is number => Number.isInteger(number)));
+  const available = secureShuffle(Array.from({ length: POTION_COUNT }, (_, index) => index + 1).filter((number) => !game.opened.includes(number) && !selected.has(number)));
+  game.eligible.forEach((teamIndex) => {
+    if (game.picks[teamIndex] === null) game.picks[teamIndex] = available.shift() ?? null;
+  });
+
+  const reveals: PotionReveal[] = [];
+  for (const chooserIndex of game.eligible) {
+    const number = game.picks[chooserIndex];
+    if (!number) continue;
+    const chooser = game.teams[chooserIndex];
+    const owners = game.teams.map((team, teamIndex) => team.poisonBottle === number && !team.needsPoison ? teamIndex : -1).filter((teamIndex) => teamIndex >= 0);
+    const hostileOwners = owners.filter((teamIndex) => teamIndex !== chooserIndex);
+    let type: PotionReveal['type'] = 'SAFE';
+    let fullyPoisoned = false;
+    let message = `${chooser.name} found a safe potion.`;
+    if (hostileOwners.length) {
+      type = 'POISON';
+      chooser.poison += 1;
+      if (chooser.poison >= 3) {
+        chooser.treasure = Math.max(0, chooser.treasure - 1);
+        chooser.poison = 1;
+        fullyPoisoned = true;
+      }
+      const ownerNames = hostileOwners.map((teamIndex) => game.teams[teamIndex].name).join(' & ');
+      message = `${ownerNames} poisoned Team ${chooser.name}! ${chooser.name} gains 1 Poison.`;
+    } else if (game.treasureBottles.includes(number)) {
+      type = 'TREASURE';
+      chooser.treasure += 1;
+      message = `${chooser.name} found a Treasure! +1 Treasure.`;
+    }
+    owners.forEach((teamIndex) => {
+      game.teams[teamIndex].poisonBottle = null;
+      game.teams[teamIndex].needsPoison = true;
+    });
+    const reveal = { number, type, chooser: chooserIndex, owners: hostileOwners, message, fullyPoisoned } satisfies PotionReveal;
+    reveals.push(reveal);
+    addPotionEvent(game, `${chooser.name} opened Potion ${number}: ${type}.`);
+  }
+
+  const openedThisRound = reveals.map((reveal) => reveal.number);
+  game.opened = [...game.opened, ...openedThisRound];
+  game.treasureBottles = game.treasureBottles.filter((number) => !selected.has(number));
+  game.treasuresRemaining = game.treasureBottles.length;
+  game.pickEndsAt = null;
+  game.picker = null;
+  game.phase = 'reveal';
+  game.roundReveals = reveals;
+  game.lastReveal = reveals[0] ?? null;
+}
+
+async function finishExpiredPotionSelections(roomId: string, now: number) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const game = await readPotion(roomId);
+    if (!game || game.phase !== 'potion_pick' || !game.pickEndsAt || now < game.pickEndsAt) return;
+    const originalVersion = game.version;
+    finishPotionSelections(game);
+    const nextVersion = Math.max(now, originalVersion + 1 + attempt);
+    game.version = nextVersion;
+    const saved = await database().prepare('UPDATE board_games SET state_json = ?, updated_at = ? WHERE room_id = ? AND updated_at = ?')
+      .bind(JSON.stringify(game), nextVersion, roomId, originalVersion).run();
+    if (saved.meta.changes > 0) return;
+  }
 }
 
 function addBoardEvent(board: BoardGame, message: string) {
@@ -245,7 +365,7 @@ async function snapshot(roomId: string, teacherToken?: string, studentClientId?:
   let potionAnswerKey: { answer: string; explanation: string; optionLetter: string | null } | undefined;
   let myPotionTeam: number | null = null;
   if (isPotionGame) {
-    const serverPotion = potionResult ?? createPotionGame();
+    const serverPotion = potionResult ?? createServerPotionGame();
     const [memberResult, answerResult] = await Promise.all([
       db.prepare('SELECT client_id, team_index, last_seen FROM board_members WHERE room_id = ? AND last_seen >= ?').bind(roomId, retentionCutoff).all<BoardMemberRow>(),
       serverPotion.currentQuestionId
@@ -287,8 +407,24 @@ async function snapshot(roomId: string, teacherToken?: string, studentClientId?:
       }
     }
     potion = {
-      ...serverPotion,
-      teams: serverPotion.teams.map(({ poisonBottle: _secret, ...team }) => team),
+      version: serverPotion.version,
+      teamCount: serverPotion.teamCount,
+      teams: serverPotion.teams.map((team) => ({ name:team.name, color:team.color, dark:team.dark, emoji:team.emoji, treasure:team.treasure, poison:team.poison, needsPoison:team.needsPoison })),
+      phase: serverPotion.phase,
+      round: serverPotion.round,
+      deck: serverPotion.deck,
+      currentQuestionId: serverPotion.currentQuestionId,
+      opened: serverPotion.opened,
+      eligible: serverPotion.eligible,
+      picks: serverPotion.picks,
+      picker: serverPotion.picker,
+      countdownEndsAt: serverPotion.countdownEndsAt,
+      pickEndsAt: serverPotion.pickEndsAt,
+      lastReveal: serverPotion.lastReveal,
+      roundReveals: serverPotion.roundReveals,
+      treasuresRemaining: serverPotion.treasuresRemaining,
+      eventLog: serverPotion.eventLog,
+      restockCount: serverPotion.restockCount,
     };
   }
   return {
@@ -358,6 +494,7 @@ export async function POST(request: Request) {
       } else if (!(await verifyTeacher(roomId, teacherToken))) {
         return apiError('Room not found.', 404);
       }
+      await finishExpiredPotionSelections(roomId, now);
       const state = await snapshot(roomId, teacherToken || undefined, clientId || undefined);
       return state ? Response.json({ ok: true, state }) : apiError('Room not found.', 404);
     }
@@ -413,7 +550,7 @@ export async function POST(request: Request) {
         db.prepare('DELETE FROM board_members WHERE room_id = ?').bind(roomId),
       ]);
       if (isTeamBattle(battle)) {
-        const board = battle === 6 ? createPotionGame() : createDefaultBoard();
+        const board = battle === 6 ? createServerPotionGame() : createDefaultBoard();
         await db.prepare('INSERT INTO board_games (room_id, state_json, updated_at) VALUES (?, ?, ?) ON CONFLICT(room_id) DO UPDATE SET state_json = excluded.state_json, updated_at = excluded.updated_at')
           .bind(roomId, JSON.stringify(board), nextVersion).run();
       }
@@ -502,7 +639,7 @@ export async function POST(request: Request) {
       if (command === 'configureTeams') {
         if (room.phase !== 'lobby') return apiError('Choose the team count before the game starts.');
         const teamCount = Math.max(2, Math.min(7, Number(body.teamCount) || 7));
-        const fresh = createPotionGame(teamCount);
+        const fresh = createServerPotionGame(teamCount);
         const nextVersion = Math.max(now, originalVersion + 1);
         fresh.version = nextVersion;
         const saved = await db.prepare('UPDATE board_games SET state_json = ?, updated_at = ? WHERE room_id = ? AND updated_at = ?')
@@ -545,6 +682,7 @@ export async function POST(request: Request) {
         addPotionEvent(game, `${team.name} team planted a secret poison.`);
       } else if (command === 'startQuestion') {
         if (game.phase !== 'poison_setup' || game.teams.some((team) => team.needsPoison)) return apiError('Every team must secretly plant a poison first.', 409);
+        ensureTreasureLayout(game);
         startPotionQuestion(game);
         clearAnswers = true;
       } else if (command === 'startCountdown') {
@@ -559,9 +697,13 @@ export async function POST(request: Request) {
         game.eligible = game.teams.map((_, teamIndex) => teamIndex).filter((teamIndex) => answers.find((answer) => answer.team_index === teamIndex)?.verdict === 'accept');
         game.countdownEndsAt = null;
         if (game.eligible.length) {
-          game.picker = game.eligible[0];
+          game.picks = Array.from({ length: game.teamCount }, () => null);
+          game.picker = null;
+          game.pickEndsAt = now + POTION_PICK_MS;
+          game.roundReveals = [];
+          game.lastReveal = null;
           game.phase = 'potion_pick';
-          addPotionEvent(game, `${game.eligible.length} team${game.eligible.length === 1 ? '' : 's'} earned a potion choice.`);
+          addPotionEvent(game, `${game.eligible.length} team${game.eligible.length === 1 ? '' : 's'} may choose simultaneously. Ten seconds started.`);
         } else if (game.round >= 20) {
           game.phase = 'finished';
           game.currentQuestionId = null;
@@ -572,54 +714,31 @@ export async function POST(request: Request) {
         }
       } else if (command === 'choosePotion' && member) {
         const number = Number(body.number);
-        if (game.phase !== 'potion_pick' || game.picker !== member.team_index || !game.eligible.includes(member.team_index)) return apiError('Wait until it is your team’s potion choice.', 409);
-        if (!Number.isInteger(number) || number < 1 || number > 40 || game.opened.includes(number)) return apiError('That potion has already been opened.', 409);
-        const chooserIndex = member.team_index;
-        const chooser = game.teams[chooserIndex];
-        const owners = game.teams.map((team, teamIndex) => team.poisonBottle === number && !team.needsPoison ? teamIndex : -1).filter((teamIndex) => teamIndex >= 0);
-        const hostileOwners = owners.filter((teamIndex) => teamIndex !== chooserIndex);
-        let type: 'SAFE' | 'TREASURE' | 'POISON' = 'SAFE';
-        let fullyPoisoned = false;
-        let message = `${chooser.name} found a safe potion.`;
-        if (hostileOwners.length) {
-          type = 'POISON';
-          chooser.poison += 1;
-          if (chooser.poison >= 3) {
-            chooser.treasure = Math.max(0, chooser.treasure - 1);
-            chooser.poison = 1;
-            fullyPoisoned = true;
-          }
-          const ownerNames = hostileOwners.map((teamIndex) => game.teams[teamIndex].name).join(' & ');
-          message = `${ownerNames} poisoned Team ${chooser.name}! ${chooser.name} gains 1 Poison.`;
-        } else if (Math.random() < 0.35) {
-          type = 'TREASURE';
-          chooser.treasure += 1;
-          message = `${chooser.name} found a Treasure! +1 Treasure.`;
+        if (game.phase !== 'potion_pick' || !game.eligible.includes(member.team_index)) return apiError('Your team did not earn a potion choice this round.', 409);
+        if (game.pickEndsAt && now >= game.pickEndsAt) {
+          finishPotionSelections(game);
+        } else {
+          if (game.picks[member.team_index] !== null) return apiError('Your team already locked a potion.', 409);
+          const alreadyClaimed = game.picks.some((picked) => picked === number);
+          if (!Number.isInteger(number) || number < 1 || number > POTION_COUNT || game.opened.includes(number) || alreadyClaimed) return apiError(`Potion ${number} was just claimed. Choose another one.`, 409);
+          game.picks[member.team_index] = number;
+          addPotionEvent(game, `${game.teams[member.team_index].name} locked in a potion.`);
+          if (game.eligible.every((teamIndex) => game.picks[teamIndex] !== null)) finishPotionSelections(game);
         }
-        owners.forEach((teamIndex) => {
-          game.teams[teamIndex].poisonBottle = null;
-          game.teams[teamIndex].needsPoison = true;
-        });
-        game.opened = [...game.opened, number];
-        game.eligible = game.eligible.filter((teamIndex) => teamIndex !== chooserIndex);
-        game.picker = null;
-        game.phase = 'reveal';
-        game.lastReveal = { number, type, chooser:chooserIndex, owners:hostileOwners, message, fullyPoisoned };
-        addPotionEvent(game, `${chooser.name} opened Potion ${number}: ${type}.`);
       } else if (command === 'continueReveal') {
         if (game.phase !== 'reveal') return apiError('Reveal a potion first.');
         game.lastReveal = null;
-        if (game.eligible.length) {
-          game.picker = game.eligible[0];
-          game.phase = 'potion_pick';
-        } else if (game.round >= 20) {
+        game.roundReveals = [];
+        game.picks = Array.from({ length: game.teamCount }, () => null);
+        game.eligible = [];
+        if (game.round >= 20) {
           game.phase = 'finished';
           game.currentQuestionId = null;
           addPotionEvent(game, 'Round 20 finished. Final Treasure scores are ready.');
-        } else if (game.opened.length >= 30) {
+        } else if ((game.treasureStocked && game.treasureBottles.length === 0) || game.opened.length >= 30) {
           game.phase = 'restock';
           game.currentQuestionId = null;
-          addPotionEvent(game, 'The witch is restocking the shelf.');
+          addPotionEvent(game, game.treasureBottles.length === 0 ? 'All twelve Treasures were found. The witch is restocking.' : 'Ten or fewer potions remain. The witch is restocking.');
         } else if (game.teams.some((team) => team.needsPoison)) {
           game.phase = 'poison_setup';
           game.currentQuestionId = null;
@@ -632,12 +751,19 @@ export async function POST(request: Request) {
         if (game.phase !== 'restock') return apiError('The shelf is not ready to restock.');
         game.opened = [];
         game.teams.forEach((team) => { team.poisonBottle = null; team.needsPoison = true; });
+        game.treasureBottles = [];
+        game.treasureStocked = false;
+        game.treasuresRemaining = 0;
+        game.picks = Array.from({ length: game.teamCount }, () => null);
+        game.pickEndsAt = null;
+        game.roundReveals = [];
+        game.lastReveal = null;
         game.phase = 'poison_setup';
         game.restockCount += 1;
         addPotionEvent(game, 'All 40 potions returned. Every team must plant new poison.');
       } else if (command === 'newGame') {
         if (!isTeacher) return apiError('Only the teacher can start a new game.', 403);
-        Object.assign(game, createPotionGame(Math.max(2, Math.min(7, Number(body.teamCount) || game.teamCount))));
+        Object.assign(game, createServerPotionGame(Math.max(2, Math.min(7, Number(body.teamCount) || game.teamCount))));
         clearAnswers = true;
       } else {
         return apiError('Unknown Witch’s Potion command.');
@@ -869,7 +995,7 @@ export async function POST(request: Request) {
         resetStatements.push(db.prepare('UPDATE board_games SET state_json = ?, updated_at = ? WHERE room_id = ?').bind(JSON.stringify(freshBoard), boardVersion, roomId));
       } else if (isPotionBattle(room.battle)) {
         const existingGame = await readPotion(roomId);
-        const freshGame = createPotionGame(existingGame?.teamCount ?? 7);
+        const freshGame = createServerPotionGame(existingGame?.teamCount ?? 7);
         const gameVersion = Math.max(now, (existingGame?.version ?? 0) + 1);
         freshGame.version = gameVersion;
         resetStatements.push(db.prepare('UPDATE board_games SET state_json = ?, updated_at = ? WHERE room_id = ?').bind(JSON.stringify(freshGame), gameVersion, roomId));

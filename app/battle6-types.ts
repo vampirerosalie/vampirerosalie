@@ -29,9 +29,13 @@ export type PotionGame = {
   currentQuestionId: string | null;
   opened: number[];
   eligible: number[];
+  picks: Array<number | null>;
   picker: number | null;
   countdownEndsAt: number | null;
+  pickEndsAt: number | null;
   lastReveal: PotionReveal | null;
+  roundReveals: PotionReveal[];
+  treasuresRemaining: number;
   eventLog: string[];
   restockCount: number;
 };
@@ -90,9 +94,13 @@ export function createPotionGame(teamCount = 7): PotionGame & { teams: Array<Pot
     currentQuestionId: null,
     opened: [],
     eligible: [],
+    picks: Array.from({ length: count }, () => null),
     picker: null,
     countdownEndsAt: null,
+    pickEndsAt: null,
     lastReveal: null,
+    roundReveals: [],
+    treasuresRemaining: 0,
     eventLog: ['The potion shelf is ready. Teams must secretly plant their poison.'],
     restockCount: 0,
   };

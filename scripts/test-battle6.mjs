@@ -65,58 +65,111 @@ teacher = (await post({
   expectedPotionVersion: teacher.potion.version,
 })).state;
 assert(teacher.potion.countdownEndsAt > Date.now(), 'The 10-second countdown did not start.');
-await post({
-  action: 'potionAnswer', clientId: students[0].clientId,
-  questionId: teacher.potion.currentQuestionId, answer: `Private answer from ${students[0].name}`,
-  submittedAt: Date.now(),
-});
-await new Promise((resolve) => setTimeout(resolve, 10_200));
-let lateAnswerLocked = false;
-try {
+for (const student of students) {
   await post({
-    action: 'potionAnswer', clientId: students[1].clientId,
-    questionId: teacher.potion.currentQuestionId, answer: `Late answer from ${students[1].name}`,
+    action: 'potionAnswer', clientId: student.clientId,
+    questionId: teacher.potion.currentQuestionId, answer: `Private answer from ${student.name}`,
     submittedAt: Date.now(),
   });
-} catch (error) {
-  lateAnswerLocked = String(error).includes('Time is up');
 }
-assert(lateAnswerLocked, 'Answers were not locked when the countdown reached zero.');
 
 publicState = (await post({ action: 'poll', ...students[0] })).state;
 assert(!publicState.potionResponses && !publicState.potionAnswerKey, 'Private review data leaked to a student.');
 teacher = (await post({ action: 'poll', teacherToken })).state;
-assert(teacher.potionResponses.length === 1 && teacher.potionAnswerKey, 'Teacher review did not receive responses and answer key.');
+assert(teacher.potionResponses.length === 2 && teacher.potionAnswerKey, 'Teacher review did not receive responses and answer key.');
 
-teacher = (await post({
-  action: 'potionCommand', command: 'markMissing', teacherToken,
-  expectedPotionVersion: teacher.potion.version,
-})).state;
-
-await post({
-  action: 'potionCommand', command: 'judge', teacherToken, teamIndex: 0, verdict: 'accept',
-  expectedPotionVersion: teacher.potion.version,
-});
+for (let teamIndex = 0; teamIndex < students.length; teamIndex += 1) {
+  await post({
+    action: 'potionCommand', command: 'judge', teacherToken, teamIndex, verdict: 'accept',
+    expectedPotionVersion: teacher.potion.version,
+  });
+}
 teacher = (await post({ action: 'poll', teacherToken })).state;
 teacher = (await post({
   action: 'potionCommand', command: 'startPotionPhase', teacherToken,
   expectedPotionVersion: teacher.potion.version,
 })).state;
-assert(teacher.potion.phase === 'potion_pick' && teacher.potion.picker === 0, 'Accepted team did not receive the potion turn.');
+assert(teacher.potion.phase === 'potion_pick' && teacher.potion.pickEndsAt > Date.now(), 'Simultaneous potion phase did not start.');
+assert(teacher.potion.eligible.length === 2 && teacher.potion.picks.every((pick) => pick === null), 'Both accepted teams were not enabled together.');
+assert(teacher.potion.treasuresRemaining === 12, 'The shelf does not contain exactly 12 hidden Treasures.');
+assert(!('treasureBottles' in teacher.potion) && !('treasureStocked' in teacher.potion), 'Hidden Treasure locations leaked to the teacher.');
 
-let picker = (await post({ action: 'poll', ...students[0] })).state;
-picker = (await post({
+let firstPicker = (await post({ action: 'poll', ...students[0] })).state;
+firstPicker = (await post({
   action: 'potionCommand', command: 'choosePotion', number: 12,
-  clientId: students[0].clientId, expectedPotionVersion: picker.potion.version,
+  clientId: students[0].clientId, expectedPotionVersion: firstPicker.potion.version,
 })).state;
-assert(picker.potion.phase === 'reveal' && picker.potion.lastReveal?.number === 12, 'Potion reveal failed.');
+assert(firstPicker.potion.phase === 'potion_pick' && firstPicker.potion.picks[0] === 12, 'First simultaneous selection was not locked.');
+
+let collisionRejected = false;
+let secondPicker = (await post({ action: 'poll', ...students[1] })).state;
+try {
+  await post({
+    action: 'potionCommand', command: 'choosePotion', number: 12,
+    clientId: students[1].clientId, expectedPotionVersion: secondPicker.potion.version,
+  });
+} catch (error) {
+  collisionRejected = String(error).includes('just claimed');
+}
+assert(collisionRejected, 'Two teams were allowed to claim the same potion.');
+
+secondPicker = (await post({ action: 'poll', ...students[1] })).state;
+const revealState = (await post({
+  action: 'potionCommand', command: 'choosePotion', number: 13,
+  clientId: students[1].clientId, expectedPotionVersion: secondPicker.potion.version,
+})).state;
+assert(revealState.potion.phase === 'reveal', 'Results were not revealed after every eligible team chose.');
+assert(revealState.potion.roundReveals.length === 2, 'The simultaneous reveal did not include both teams.');
+assert(new Set(revealState.potion.roundReveals.map((reveal) => reveal.number)).size === 2, 'The reveal contains duplicate potion claims.');
+
+teacher = (await post({ action: 'poll', teacherToken })).state;
+teacher = (await post({
+  action: 'potionCommand', command: 'continueReveal', teacherToken,
+  expectedPotionVersion: teacher.potion.version,
+})).state;
+assert(teacher.potion.phase === 'question', 'The game did not continue to the next question after the simultaneous reveal.');
+
+for (const student of students) {
+  await post({
+    action: 'potionAnswer', clientId: student.clientId,
+    questionId: teacher.potion.currentQuestionId, answer: `Round two answer from ${student.name}`,
+    submittedAt: Date.now(),
+  });
+}
+teacher = (await post({ action: 'poll', teacherToken })).state;
+for (let teamIndex = 0; teamIndex < students.length; teamIndex += 1) {
+  await post({
+    action: 'potionCommand', command: 'judge', teacherToken, teamIndex, verdict: 'accept',
+    expectedPotionVersion: teacher.potion.version,
+  });
+}
+teacher = (await post({ action: 'poll', teacherToken })).state;
+teacher = (await post({
+  action: 'potionCommand', command: 'startPotionPhase', teacherToken,
+  expectedPotionVersion: teacher.potion.version,
+})).state;
+let timeoutPicker = (await post({ action: 'poll', ...students[0] })).state;
+timeoutPicker = (await post({
+  action: 'potionCommand', command: 'choosePotion', number: 14,
+  clientId: students[0].clientId, expectedPotionVersion: timeoutPicker.potion.version,
+})).state;
+assert(timeoutPicker.potion.phase === 'potion_pick', 'Potion phase ended before the second team had time to choose.');
+await new Promise((resolve) => setTimeout(resolve, 10_200));
+teacher = (await post({ action: 'poll', teacherToken })).state;
+assert(teacher.potion.phase === 'reveal' && teacher.potion.roundReveals.length === 2, 'Missing team was not auto-assigned after ten seconds.');
+assert(new Set(teacher.potion.roundReveals.map((reveal) => reveal.number)).size === 2, 'Timeout auto-assignment reused a claimed potion.');
+
+const reconnected = (await post({ action: 'poll', ...students[0] })).state;
+assert(reconnected.myPotionTeam === 0 && reconnected.potion.opened.includes(12) && reconnected.potion.opened.includes(14), 'A reconnect did not restore the team and locked potion state.');
 
 console.log(JSON.stringify({
   ok: true,
   room,
   checks: [
     'battle selection', 'team count', 'exclusive teams', 'secret poison',
-    'live 10-second countdown', 'lock at zero', 'private answers',
-    'teacher review', 'accept/reject', 'potion reveal',
+    'live 10-second answer countdown', 'private answers', 'teacher review',
+    'accept/reject', '12 hidden Treasures', 'simultaneous potion choices',
+    'first-confirmed unique claim', 'group reveal', '10-second auto-assignment',
+    'reconnect restoration',
   ],
 }, null, 2));

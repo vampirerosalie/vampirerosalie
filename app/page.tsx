@@ -183,9 +183,13 @@ function TeacherGame({ qrReady }: { qrReady: boolean }) {
   const displayedPotionResponses = (state.potionResponses ?? []).map((response) => ({ ...response, verdict: judgeOverrides[response.teamIndex] ?? response.verdict }));
 
   const applyTeacherState = useCallback((next: GameState, sequence: number) => {
-    if (sequence < appliedSequenceRef.current) return;
-    appliedSequenceRef.current = sequence;
-    const previousQuestion = stateRef.current.board?.currentQuestionId ?? stateRef.current.potion?.currentQuestionId ?? null;
+    const current = stateRef.current;
+    const currentTeamVersion = current.potion?.version ?? current.board?.version ?? 0;
+    const nextTeamVersion = next.potion?.version ?? next.board?.version ?? 0;
+    if (next.battle === current.battle && nextTeamVersion < currentTeamVersion) return;
+    if (sequence < appliedSequenceRef.current && nextTeamVersion <= currentTeamVersion && next.version <= current.version) return;
+    appliedSequenceRef.current = Math.max(appliedSequenceRef.current, sequence);
+    const previousQuestion = current.board?.currentQuestionId ?? current.potion?.currentQuestionId ?? null;
     const nextQuestion = next.board?.currentQuestionId ?? next.potion?.currentQuestionId ?? null;
     const remainingOverrides = { ...judgeOverridesRef.current };
     if (previousQuestion !== nextQuestion) {
@@ -267,7 +271,7 @@ function TeacherGame({ qrReady }: { qrReady: boolean }) {
         setConnectionLabel('Reconnecting room…');
       }
       if (stopped) return;
-      const activeRound = stateRef.current.phase === 'lobby' || stateRef.current.board?.phase === 'answering' || stateRef.current.potion?.phase === 'question';
+      const activeRound = stateRef.current.phase === 'lobby' || stateRef.current.board?.phase === 'answering' || stateRef.current.potion?.phase === 'question' || stateRef.current.potion?.phase === 'potion_pick';
       timer = setTimeout(poll, Math.min(5000, (activeRound ? 500 : 900) + failures * 850));
     };
     void poll();
@@ -557,6 +561,9 @@ function StudentGame({ roomCode, requestedBattle }: { roomCode: string; requeste
 
   const applyState = useCallback((next: GameState) => {
     const previous = stateRef.current;
+    if (next.battle === previous.battle && next.potion && previous.potion && next.potion.version < previous.potion.version) return;
+    if (next.battle === previous.battle && next.board && previous.board && next.board.version < previous.board.version) return;
+    if (!next.potion && !next.board && next.version < previous.version) return;
     stateRef.current = next;
     setState(next);
     const nextBoardQuestion = next.board?.currentQuestionId ?? next.potion?.currentQuestionId ?? null;
@@ -619,7 +626,7 @@ function StudentGame({ roomCode, requestedBattle }: { roomCode: string; requeste
         setStatus(error instanceof Error && error.message.includes('Room not found') ? 'Waiting for the teacher to open this room…' : 'Signal interrupted — reconnecting automatically…');
       }
       if (stopped) return;
-      const activeRound = stateRef.current.phase === 'question' || stateRef.current.board?.phase === 'answering' || stateRef.current.potion?.phase === 'question';
+      const activeRound = stateRef.current.phase === 'question' || stateRef.current.board?.phase === 'answering' || stateRef.current.potion?.phase === 'question' || stateRef.current.potion?.phase === 'potion_pick';
       timer = setTimeout(poll, Math.min(6000, (activeRound ? 750 : 1200) + failures * 850));
     };
     void poll();
@@ -728,9 +735,33 @@ function StudentGame({ roomCode, requestedBattle }: { roomCode: string; requeste
     if (!clientId || !stateRef.current.potion) return;
     setStatus(command === 'plantPoison' ? 'Planting secret poison…' : 'Opening potion…');
     try {
-      const result = await gameRequest<{ state: GameState }>({ action:'potionCommand', room:roomCode, clientId, command, expectedPotionVersion:stateRef.current.potion.version, ...details });
-      applyState(result.state);
-      setStatus(command === 'plantPoison' ? 'Secret poison saved' : 'Potion choice saved');
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const current = stateRef.current.potion;
+        if (!current) return;
+        const result = await gameRequest<{ state: GameState; conflict?: boolean }>({ action:'potionCommand', room:roomCode, clientId, command, expectedPotionVersion:current.version, ...details });
+        applyState(result.state);
+        if (!result.conflict) {
+          setStatus(command === 'plantPoison' ? 'Secret poison saved' : 'Potion choice saved');
+          return;
+        }
+        const latest = result.state.potion;
+        const teamIndex = result.state.myPotionTeam;
+        if (!latest || teamIndex === null || teamIndex === undefined) return;
+        if (command === 'plantPoison' && !latest.teams[teamIndex]?.needsPoison) {
+          setStatus('Secret poison saved');
+          return;
+        }
+        if (command === 'choosePotion') {
+          if (latest.phase === 'reveal' || latest.picks?.[teamIndex] !== null) {
+            setStatus('Potion choice saved');
+            return;
+          }
+          const requested = Number(details.number);
+          if (latest.picks?.some((number) => number === requested)) throw new Error(`Potion ${requested} was just claimed. Choose another one.`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 45 * (attempt + 1)));
+      }
+      throw new Error('Another team moved at the same moment. Please tap again.');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Move not sent — reconnecting automatically…');
       setPollCycle((value) => value + 1);
