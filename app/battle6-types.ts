@@ -69,10 +69,13 @@ export const POTION_TEAM_DEFS = [
   { name: 'Orange', color: '#ff963d', dark: '#733d16', emoji: '🔥' },
   { name: 'Teal', color: '#26c7c4', dark: '#15595d', emoji: '🧿' },
   { name: 'Gold', color: '#ffd34f', dark: '#745b12', emoji: '⭐' },
+  { name: 'Red', color: '#ff5b62', dark: '#74252b', emoji: '❤️' },
+  { name: 'Indigo', color: '#7180ff', dark: '#2c3475', emoji: '🌌' },
+  { name: 'Lime', color: '#a8df45', dark: '#46651a', emoji: '🍀' },
 ] as const;
 
 export function createPotionGame(teamCount = 7): PotionGame & { teams: Array<PotionTeam & { poisonBottle: number | null }> } {
-  const count = Math.max(2, Math.min(7, teamCount));
+  const count = Math.max(2, Math.min(10, teamCount));
   const deck = [...Array(60).keys()]
     .sort(() => Math.random() - 0.5)
     .slice(0, 20)

@@ -22,6 +22,24 @@ teacher = (await post({ action: 'setBattle', teacherToken, battle: 6, expectedVe
 assert(teacher.potion?.teamCount === 7, 'Battle 6 was not created.');
 
 teacher = (await post({
+  action: 'potionCommand', command: 'configureTeams', teamCount: 10,
+  teacherToken, expectedPotionVersion: teacher.potion.version,
+})).state;
+assert(teacher.potion.teamCount === 10 && teacher.potion.teams.length === 10, 'Teacher could not configure ten teams.');
+assert(new Set(teacher.potion.teams.map((team) => team.name)).size === 10, 'Ten distinct potion teams were not created.');
+const capacityStudents = Array.from({ length: 10 }, (_, index) => ({
+  clientId: `p6-capacity-${index}-${crypto.randomUUID()}`,
+  name: `Capacity ${index + 1}`,
+}));
+for (let index = 0; index < capacityStudents.length; index += 1) {
+  await post({ action: 'poll', ...capacityStudents[index] });
+  const joined = (await post({ action: 'chooseTeam', ...capacityStudents[index], teamIndex: index })).state;
+  assert(joined.myPotionTeam === index, `Capacity player ${index + 1} could not claim team ${index + 1}.`);
+}
+teacher = (await post({ action: 'poll', teacherToken })).state;
+assert(teacher.potionTeamStatuses.filter((status) => status.occupied).length === 10, 'All ten potion team places were not available.');
+
+teacher = (await post({
   action: 'potionCommand', command: 'configureTeams', teamCount: 2,
   teacherToken, expectedPotionVersion: teacher.potion.version,
 })).state;
@@ -166,7 +184,7 @@ console.log(JSON.stringify({
   ok: true,
   room,
   checks: [
-    'battle selection', 'team count', 'exclusive teams', 'secret poison',
+    'battle selection', '10-team capacity', 'exclusive teams', 'secret poison',
     'live 10-second answer countdown', 'private answers', 'teacher review',
     'accept/reject', '12 hidden Treasures', 'simultaneous potion choices',
     'first-confirmed unique claim', 'group reveal', '10-second auto-assignment',

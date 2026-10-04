@@ -638,7 +638,7 @@ export async function POST(request: Request) {
 
       if (command === 'configureTeams') {
         if (room.phase !== 'lobby') return apiError('Choose the team count before the game starts.');
-        const teamCount = Math.max(2, Math.min(7, Number(body.teamCount) || 7));
+        const teamCount = Math.max(2, Math.min(10, Number(body.teamCount) || 7));
         const fresh = createServerPotionGame(teamCount);
         const nextVersion = Math.max(now, originalVersion + 1);
         fresh.version = nextVersion;
@@ -763,7 +763,7 @@ export async function POST(request: Request) {
         addPotionEvent(game, 'All 40 potions returned. Every team must plant new poison.');
       } else if (command === 'newGame') {
         if (!isTeacher) return apiError('Only the teacher can start a new game.', 403);
-        Object.assign(game, createServerPotionGame(Math.max(2, Math.min(7, Number(body.teamCount) || game.teamCount))));
+        Object.assign(game, createServerPotionGame(Math.max(2, Math.min(10, Number(body.teamCount) || game.teamCount))));
         clearAnswers = true;
       } else {
         return apiError('Unknown Witch’s Potion command.');
