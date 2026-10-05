@@ -26,6 +26,7 @@ export type PotionGame = {
   phase: PotionPhase;
   round: number;
   deck: string[];
+  optionOrders: Record<string, number[]>;
   currentQuestionId: string | null;
   opened: number[];
   eligible: number[];
@@ -94,6 +95,7 @@ export function createPotionGame(teamCount = 7): PotionGame & { teams: Array<Pot
     phase: 'poison_setup',
     round: 0,
     deck,
+    optionOrders: {},
     currentQuestionId: null,
     opened: [],
     eligible: [],

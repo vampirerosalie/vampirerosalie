@@ -19,7 +19,12 @@ function usePotionCountdown(endsAt: number | null) {
 }
 
 function questionFor(game: PotionGame) {
-  return POTION_QUESTIONS.find((question) => question.id === game.currentQuestionId) ?? null;
+  const question = POTION_QUESTIONS.find((item) => item.id === game.currentQuestionId);
+  if (!question) return null;
+  const order = game.optionOrders?.[question.id];
+  if (!order?.length) return question;
+  const options = order.map((index) => question.options[index]).filter((option): option is string => typeof option === 'string');
+  return options.length === question.options.length ? { ...question, options } : question;
 }
 
 function teamStyle(color: string, dark: string) {

@@ -50,7 +50,9 @@ const TREASURE_COUNT = 12;
 const POTION_PICK_MS = 10_000;
 
 function createServerPotionGame(teamCount = 7): ServerPotionGame {
-  return { ...createPotionGame(teamCount), treasureBottles: [], treasureStocked: false };
+  const game = createPotionGame(teamCount);
+  game.optionOrders = createPotionOptionOrders(game.deck);
+  return { ...game, treasureBottles: [], treasureStocked: false };
 }
 
 function database() {
@@ -118,6 +120,7 @@ async function readPotion(roomId: string) {
     state.countdownEndsAt = Number.isFinite(state.countdownEndsAt) ? Number(state.countdownEndsAt) : null;
     state.pickEndsAt = Number.isFinite(state.pickEndsAt) ? Number(state.pickEndsAt) : null;
     state.picks = Array.from({ length: state.teamCount }, (_, index) => Number.isInteger(state.picks?.[index]) ? Number(state.picks[index]) : null);
+    state.optionOrders = state.optionOrders && typeof state.optionOrders === 'object' ? state.optionOrders : createLegacyPotionOptionOrders(state.deck);
     state.roundReveals = Array.isArray(state.roundReveals) ? state.roundReveals : state.lastReveal ? [state.lastReveal] : [];
     state.treasureBottles = Array.isArray(state.treasureBottles) ? state.treasureBottles.filter((number) => Number.isInteger(number) && number >= 1 && number <= POTION_COUNT) : [];
     state.treasureStocked = Boolean(state.treasureStocked);
@@ -162,6 +165,37 @@ function secureShuffle(values: number[]) {
     [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
   }
   return shuffled;
+}
+
+function potionQuestionOrder(question: (typeof POTION_QUESTIONS)[number], correctSlot: number, randomizeDistractors: boolean) {
+  const indexes = question.options.map((_, index) => index);
+  const correctIndex = question.options.findIndex((option) => normalizeAnswer(option) === normalizeAnswer(question.answer));
+  if (correctIndex < 0) return indexes;
+  const distractors = indexes.filter((index) => index !== correctIndex);
+  const ordered = randomizeDistractors ? secureShuffle(distractors) : distractors;
+  ordered.splice(Math.min(correctSlot, ordered.length), 0, correctIndex);
+  return ordered;
+}
+
+function createPotionOptionOrders(deck: string[]) {
+  const questions = deck
+    .map((id) => POTION_QUESTIONS.find((question) => question.id === id))
+    .filter((question): question is (typeof POTION_QUESTIONS)[number] => Boolean(question?.options.length));
+  const slotCycle = secureShuffle([0, 1, 2, 3]);
+  const correctSlots = secureShuffle(questions.map((_, index) => slotCycle[index % slotCycle.length]));
+  return Object.fromEntries(questions.map((question, index) => [
+    question.id,
+    potionQuestionOrder(question, correctSlots[index] % question.options.length, true),
+  ]));
+}
+
+function createLegacyPotionOptionOrders(deck: string[]) {
+  return Object.fromEntries(deck.flatMap((id) => {
+    const question = POTION_QUESTIONS.find((item) => item.id === id);
+    if (!question?.options.length) return [];
+    const stableSlot = [...question.id].reduce((total, character) => total + character.charCodeAt(0), 0) % question.options.length;
+    return [[question.id, potionQuestionOrder(question, stableSlot, false)]];
+  }));
 }
 
 function activePoisonNumbers(game: ServerPotionGame) {
@@ -398,7 +432,9 @@ async function snapshot(roomId: string, teacherToken?: string, studentClientId?:
       }));
       const question = POTION_QUESTIONS.find((item) => item.id === serverPotion.currentQuestionId);
       if (question) {
-        const answerIndex = question.options.findIndex((option) => normalizeAnswer(option) === normalizeAnswer(question.answer));
+        const order = serverPotion.optionOrders[question.id] ?? question.options.map((_, index) => index);
+        const presentedOptions = order.map((index) => question.options[index]).filter((option): option is string => typeof option === 'string');
+        const answerIndex = presentedOptions.findIndex((option) => normalizeAnswer(option) === normalizeAnswer(question.answer));
         potionAnswerKey = {
           answer: question.answer,
           explanation: question.note || (question.type === 'MCQ' ? 'Use the supplied key while reviewing each team’s choice.' : 'Accept any accurate, reasonable answer—not only the exact wording shown.'),
@@ -413,6 +449,7 @@ async function snapshot(roomId: string, teacherToken?: string, studentClientId?:
       phase: serverPotion.phase,
       round: serverPotion.round,
       deck: serverPotion.deck,
+      optionOrders: serverPotion.optionOrders,
       currentQuestionId: serverPotion.currentQuestionId,
       opened: serverPotion.opened,
       eligible: serverPotion.eligible,

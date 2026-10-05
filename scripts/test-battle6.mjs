@@ -1,3 +1,5 @@
+import { POTION_QUESTIONS } from '../app/battle6-data.ts';
+
 const endpoint = process.env.BATTLE6_URL || 'http://localhost:3000/api/game';
 const room = String(10000 + Math.floor(Math.random() * 89999));
 const teacherToken = `battle6-teacher-${crypto.randomUUID()}`;
@@ -20,6 +22,15 @@ function assert(value, message) {
 let teacher = (await post({ action: 'create', teacherToken })).state;
 teacher = (await post({ action: 'setBattle', teacherToken, battle: 6, expectedVersion: teacher.version })).state;
 assert(teacher.potion?.teamCount === 7, 'Battle 6 was not created.');
+const correctSlots = Object.entries(teacher.potion.optionOrders).map(([questionId, order]) => {
+  const question = POTION_QUESTIONS.find((item) => item.id === questionId);
+  assert(question?.type === 'MCQ', `Option order was created for non-MCQ question ${questionId}.`);
+  const sourceIndex = question.options.findIndex((option) => option === question.answer);
+  const presentedIndex = order.indexOf(sourceIndex);
+  assert(presentedIndex >= 0, `Correct answer disappeared from ${questionId}.`);
+  return presentedIndex;
+});
+assert(correctSlots.length > 0 && new Set(correctSlots).size >= Math.min(4, correctSlots.length), 'MCQ correct answers were not distributed across answer letters.');
 
 teacher = (await post({
   action: 'potionCommand', command: 'configureTeams', teamCount: 10,
@@ -184,7 +195,7 @@ console.log(JSON.stringify({
   ok: true,
   room,
   checks: [
-    'battle selection', '10-team capacity', 'exclusive teams', 'secret poison',
+    'battle selection', 'randomized MCQ answer positions', '10-team capacity', 'exclusive teams', 'secret poison',
     'live 10-second answer countdown', 'private answers', 'teacher review',
     'accept/reject', '12 hidden Treasures', 'simultaneous potion choices',
     'first-confirmed unique claim', 'group reveal', '10-second auto-assignment',
