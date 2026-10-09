@@ -61,9 +61,15 @@ for (const team of teams) {
 }
 
 const reviewState = (await request(`rooms/${host.pin}/state`, { token: host.hostToken })).data;
-for (const team of reviewState.teams) {
-  await act(host.hostToken, 'host:review', { teamId: team.id, questionId, decision: 'accepted' });
-}
+const acceptedReview = { type: 'host:review', requestId: requestId(), teamId: reviewState.teams[0].id, questionId, decision: 'accepted' };
+await request(`rooms/${host.pin}/action`, { token: host.hostToken, body: acceptedReview });
+await request(`rooms/${host.pin}/action`, { token: host.hostToken, body: acceptedReview });
+await act(host.hostToken, 'host:review', { teamId: reviewState.teams[0].id, questionId, decision: 'accepted' });
+await act(host.hostToken, 'host:review', { teamId: reviewState.teams[1].id, questionId, decision: 'rejected' });
+const reviewedTeam = (await request(`rooms/${host.pin}/state`, { token: teams[0].teamToken })).data;
+const rejectedTeam = (await request(`rooms/${host.pin}/state`, { token: teams[1].teamToken })).data;
+assert.equal(Object.values(reviewedTeam.me.inventory).reduce((total, quantity) => total + quantity, 0), 2, 'Accepted answer did not award exactly two ingredients once.');
+assert.equal(Object.values(rejectedTeam.me.inventory).reduce((total, quantity) => total + quantity, 0), 0, 'Rejected answer awarded ingredients.');
 
 await act(host.hostToken, 'host:reveal', { questionId, expectedPhase: 'question' });
 const revealed = (await request(`rooms/${host.pin}/state`, { token: host.hostToken })).data;
@@ -74,7 +80,18 @@ const nextQuestion = (await request(`rooms/${host.pin}/state`, { token: teams[0]
 assert.equal(nextQuestion.phase, 'question', 'Next question should open without a cooking timer.');
 assert.equal(nextQuestion.cookingAvailable, true, 'Cooking must remain available during questions.');
 assert.equal(nextQuestion.rushEndsAt, null, 'No forced cooking timer should remain.');
-assert.equal(Object.values(nextQuestion.me.inventory).reduce((total, quantity) => total + quantity, 0), 1, 'Accepted answer did not award one ingredient.');
+assert.equal(Object.values(nextQuestion.me.inventory).reduce((total, quantity) => total + quantity, 0), 2, 'Accepted pair was not preserved after advancing.');
+
+const secondQuestionId = nextQuestion.question.id;
+await act(teams[0].teamToken, 'pupil:submit', { questionId: secondQuestionId, answer: 'Second deployment smoke answer' });
+await act(host.hostToken, 'host:review', { teamId: reviewState.teams[0].id, questionId: secondQuestionId, decision: 'accepted' });
+const readyToCook = (await request(`rooms/${host.pin}/state`, { token: teams[0].teamToken })).data;
+assert.equal(Object.values(readyToCook.me.inventory).reduce((total, quantity) => total + quantity, 0), 4, 'Second accepted answer did not add another pair.');
+const ingredients = Object.entries(readyToCook.me.inventory).flatMap(([ingredient, quantity]) => Array(quantity).fill(ingredient)).slice(0, 3);
+assert.equal(ingredients.length, 3, 'Accepted rewards did not provide enough ingredients for a three-ingredient cook.');
+await act(teams[0].teamToken, 'pupil:cook', { questionId: secondQuestionId, expectedPhase: 'question', ingredients });
+const afterCook = (await request(`rooms/${host.pin}/state`, { token: teams[0].teamToken })).data;
+assert.equal(Object.values(afterCook.me.inventory).reduce((total, quantity) => total + quantity, 0), 1, 'Cooking did not consume exactly three ingredients.');
 
 await act(host.hostToken, 'host:close');
 
@@ -82,5 +99,5 @@ console.log(JSON.stringify({
   ok: true,
   endpoint: api,
   room: host.pin,
-  checks: ['health', 'room creation', 'two team joins', 'QR', 'privacy', 'submissions', 'teacher review', 'reveal', 'anytime cooking', 'room close'],
+  checks: ['health', 'room creation', 'two team joins', 'QR', 'privacy', 'submissions', 'two-unit accepted reward', 'zero rejected reward', 'retry idempotency', 'reveal', 'three-ingredient anytime cooking', 'room close'],
 }, null, 2));

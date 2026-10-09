@@ -57,7 +57,9 @@ const cleanName=(s,max)=>String(s??'').normalize('NFKC').replace(/[\u0000-\u001f
 export function normalizeAnswer(s){return String(s).normalize('NFKC').replace(/[‘’ʼ]/g,"'").trim().replace(/\s+/g,' ').replace(/\s*'\s*/g,"'").replace(/[.!?]+$/,'').trim().toLowerCase();}
 const freshBag=()=>Object.fromEntries(INGREDIENTS.map(x=>[x,0]));
 const countBag=bag=>Object.values(bag).reduce((a,b)=>a+b,0);
-const rewardLocked=(team,submission)=>submission?.status==='accepted'&&(submission.rewardSpent===true||team.inventory[submission.reward]<1);
+const rewardItems=submission=>Array.isArray(submission?.rewards)&&submission.rewards.length?submission.rewards:submission?.reward?[submission.reward]:[];
+const rewardCounts=submission=>rewardItems(submission).reduce((bag,item)=>(bag[item]=(bag[item]??0)+1,bag),{});
+const rewardLocked=(team,submission)=>submission?.status==='accepted'&&(submission.rewardSpent===true||Object.entries(rewardCounts(submission)).some(([item,quantity])=>team.inventory[item]<quantity));
 // Source token IDs are authoring metadata and may encode answer order. Never
 // publish them. A keyed, room-specific presentation ID is stable on reconnect
 // but reveals no original position, including for previously saved rooms.
@@ -120,8 +122,8 @@ export class GameStore {
   const showAnswer=['reveal','rush','finished'].includes(r.phase);
   const tokenId=id=>createHmac('sha256',this.secret).update(`rebuild:${r.pin}:${r.createdAt}:${q?.id}:${id}`).digest('hex').slice(0,24);
   const data={pin:r.pin,roomName:r.roomName,phase:r.phase,version:r.version,serverTime:this.now(),expiresAt:r.expiresAt,role:auth.role,teamCount:r.teamCount,questionNumber:r.questionIndex+1,totalQuestions:r.questions.length,question:publicQuestion(q,tokenId),answerReveal:showAnswer&&q?{canonicalAnswer:q.canonicalAnswer,feedback:q.feedback}:null,cookingAvailable:this.cookingAvailable(r),rushEndsAt:null,rushEnded:false,rushNumber:r.rushNumber??0,teams:r.teams.map(t=>({id:t.id,slot:t.slot,name:t.name,stars:t.stars,inventoryCount:countBag(t.inventory),acceptedCount:Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length,submissionStatus:submissions[t.id]?.status??'waiting',online:(this.lastSeen.get(`${r.pin}:${t.id}`)??0)>this.now()-20000,recipesCount:Object.keys(t.recipes).length,canBeStolenFrom:this.cookingAvailable(r)&&countBag(t.inventory)>0&&!r.incomingThefts[t.id]})).sort((a,b)=>a.slot-b.slot),latestCooks:r.latestCooks.slice(-100).map(cook=>visibleCook(cook,auth)),events:r.events.slice(-10),takenSlots:r.teams.map(t=>t.slot),winners:['finished','closed'].includes(r.phase)?r.teams.filter(t=>t.stars===Math.max(...r.teams.map(t=>t.stars))).filter(t=>Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length===Math.max(...r.teams.filter(x=>x.stars===Math.max(...r.teams.map(y=>y.stars))).map(x=>Object.values(r.submissions).filter(s=>s[x.id]?.status==='accepted').length))).map(t=>t.id):[]};
-  if(auth.role==='host'){data.answerKey=q?Object.fromEntries(['canonicalAnswer','acceptedVariants','correctOptionId','targetTense','feedback','canonicalTokenOrder','acceptedTokenOrders'].filter(k=>q[k]!==undefined).map(k=>[k,k==='canonicalTokenOrder'?q[k].map(tokenId):k==='acceptedTokenOrders'?q[k].map(order=>order.map(tokenId)):q[k]])):null;data.submissions=r.teams.map(t=>({teamId:t.id,teamName:t.name,answer:submissions[t.id]?.answer??'',status:submissions[t.id]?.status??'waiting',reward:submissions[t.id]?.status==='accepted'?submissions[t.id].reward:null,rewardLocked:rewardLocked(t,submissions[t.id])}));data.settings={cookingMode:'anytime',teamCount:r.teamCount,ingredientWeights:r.weights,theftRecipe:'Sneaky Snack',theftMaxIncomingPerQuestion:1};data.joinPath=`/?battle=7&join=${r.pin}`;}
-  if(auth.role==='team'){const t=auth.team;const s=submissions[t.id];data.me={id:t.id,name:t.name,slot:t.slot,stars:t.stars,inventory:{...t.inventory},recipes:Object.values(t.recipes),powers:t.powers.map(p=>({...p})),submission:s?{answer:s.answer,status:s.status,reward:s.status==='accepted'?s.reward:null}:null};}
+  if(auth.role==='host'){data.answerKey=q?Object.fromEntries(['canonicalAnswer','acceptedVariants','correctOptionId','targetTense','feedback','canonicalTokenOrder','acceptedTokenOrders'].filter(k=>q[k]!==undefined).map(k=>[k,k==='canonicalTokenOrder'?q[k].map(tokenId):k==='acceptedTokenOrders'?q[k].map(order=>order.map(tokenId)):q[k]])):null;data.submissions=r.teams.map(t=>{const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];return{teamId:t.id,teamName:t.name,answer:s?.answer??'',status:s?.status??'waiting',reward:rewards[0]??null,rewards,rewardLocked:rewardLocked(t,s)};});data.settings={cookingMode:'anytime',teamCount:r.teamCount,ingredientWeights:r.weights,theftRecipe:'Sneaky Snack',theftMaxIncomingPerQuestion:1};data.joinPath=`/?battle=7&join=${r.pin}`;}
+  if(auth.role==='team'){const t=auth.team;const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];data.me={id:t.id,name:t.name,slot:t.slot,stars:t.stars,inventory:{...t.inventory},recipes:Object.values(t.recipes),powers:t.powers.map(p=>({...p})),submission:s?{answer:s.answer,status:s.status,reward:rewards[0]??null,rewards}:null};}
   return data;
  }
  event(r,text){r.events.push({id:randomBytes(8).toString('hex'),text,at:this.now()});r.events=r.events.slice(-100);}
@@ -132,7 +134,7 @@ export class GameStore {
   // answer's reward is used up, a later theft/reward cannot make it reversible
   // again. Only the current question can still be reviewed by the teacher.
   const submission=r.submissions[this.currentQuestion(r)?.id]?.[team.id];
-  if(submission?.status==='accepted'&&team.inventory[submission.reward]<1)submission.rewardSpent=true;
+  if(submission?.status==='accepted'&&Object.entries(rewardCounts(submission)).some(([item,quantity])=>team.inventory[item]<quantity))submission.rewardSpent=true;
  }
  action(pin,token,body={}){
   let r=this.room(pin);const auth=this.auth(r,token);
@@ -168,18 +170,18 @@ export class GameStore {
     requirePhase('question');if(b.questionId!==q.id)fail('That question has ended. Your answer was not submitted to the new round.','STALE_QUESTION',409);
     if(typeof b.answer!=='string'||!b.answer.trim()||b.answer.length>500)fail('Enter an answer of 1–500 characters.');
     const subs=r.submissions[q.id]??={};if(subs[auth.team.id])fail('Your team has already submitted this answer.','ALREADY_SUBMITTED',409);
-    subs[auth.team.id]={answer:b.answer.trim(),status:'submitted',reward:null,at:this.now()};return{submitted:true};
+    subs[auth.team.id]={answer:b.answer.trim(),status:'submitted',rewards:null,at:this.now()};return{submitted:true};
    }
    case 'host:review':{
     requirePhase('question');if(b.questionId!==q.id)fail('That question is no longer open.','STALE_QUESTION',409);if(!['accepted','rejected'].includes(b.decision))fail('Choose Accept or Reject.');
     const team=r.teams.find(t=>t.id===b.teamId);const sub=r.submissions[q.id]?.[b.teamId];if(!team||!sub)fail('There is no answer to review.','NO_SUBMISSION',409);
-    if(sub.status===b.decision)return{decision:sub.status,reward:sub.status==='accepted'?sub.reward:null};
+    if(sub.status===b.decision){const rewards=sub.status==='accepted'?rewardItems(sub):[];return{decision:sub.status,reward:rewards[0]??null,rewards};}
     if(sub.status==='accepted'){
-     if(rewardLocked(team,sub))fail('This answer’s ingredient has already been used or stolen. Its accepted reward can no longer be reversed.','REWARD_ALREADY_USED',409);
-     team.inventory[sub.reward]--;
+     if(rewardLocked(team,sub))fail('One or both of this answer’s ingredients have already been used or stolen. Its accepted reward can no longer be reversed.','REWARD_ALREADY_USED',409);
+     for(const item of rewardItems(sub))team.inventory[item]--;
     }
-    if(b.decision==='accepted'){sub.reward??=this.ingredient(r);team.inventory[sub.reward]++;}
-    sub.status=b.decision;return{decision:sub.status,reward:sub.status==='accepted'?sub.reward:null};
+    if(b.decision==='accepted'){if(!rewardItems(sub).length)sub.rewards=[this.ingredient(r),this.ingredient(r)];for(const item of rewardItems(sub))team.inventory[item]++;}
+    sub.status=b.decision;const rewards=sub.status==='accepted'?rewardItems(sub):[];return{decision:sub.status,reward:rewards[0]??null,rewards};
    }
    case 'host:reveal': requirePhase('question');if(Object.values(r.submissions[q.id]??{}).some(s=>s.status==='submitted'))fail('Review every submitted answer before revealing.','REVIEWS_PENDING',409);r.phase='reveal';return{revealed:true};
    case 'host:advance':{

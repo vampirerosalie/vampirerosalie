@@ -83,6 +83,14 @@ test('frontend renders every role/phase and question format, escapes text, guard
  h.frontend.configure('screen',base);h.frontend.queuePublicCooks(base);const cooks=Array.from({length:20},(_,i)=>({id:`cook-${i}`,teamName:'Team',dish:{name:'Toast',emoji:'🍞',success:true},at:i}));h.frontend.queuePublicCooks({...base,latestCooks:cooks});assert.equal(h.frontend.get().cookQueueLength,19);h.frontend.queuePublicCooks({...base,latestCooks:cooks});assert.equal(h.frontend.get().cookQueueLength,19);assert.match(h.frontend.shareUrl('join'),/\?battle=7&join=12345/);
 });
 
+test('accepted rewards show two animated ingredients on student and teacher screens',()=>{
+ const h=harness(),base=snapshot(),submission={answer:'Correct answer',status:'accepted',reward:'Bread',rewards:['Bread','Rice']};
+ h.frontend.configure('join',{...base,role:'team',me:{id:'a',slot:1,name:'Team',stars:0,inventory:{Bread:1,Rice:1},recipes:[],powers:[],submission}});
+ assert.match(h.frontend.get().html,/Two ingredients added to your pantry/);assert.match(h.frontend.get().html,/reward-item-1/);assert.match(h.frontend.get().html,/reward-item-2/);assert.match(h.frontend.get().html,/\+1 Bread/);assert.match(h.frontend.get().html,/\+1 Rice/);
+ h.frontend.configure('host',{...base,role:'host',teams:[{id:'a',slot:1,name:'Team',stars:0,inventoryCount:2,acceptedCount:1,submissionStatus:'accepted',online:true}],submissions:[{teamId:'a',teamName:'Team',...submission,rewardLocked:false}]});h.frontend.ui.review=true;h.frontend.render();
+ assert.match(h.frontend.get().html,/Each accepted answer awards two ingredients exactly once/);assert.match(h.frontend.get().html,/\+1 Bread/);assert.match(h.frontend.get().html,/\+1 Rice/);
+});
+
 
 test('Battle 7 entry immediately creates the teacher lobby and restores its capability on refresh',async()=>{
  const {store,host}=fixture(),saved=new Map(),sessionSaved=new Map(),normal=adapter(store);let creates=0;

@@ -12,7 +12,8 @@ const count=t=>Object.values(t.inventory).reduce((a,b)=>a+b,0);
 test('bank has 20 unique mixed questions, four per tense, rebuild tokens conserve words',()=>{assert.equal(questions.length,20);assert.equal(new Set(questions.map(q=>q.id)).size,20);const tenses={};const formats={};for(const q of questions){tenses[q.targetTense]=(tenses[q.targetTense]??0)+1;formats[q.format]=(formats[q.format]??0)+1;if(q.tokens){assert.deepEqual([...q.canonicalTokenOrder].sort(),q.tokens.map(t=>t.id).sort());}}assert.deepEqual(Object.values(tenses),[4,4,4,4,4]);assert.equal(formats.typed_correction,10);assert.equal(formats.multiple_choice,5);assert.equal(formats.sentence_rebuild,5);});
 test('ten distinct stations; retry join restores identity and cannot occupy a second slot',()=>{const s=setup({roomTeamCount:10});const id=randomUUID();const t=s.store.join(s.host.pin,{teamSlot:4,name:'Owls',clientId:id});assert.deepEqual(s.store.join(s.host.pin,{teamSlot:7,name:'ignored',clientId:id}),t);assert.throws(()=>s.store.join(s.host.pin,{teamSlot:4,name:'Other',clientId:randomUUID()}),/taken/);for(let i=5;i<=10;i++)s.store.join(s.host.pin,{teamSlot:i,name:`Team${i}`,clientId:randomUUID()});assert.equal(s.room().teams.length,10);assert.throws(()=>s.store.join(s.host.pin,{teamSlot:11,name:'Extra',clientId:randomUUID()}),/available/);});
 test('public and pupil snapshots hide teacher answer key and entire hidden catalogue',()=>{const s=setup();const q=start(s);for(const token of [undefined,s.teams[0].teamToken]){const state=s.store.state(s.host.pin,token);assert.equal(state.answerKey,undefined);assert.equal(state.answerReveal,null);assert.equal(state.question.canonicalAnswer,undefined);assert.equal(state.question.targetTense,undefined);assert.equal(state.question.canonicalTokenOrder,undefined);assert.equal(state.recipes,undefined);}assert.equal(s.store.state(s.host.pin,s.host.hostToken).answerKey.canonicalAnswer,q.canonicalAnswer);});
-test('manual accept rewards once; retries and repeated decisions do not duplicate; reversal reuses reward',()=>{const s=setup();const q=start(s);const t=s.teams[0];s.act(t.teamToken,'pupil:submit',{questionId:q.id,answer:'Teacher decides this'});assert.equal(count(s.room().teams[0]),0);const action={type:'host:review',requestId:randomUUID(),teamId:t.teamId,questionId:q.id,decision:'accepted'};const first=s.store.action(s.host.pin,s.host.hostToken,action);assert.equal(count(s.room().teams[0]),1);assert.equal(first.result.reward,'Bread');assert.equal(s.store.action(s.host.pin,s.host.hostToken,action).replayed,true);s.act(s.host.hostToken,'host:review',{...action,requestId:randomUUID()});assert.equal(count(s.room().teams[0]),1);s.act(s.host.hostToken,'host:review',{teamId:t.teamId,questionId:q.id,decision:'rejected'});assert.equal(count(s.room().teams[0]),0);s.act(s.host.hostToken,'host:review',{teamId:t.teamId,questionId:q.id,decision:'accepted'});assert.equal(count(s.room().teams[0]),1);assert.equal(s.room().teams[0].inventory.Bread,1);});
+test('manual accept rewards a pair once; retries and repeated decisions do not duplicate; reversal reuses the pair',()=>{const s=setup();const q=start(s);const t=s.teams[0];s.act(t.teamToken,'pupil:submit',{questionId:q.id,answer:'Teacher decides this'});assert.equal(count(s.room().teams[0]),0);const action={type:'host:review',requestId:randomUUID(),teamId:t.teamId,questionId:q.id,decision:'accepted'};const first=s.store.action(s.host.pin,s.host.hostToken,action);assert.equal(count(s.room().teams[0]),2);assert.deepEqual(first.result.rewards,['Bread','Bread']);assert.equal(s.store.action(s.host.pin,s.host.hostToken,action).replayed,true);s.act(s.host.hostToken,'host:review',{...action,requestId:randomUUID()});assert.equal(count(s.room().teams[0]),2);s.act(s.host.hostToken,'host:review',{teamId:t.teamId,questionId:q.id,decision:'rejected'});assert.equal(count(s.room().teams[0]),0);s.act(s.host.hostToken,'host:review',{teamId:t.teamId,questionId:q.id,decision:'accepted'});assert.equal(count(s.room().teams[0]),2);assert.equal(s.room().teams[0].inventory.Bread,2);});
+test('the two reward units are independent weighted draws and may differ',()=>{const rolls=[0,9],s=setup({random:max=>{const roll=rolls.shift();assert.ok(roll<max);return roll;}}),q=start(s),t=s.teams[0];s.act(t.teamToken,'pupil:submit',{questionId:q.id,answer:'Two draws'});const result=s.act(s.host.hostToken,'host:review',{teamId:t.teamId,questionId:q.id,decision:'accepted'});assert.deepEqual(result.result.rewards,['Bread','Rice']);assert.equal(s.room().teams[0].inventory.Bread,1);assert.equal(s.room().teams[0].inventory.Rice,1);assert.equal(count(s.room().teams[0]),2);});
 test('reject grants nothing; submitted answers lock and teacher must review before reveal',()=>{const s=setup();const q=start(s);const t=s.teams[0];s.act(t.teamToken,'pupil:submit',{questionId:q.id,answer:'no'});assert.throws(()=>s.act(s.host.hostToken,'host:reveal'),/Review every/);assert.throws(()=>s.act(t.teamToken,'pupil:submit',{questionId:q.id,answer:'again'}),/already submitted/);s.act(s.host.hostToken,'host:review',{teamId:t.teamId,questionId:q.id,decision:'rejected'});assert.equal(count(s.room().teams[0]),0);s.act(s.host.hostToken,'host:reveal');assert.equal(s.store.state(s.host.pin).answerReveal.canonicalAnswer,q.canonicalAnswer);assert.throws(()=>s.act(s.host.hostToken,'host:review',{teamId:t.teamId,questionId:q.id,decision:'accepted'}),/only available/);});
 test('normalization handles curly apostrophes and spacing without dropping negation',()=>{assert.equal(normalizeAnswer('  AREN ’T   COOKING!  '),"aren't cooking");assert.notEqual(normalizeAnswer("aren't cooking"),normalizeAnswer('are cooking'));});
 test('20 shuffled unique questions advance directly with no timer and finish with tied winners',()=>{
@@ -57,7 +58,7 @@ test('finished cooking, stale question, role escalation and reused receipt paylo
  s.room().questionIndex=19;cookPhase(s);s.act(s.host.hostToken,'host:advance');
  assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Cheese','Tomato']}),/only available/);
 });
-test('serialized restore keeps host/team identities and action receipts with the room secret',()=>{const s=setup();const q=start(s);s.act(s.teams[0].teamToken,'pupil:submit',{questionId:q.id,answer:q.canonicalAnswer});const b={type:'host:review',requestId:randomUUID(),teamId:s.teams[0].teamId,questionId:q.id,decision:'accepted'};s.store.action(s.host.pin,s.host.hostToken,b);const restored=new GameStore({questions,secret:s.store.secret,now:()=>1770000001000});restored.rooms.set(s.host.pin,JSON.parse(JSON.stringify(s.room())));assert.equal(restored.state(s.host.pin,s.teams[0].teamToken).me.inventory.Bread,1);assert.equal(restored.action(s.host.pin,s.host.hostToken,b).replayed,true);assert.equal(restored.state(s.host.pin,s.teams[0].teamToken).me.inventory.Bread,1);});
+test('serialized restore keeps host/team identities and pair-reward action receipts with the room secret',()=>{const s=setup();const q=start(s);s.act(s.teams[0].teamToken,'pupil:submit',{questionId:q.id,answer:q.canonicalAnswer});const b={type:'host:review',requestId:randomUUID(),teamId:s.teams[0].teamId,questionId:q.id,decision:'accepted'};s.store.action(s.host.pin,s.host.hostToken,b);const restored=new GameStore({questions,secret:s.store.secret,now:()=>1770000001000});restored.rooms.set(s.host.pin,JSON.parse(JSON.stringify(s.room())));assert.equal(restored.state(s.host.pin,s.teams[0].teamToken).me.inventory.Bread,2);assert.equal(restored.action(s.host.pin,s.host.hostToken,b).replayed,true);assert.equal(restored.state(s.host.pin,s.teams[0].teamToken).me.inventory.Bread,2);});
 test('fixed catalogue has40 dishes and one special; original recipe values remain intact',()=>{assert.equal(Object.values(RECIPES).filter(x=>x.type==='dish').length,40);assert.equal(Object.values(RECIPES).filter(x=>x.type==='steal').length,1);assert.equal(RECIPES[recipeKey(['Chicken','Tomato','Cheese'])].stars,3);assert.equal(RECIPES[recipeKey(['Chocolate','Chicken','Mushroom'])],undefined);for(const r of Object.values(RECIPES)){assert.equal(r.ingredients.length,3);assert.ok(r.ingredients.every(x=>INGREDIENTS.includes(x)));}});
 
 test('all five rebuilds expose opaque stable room-specific IDs, never source answer-order IDs',()=>{
@@ -201,7 +202,7 @@ test('spent answer rewards cannot be reversed, even after replacement ingredient
  const reject={type:'host:review',requestId:randomUUID(),questionId:q.id,teamId:team.teamId,decision:'rejected'};
  const before=JSON.stringify(s.room());
  assert.throws(()=>s.store.action(s.host.pin,s.host.hostToken,reject),e=>e.code==='REWARD_ALREADY_USED');
- assert.equal(JSON.stringify(s.room()),before);assert.equal(s.room().teams[0].inventory.Bread,0);
+ assert.equal(JSON.stringify(s.room()),before);assert.equal(s.room().teams[0].inventory.Bread,1);
  // A genuinely new ingredient does not restore the already-spent reward.
  s.room().teams[0].powers.push({id:'replacement-power',type:'steal'});s.room().teams[1].inventory.Bread=1;
  s.act(team.teamToken,'pupil:steal',{powerId:'replacement-power',targetTeamId:s.teams[1].teamId});
@@ -209,10 +210,10 @@ test('spent answer rewards cannot be reversed, even after replacement ingredient
  restored.rooms.set(s.host.pin,JSON.parse(JSON.stringify(s.room())));
  assert.throws(()=>restored.action(s.host.pin,s.host.hostToken,reject),e=>e.code==='REWARD_ALREADY_USED');
  assert.equal(restored.state(s.host.pin,s.host.hostToken).submissions[0].rewardLocked,true);
- assert.equal(restored.state(s.host.pin,team.teamToken).me.inventory.Bread,1);
+ assert.equal(restored.state(s.host.pin,team.teamToken).me.inventory.Bread,2);
  assert.equal(restored.state(s.host.pin,team.teamToken).me.submission.status,'accepted');
  restored.action(s.host.pin,s.host.hostToken,{...reject,requestId:randomUUID(),decision:'accepted'});
- assert.equal(restored.state(s.host.pin,team.teamToken).me.inventory.Bread,1);
+ assert.equal(restored.state(s.host.pin,team.teamToken).me.inventory.Bread,2);
 });
 
 test('older stock is spent before the current reward, so an unspent reward can still be reversed',()=>{
@@ -225,7 +226,7 @@ test('older stock is spent before the current reward, so an unspent reward can s
  s.act(s.host.hostToken,'host:review',{teamId:team.teamId,decision:'rejected'});
  assert.equal(count(s.room().teams[0]),0);assert.equal(s.room().teams[0].stars,3);
  s.act(s.host.hostToken,'host:review',{teamId:team.teamId,decision:'accepted'});
- assert.equal(count(s.room().teams[0]),1);
+ assert.equal(count(s.room().teams[0]),2);
 });
 
 test('stolen rewards lock review reversal and theft protection lasts through reveal, resetting on the next question',()=>{
@@ -238,7 +239,7 @@ test('stolen rewards lock review reversal and theft protection lasts through rev
  s.room().teams[1].inventory.Egg=1;s.act(s.host.hostToken,'host:reveal');
  assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:steal',{powerId:'power-next',targetTeamId:victim.teamId}),e=>e.code==='TARGET_PROTECTED');
  s.act(s.host.hostToken,'host:advance');
- assert.equal(s.act(s.teams[0].teamToken,'pupil:steal',{powerId:'power-next',targetTeamId:victim.teamId}).result.ingredient,'Egg');
+ assert.equal(s.act(s.teams[0].teamToken,'pupil:steal',{powerId:'power-next',targetTeamId:victim.teamId}).result.ingredient,'Bread');
 });
 
 test('saved rush rooms ignore both expired and future timers and advance without waiting',()=>{

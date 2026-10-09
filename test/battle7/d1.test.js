@@ -55,7 +55,7 @@ test('simultaneous 10-team submit and teacher review never drop rewards or expos
   await Promise.all(bodies.map((body) => s.store().action(s.host.pin, s.host.hostToken, body)));
   const room = s.db.room(s.host.pin);
   assert.equal(room.version, 32);
-  assert.ok(room.teams.every((team) => team.inventory.Bread === 1));
+  assert.ok(room.teams.every((team) => team.inventory.Bread === 2));
   for (const token of [undefined, s.teams[0].teamToken]) {
     const state = await s.store().state(s.host.pin, token);
     assert.equal(state.answerKey, undefined);
@@ -200,7 +200,7 @@ test('concurrent cook and teacher rejection serialize without negative inventory
   assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
   assert.ok(['REWARD_ALREADY_USED','NOT_ENOUGH_INGREDIENTS'].includes(results.find(r=>r.status==='rejected').reason.code));
   const room=s.db.room(s.host.pin),team=room.teams[0],submission=room.submissions[room.questions[0].id][team.id];
-  assert.ok(Object.values(team.inventory).every(n=>n>=0));assert.equal(team.inventory.Bread,0);
+  assert.ok(Object.values(team.inventory).every(n=>n>=0));assert.equal(team.inventory.Bread,submission.status==='accepted'?1:0);
   assert.equal(team.stars,submission.status==='accepted'?3:0);
   if(team.stars)assert.equal(submission.rewardSpent,true);
  }
@@ -258,7 +258,7 @@ test('all twenty rounds finish through D1 without rush phases and reconnect reta
  }
  const state=await s.store().state(s.host.pin,s.teams[0].teamToken);
  assert.equal(state.phase,'finished');assert.equal(state.questionNumber,20);assert.deepEqual(state.winners,[s.teams[0].teamId]);
- assert.equal(state.me.inventory.Bread,20);assert.equal(state.cookingAvailable,false);
+ assert.equal(state.me.inventory.Bread,40);assert.equal(state.cookingAvailable,false);
  assert.deepEqual(await s.store().join(s.host.pin,s.identities[0]),s.teams[0]);
  assert.equal((await s.store().state(s.host.pin,s.teams[0].teamToken)).me.id,s.teams[0].teamId);
 });
