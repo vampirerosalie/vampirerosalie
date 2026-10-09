@@ -39,6 +39,8 @@ export default defineConfig(async () => {
     plugins: [
       vinext(),
       cloudflare({
+        // Optional local-preview fallback when network interface inspection is unavailable.
+        inspectorPort: process.env.DISABLE_LOCAL_INSPECTOR === '1' ? false : undefined,
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
         config: localBindingConfig,
       }),

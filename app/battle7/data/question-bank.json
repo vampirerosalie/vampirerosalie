@@ -1,0 +1,1011 @@
+{
+  "schemaVersion": "1.1",
+  "title": "Crazy Kitchen: Five-Tense Question Bank",
+  "status": "review_draft",
+  "audience": "Secondary classroom; mixed proficiency; short contextual sentences.",
+  "language": "en",
+  "supportedTenses": [
+    "present_simple",
+    "present_continuous",
+    "past_simple",
+    "past_continuous",
+    "future_simple"
+  ],
+  "questionCount": 20,
+  "pointsPerQuestion": 1,
+  "studentDirections": "Choose the form that best fits the context. The game practises present simple, present continuous, past simple, past continuous, and future simple. For typed questions, replace only the bold words and keep the same main verb. For rebuild questions, use every word once. Your teacher makes the final decision.",
+  "studentDirectionsZh": "根据语境作答。本游戏练习一般现在时、现在进行时、一般过去时、过去进行时和一般将来时。输入改错题只填写加粗部分的正确形式，保留原来的主要动词；重组句子题每个单词使用一次。最终由老师判定。",
+  "presentationRules": {
+    "beforeSubmission": [
+      "instruction",
+      "instructionZh",
+      "promptSegments",
+      "options",
+      "tokens"
+    ],
+    "hideBeforeSubmission": [
+      "targetTense",
+      "canonicalAnswer",
+      "acceptedVariants",
+      "correctOptionId",
+      "feedback",
+      "canonicalTokenOrder",
+      "acceptedTokenOrders",
+      "canonicalTokenOrder",
+      "acceptedTokenOrders"
+    ],
+    "showFeedbackAfterSubmission": false,
+    "boldOnlyMarkedSegments": true,
+    "doNotGenerateAnswerHints": true,
+    "placeholder": "Type the replacement only",
+    "shuffleQuestionOrder": true,
+    "shuffleOptionsByStableId": true,
+    "note": "Reference answers and explanations are teacher-facing until an explicit reveal. Do not show tense labels or group student rounds under visible tense names. Rebuild tokens are the puzzle, not an additional hint.",
+    "teacherControlledReveal": true
+  },
+  "answerMatching": {
+    "typed": "Normalize the submission and every accepted variant, then compare for exact equality to provide an optional host-only suggestion. Never automatically mark the answer.",
+    "normalizationSteps": [
+      "Apply Unicode NFKC normalization.",
+      "Replace curly apostrophes (U+2018, U+2019, U+02BC) with a straight apostrophe.",
+      "Trim leading and trailing whitespace.",
+      "Collapse internal whitespace to one space.",
+      "Remove spaces immediately before and after apostrophes.",
+      "Remove optional terminal sentence punctuation: periods, exclamation marks, and question marks.",
+      "Trim again and compare case-insensitively."
+    ],
+    "multipleChoice": "Compare the selected stable option id with correctOptionId for a host-only suggestion, even when options are shuffled. The teacher decides Accept/Reject.",
+    "doNot": [
+      "Use substring matching.",
+      "Accept an entire sentence as a replacement.",
+      "Remove negation.",
+      "Treat a different main verb as a correct tense repair."
+    ],
+    "fullSentenceResponse": "Give a format reminder and allow another try without marking the grammar as incorrect.",
+    "alternateGrammarPolicy": "The teacher can accept any defensible answer in context. Reference answers and alternates guide judgment; they are not an exhaustive grammar rule or an automatic grade.",
+    "sentenceRebuild": "Require each supplied token id exactly once and compare the order with acceptedTokenOrders for a host-only suggestion. The teacher can accept other valid orders; case and punctuation do not decide the grade."
+  },
+  "questions": [
+    {
+      "id": "PS01",
+      "format": "typed_correction",
+      "targetTense": "present_simple",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "Every weekday, Maya ",
+          "bold": false
+        },
+        {
+          "text": "is packing",
+          "bold": true
+        },
+        {
+          "text": " lunch at 7 a.m. She follows the same routine each day.",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "packs",
+      "acceptedVariants": [
+        "packs"
+      ],
+      "feedback": {
+        "explanation": "This is Maya’s regular habit, so use the present simple. With Maya (she), pack becomes packs.",
+        "explanationZh": "“Every weekday”和“same routine”表示日常习惯，用一般现在时；Maya 是第三人称单数，所以用 packs。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PS02",
+      "format": "typed_correction",
+      "targetTense": "present_simple",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "Our café ",
+          "bold": false
+        },
+        {
+          "text": "is not opening",
+          "bold": true
+        },
+        {
+          "text": " on Sundays. This is its regular weekly schedule.",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "does not open",
+      "acceptedVariants": [
+        "does not open",
+        "doesn't open"
+      ],
+      "feedback": {
+        "explanation": "A regular weekly schedule takes the present simple. The negative for the singular subject our café is does not + open.",
+        "explanationZh": "固定的每周安排用一般现在时；our café 是单数，否定形式为 does not / doesn’t open。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PS03",
+      "format": "sentence_rebuild",
+      "targetTense": "present_simple",
+      "instruction": "Put all the words in order to make a sentence. Use each word once.",
+      "instructionZh": "把所有单词重新排序组成一句话，每个单词使用一次。",
+      "promptSegments": [
+        {
+          "text": "Ella goes to school the same way every morning.",
+          "bold": false
+        }
+      ],
+      "tokens": [
+        {
+          "id": "t4",
+          "text": "school"
+        },
+        {
+          "id": "t2",
+          "text": "walks"
+        },
+        {
+          "id": "t6",
+          "text": "morning"
+        },
+        {
+          "id": "t1",
+          "text": "Ella"
+        },
+        {
+          "id": "t3",
+          "text": "to"
+        },
+        {
+          "id": "t5",
+          "text": "every"
+        }
+      ],
+      "canonicalTokenOrder": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5",
+        "t6"
+      ],
+      "acceptedTokenOrders": [
+        [
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6"
+        ],
+        [
+          "t5",
+          "t6",
+          "t1",
+          "t2",
+          "t3",
+          "t4"
+        ]
+      ],
+      "canonicalAnswer": "Ella walks to school every morning.",
+      "acceptedVariants": [
+        "Ella walks to school every morning.",
+        "Every morning Ella walks to school."
+      ],
+      "feedback": {
+        "explanation": "Use Ella + walks for a regular habit. Every morning can go at the beginning or the end.",
+        "explanationZh": "日常习惯用一般现在时；Ella 后接 walks。“Every morning”可放在句首或句末。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PS04",
+      "format": "multiple_choice",
+      "targetTense": "present_simple",
+      "instruction": "Choose the verb phrase that best completes the sentence.",
+      "instructionZh": "选择最符合语境的动词或动词短语。",
+      "promptSegments": [
+        {
+          "text": "Our library’s regular hours are on this sign. It ___ at 9 a.m. every weekday.",
+          "bold": false
+        }
+      ],
+      "options": [
+        {
+          "id": "A",
+          "text": "is opening"
+        },
+        {
+          "id": "B",
+          "text": "opened"
+        },
+        {
+          "id": "C",
+          "text": "opens"
+        },
+        {
+          "id": "D",
+          "text": "will open"
+        }
+      ],
+      "correctOptionId": "C",
+      "canonicalAnswer": "opens",
+      "acceptedVariants": [
+        "opens"
+      ],
+      "feedback": {
+        "explanation": "The sentence describes the library’s regular opening time, so the present simple opens fits best.",
+        "explanationZh": "图书馆的固定开放时间用一般现在时；it 后用 opens。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PC01",
+      "format": "typed_correction",
+      "targetTense": "present_continuous",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "Look! Steam ",
+          "bold": false
+        },
+        {
+          "text": "rose",
+          "bold": true
+        },
+        {
+          "text": " from that pot right now.",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "is rising",
+      "acceptedVariants": [
+        "is rising"
+      ],
+      "feedback": {
+        "explanation": "Look and right now point to something happening at this moment. Use is + rising with the singular subject steam.",
+        "explanationZh": "“Look”和“right now”表示此刻正在发生，用现在进行时 is rising。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PC02",
+      "format": "typed_correction",
+      "targetTense": "present_continuous",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "The chef is speaking, but two students ",
+          "bold": false
+        },
+        {
+          "text": "did not listen",
+          "bold": true
+        },
+        {
+          "text": " at the moment.",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "are not listening",
+      "acceptedVariants": [
+        "are not listening",
+        "aren't listening"
+      ],
+      "feedback": {
+        "explanation": "At the moment describes the students’ behavior right now. With two students, use are not + listening.",
+        "explanationZh": "“At the moment”表示此刻；two students 是复数，用 are not / aren’t listening。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PC03",
+      "format": "sentence_rebuild",
+      "targetTense": "present_continuous",
+      "instruction": "Put all the words in order to make a sentence. Use each word once.",
+      "instructionZh": "把所有单词重新排序组成一句话，每个单词使用一次。",
+      "promptSegments": [
+        {
+          "text": "Maya is in the kitchen at this moment.",
+          "bold": false
+        }
+      ],
+      "tokens": [
+        {
+          "id": "t4",
+          "text": "lunch"
+        },
+        {
+          "id": "t5",
+          "text": "right"
+        },
+        {
+          "id": "t3",
+          "text": "making"
+        },
+        {
+          "id": "t1",
+          "text": "Maya"
+        },
+        {
+          "id": "t6",
+          "text": "now"
+        },
+        {
+          "id": "t2",
+          "text": "is"
+        }
+      ],
+      "canonicalTokenOrder": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5",
+        "t6"
+      ],
+      "acceptedTokenOrders": [
+        [
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6"
+        ],
+        [
+          "t5",
+          "t6",
+          "t1",
+          "t2",
+          "t3",
+          "t4"
+        ],
+        [
+          "t1",
+          "t2",
+          "t5",
+          "t6",
+          "t3",
+          "t4"
+        ]
+      ],
+      "canonicalAnswer": "Maya is making lunch right now.",
+      "acceptedVariants": [
+        "Maya is making lunch right now.",
+        "Right now Maya is making lunch.",
+        "Maya is right now making lunch."
+      ],
+      "feedback": {
+        "explanation": "An action happening right now uses is + making with Maya. Right now can go at the beginning or the end, and can also follow is.",
+        "explanationZh": "此刻正在发生的动作，用现在进行时 is making。“Right now”可放在句首、句末，也可放在 is 后。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PC04",
+      "format": "multiple_choice",
+      "targetTense": "present_continuous",
+      "instruction": "Choose the verb phrase that best completes the sentence.",
+      "instructionZh": "选择最符合语境的动词或动词短语。",
+      "promptSegments": [
+        {
+          "text": "Please be quiet. I ___ to the instructions right now.",
+          "bold": false
+        }
+      ],
+      "options": [
+        {
+          "id": "A",
+          "text": "listen"
+        },
+        {
+          "id": "B",
+          "text": "am listening"
+        },
+        {
+          "id": "C",
+          "text": "listened"
+        },
+        {
+          "id": "D",
+          "text": "will listen"
+        }
+      ],
+      "correctOptionId": "B",
+      "canonicalAnswer": "am listening",
+      "acceptedVariants": [
+        "am listening"
+      ],
+      "feedback": {
+        "explanation": "Right now shows an action in progress. With I, use am + listening.",
+        "explanationZh": "“Right now”表示正在进行的动作；I 后用 am listening。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PA01",
+      "format": "typed_correction",
+      "targetTense": "past_simple",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "Yesterday, Nina ",
+          "bold": false
+        },
+        {
+          "text": "buys",
+          "bold": true
+        },
+        {
+          "text": " three apples at the market.",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "bought",
+      "acceptedVariants": [
+        "bought"
+      ],
+      "feedback": {
+        "explanation": "Yesterday is a finished past time, so use the past simple. The past form of buy is bought.",
+        "explanationZh": "“Yesterday”表示已经过去的时间，用一般过去时；buy 的过去式是 bought。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PA02",
+      "format": "typed_correction",
+      "targetTense": "past_simple",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "We finished dinner an hour ago, but we ",
+          "bold": false
+        },
+        {
+          "text": "do not wash",
+          "bold": true
+        },
+        {
+          "text": " the plates afterward.",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "did not wash",
+      "acceptedVariants": [
+        "did not wash",
+        "didn't wash"
+      ],
+      "feedback": {
+        "explanation": "The dinner and the time afterward are in the past. Use did not + the base form wash.",
+        "explanationZh": "“An hour ago”把事情定位在过去；一般过去时的否定形式为 did not / didn’t wash。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PA03",
+      "format": "sentence_rebuild",
+      "targetTense": "past_simple",
+      "instruction": "Put all the words in order to make a sentence. Use each word once.",
+      "instructionZh": "把所有单词重新排序组成一句话，每个单词使用一次。",
+      "promptSegments": [
+        {
+          "text": "This happened yesterday.",
+          "bold": false
+        }
+      ],
+      "tokens": [
+        {
+          "id": "t5",
+          "text": "yesterday"
+        },
+        {
+          "id": "t4",
+          "text": "sandwich"
+        },
+        {
+          "id": "t1",
+          "text": "I"
+        },
+        {
+          "id": "t3",
+          "text": "a"
+        },
+        {
+          "id": "t2",
+          "text": "made"
+        }
+      ],
+      "canonicalTokenOrder": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5"
+      ],
+      "acceptedTokenOrders": [
+        [
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5"
+        ],
+        [
+          "t5",
+          "t1",
+          "t2",
+          "t3",
+          "t4"
+        ]
+      ],
+      "canonicalAnswer": "I made a sandwich yesterday.",
+      "acceptedVariants": [
+        "I made a sandwich yesterday.",
+        "Yesterday I made a sandwich."
+      ],
+      "feedback": {
+        "explanation": "Yesterday describes a finished past time, so use made. Yesterday can go at the beginning or the end.",
+        "explanationZh": "“Yesterday”表示过去的时间，用 made；时间词可放在句首或句末。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PA04",
+      "format": "multiple_choice",
+      "targetTense": "past_simple",
+      "instruction": "Choose the verb phrase that best completes the sentence.",
+      "instructionZh": "选择最符合语境的动词或动词短语。",
+      "promptSegments": [
+        {
+          "text": "The timer rang ten minutes ago. Oscar ___ the cake out of the oven immediately.",
+          "bold": false
+        }
+      ],
+      "options": [
+        {
+          "id": "A",
+          "text": "takes"
+        },
+        {
+          "id": "B",
+          "text": "is taking"
+        },
+        {
+          "id": "C",
+          "text": "will take"
+        },
+        {
+          "id": "D",
+          "text": "took"
+        }
+      ],
+      "correctOptionId": "D",
+      "canonicalAnswer": "took",
+      "acceptedVariants": [
+        "took"
+      ],
+      "feedback": {
+        "explanation": "Oscar completed the action ten minutes ago, so use the past simple took.",
+        "explanationZh": "动作发生在十分钟前并已完成，用一般过去时 took。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PAC01",
+      "format": "typed_correction",
+      "targetTense": "past_continuous",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "When the power went out last night, we ",
+          "bold": false
+        },
+        {
+          "text": "are cooking",
+          "bold": true
+        },
+        {
+          "text": " dinner. The meal was only half finished.",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "were cooking",
+      "acceptedVariants": [
+        "were cooking"
+      ],
+      "feedback": {
+        "explanation": "Cooking was already in progress when the power went out. Use were + cooking with we.",
+        "explanationZh": "昨晚停电时，做饭的动作正在进行；we 后用过去进行时 were cooking。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PAC02",
+      "format": "typed_correction",
+      "targetTense": "past_continuous",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "At exactly 8 p.m. yesterday, I was in the middle of my homework. I ",
+          "bold": false
+        },
+        {
+          "text": "am writing",
+          "bold": true
+        },
+        {
+          "text": " the final paragraph.",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "was writing",
+      "acceptedVariants": [
+        "was writing"
+      ],
+      "feedback": {
+        "explanation": "The writing was in progress at a particular past moment. With I, use was + writing.",
+        "explanationZh": "昨晚八点正在写最后一段，表示过去某一时刻正在进行的动作，用 was writing。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PAC03",
+      "format": "sentence_rebuild",
+      "targetTense": "past_continuous",
+      "instruction": "Put all the words in order to make a sentence. Use each word once.",
+      "instructionZh": "把所有单词重新排序组成一句话，每个单词使用一次。",
+      "promptSegments": [
+        {
+          "text": "At 7 p.m. yesterday, Mina was halfway through her report.",
+          "bold": false
+        }
+      ],
+      "tokens": [
+        {
+          "id": "t4",
+          "text": "at"
+        },
+        {
+          "id": "t3",
+          "text": "working"
+        },
+        {
+          "id": "t1",
+          "text": "Mina"
+        },
+        {
+          "id": "t6",
+          "text": "yesterday"
+        },
+        {
+          "id": "t2",
+          "text": "was"
+        },
+        {
+          "id": "t5",
+          "text": "seven"
+        }
+      ],
+      "canonicalTokenOrder": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5",
+        "t6"
+      ],
+      "acceptedTokenOrders": [
+        [
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6"
+        ],
+        [
+          "t4",
+          "t5",
+          "t6",
+          "t1",
+          "t2",
+          "t3"
+        ],
+        [
+          "t6",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5"
+        ],
+        [
+          "t6",
+          "t4",
+          "t5",
+          "t1",
+          "t2",
+          "t3"
+        ],
+        [
+          "t1",
+          "t2",
+          "t3",
+          "t6",
+          "t4",
+          "t5"
+        ]
+      ],
+      "canonicalAnswer": "Mina was working at seven yesterday.",
+      "acceptedVariants": [
+        "Mina was working at seven yesterday.",
+        "At seven yesterday Mina was working.",
+        "Yesterday Mina was working at seven.",
+        "Yesterday at seven Mina was working.",
+        "Mina was working yesterday at seven."
+      ],
+      "feedback": {
+        "explanation": "The work was in progress at a past moment, so use Mina + was working. The time phrases have more than one natural position.",
+        "explanationZh": "过去某一时刻正在进行的动作，用 Mina was working；时间短语可以有不同的自然位置。"
+      },
+      "points": 1
+    },
+    {
+      "id": "PAC04",
+      "format": "multiple_choice",
+      "targetTense": "past_continuous",
+      "instruction": "Choose the verb phrase that best completes the sentence.",
+      "instructionZh": "选择最符合语境的动词或动词短语。",
+      "promptSegments": [
+        {
+          "text": "When I entered the kitchen yesterday, Dad was halfway through chopping an onion. He ___ it as I walked in.",
+          "bold": false
+        }
+      ],
+      "options": [
+        {
+          "id": "A",
+          "text": "was chopping"
+        },
+        {
+          "id": "B",
+          "text": "is chopping"
+        },
+        {
+          "id": "C",
+          "text": "will chop"
+        },
+        {
+          "id": "D",
+          "text": "chops"
+        }
+      ],
+      "correctOptionId": "A",
+      "canonicalAnswer": "was chopping",
+      "acceptedVariants": [
+        "was chopping"
+      ],
+      "feedback": {
+        "explanation": "Dad was halfway through the action when I entered. An action in progress at a past time takes was chopping.",
+        "explanationZh": "我进厨房时，爸爸切洋葱的动作正在进行，用过去进行时 was chopping。"
+      },
+      "points": 1
+    },
+    {
+      "id": "FS01",
+      "format": "typed_correction",
+      "targetTense": "future_simple",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "The phone is ringing. I ",
+          "bold": false
+        },
+        {
+          "text": "answered",
+          "bold": true
+        },
+        {
+          "text": " it in a moment!",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "will answer",
+      "acceptedVariants": [
+        "will answer",
+        "shall answer"
+      ],
+      "feedback": {
+        "explanation": "The speaker makes a decision now about the next action. Use will + answer. Shall answer is also accepted with I.",
+        "explanationZh": "说话者此刻作出接电话的决定，用 will answer；主语为 I 时，也接受 shall answer。"
+      },
+      "points": 1
+    },
+    {
+      "id": "FS02",
+      "format": "typed_correction",
+      "targetTense": "future_simple",
+      "instruction": "Replace only the bold verb or verb phrase. Keep the same main verb.",
+      "instructionZh": "只输入加粗动词或动词短语的正确形式，保留原来的主要动词。",
+      "promptSegments": [
+        {
+          "text": "I promise I ",
+          "bold": false
+        },
+        {
+          "text": "do not forget",
+          "bold": true
+        },
+        {
+          "text": " your birthday next year.",
+          "bold": false
+        }
+      ],
+      "canonicalAnswer": "will not forget",
+      "acceptedVariants": [
+        "will not forget",
+        "won't forget",
+        "shall not forget",
+        "shan't forget"
+      ],
+      "feedback": {
+        "explanation": "This is a promise about next year. Use will not + forget (won’t forget). Shall not / shan’t is also accepted with I.",
+        "explanationZh": "这是对明年的承诺，用 will not / won’t forget；主语为 I 时，也接受 shall not / shan’t forget。"
+      },
+      "points": 1
+    },
+    {
+      "id": "FS03",
+      "format": "sentence_rebuild",
+      "targetTense": "future_simple",
+      "instruction": "Put all the words in order to make a sentence. Use each word once.",
+      "instructionZh": "把所有单词重新排序组成一句话，每个单词使用一次。",
+      "promptSegments": [
+        {
+          "text": "This is a prediction about tomorrow’s match.",
+          "bold": false
+        }
+      ],
+      "tokens": [
+        {
+          "id": "t7",
+          "text": "tomorrow"
+        },
+        {
+          "id": "t3",
+          "text": "will"
+        },
+        {
+          "id": "t1",
+          "text": "our"
+        },
+        {
+          "id": "t5",
+          "text": "the"
+        },
+        {
+          "id": "t2",
+          "text": "team"
+        },
+        {
+          "id": "t6",
+          "text": "match"
+        },
+        {
+          "id": "t4",
+          "text": "win"
+        }
+      ],
+      "canonicalTokenOrder": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5",
+        "t6",
+        "t7"
+      ],
+      "acceptedTokenOrders": [
+        [
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7"
+        ],
+        [
+          "t7",
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6"
+        ]
+      ],
+      "canonicalAnswer": "Our team will win the match tomorrow.",
+      "acceptedVariants": [
+        "Our team will win the match tomorrow.",
+        "Tomorrow our team will win the match."
+      ],
+      "feedback": {
+        "explanation": "A prediction about tomorrow uses will + win. Tomorrow can go at the beginning or the end.",
+        "explanationZh": "对未来的预测用 will win；“Tomorrow”可放在句首或句末。"
+      },
+      "points": 1
+    },
+    {
+      "id": "FS04",
+      "format": "multiple_choice",
+      "targetTense": "future_simple",
+      "instruction": "Choose the verb phrase that best completes the sentence.",
+      "instructionZh": "选择最符合语境的动词或动词短语。",
+      "promptSegments": [
+        {
+          "text": "That bag looks heavy. I ___ it for you.",
+          "bold": false
+        }
+      ],
+      "options": [
+        {
+          "id": "A",
+          "text": "carried"
+        },
+        {
+          "id": "B",
+          "text": "carry"
+        },
+        {
+          "id": "C",
+          "text": "will carry"
+        },
+        {
+          "id": "D",
+          "text": "was carrying"
+        }
+      ],
+      "correctOptionId": "C",
+      "canonicalAnswer": "will carry",
+      "acceptedVariants": [
+        "will carry"
+      ],
+      "feedback": {
+        "explanation": "The speaker offers help now. Will + carry expresses this immediate offer.",
+        "explanationZh": "说话者此刻主动提出帮忙，用 will carry。"
+      },
+      "points": 1
+    }
+  ],
+  "gradingMode": "teacher_manual",
+  "teacherReview": {
+    "panelPosition": "right",
+    "requiredActions": [
+      "Accept",
+      "Reject"
+    ],
+    "decisionAuthority": "The teacher makes the final Accept/Reject decision. Canonical answers, accepted variants, token orders, and any match result are suggestions only.",
+    "automaticMarking": false,
+    "allowUnlistedValidAnswers": true,
+    "recommendedInformation": [
+      "studentResponse",
+      "canonicalAnswer",
+      "acceptedVariants",
+      "feedback"
+    ],
+    "studentAnswerReveal": "Keep reference answers and explanations host-only until the teacher explicitly reveals them."
+  }
+}

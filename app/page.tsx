@@ -491,7 +491,7 @@ function TeacherGame({ qrReady }: { qrReady: boolean }) {
       </header>
       {state.phase === 'lobby' ? <><section className="battle-selector" aria-label="Choose grammar battle">
         <div><span>CHOOSE QUESTION SET</span><strong>Battle {state.battle} is ready</strong></div>
-        <div className="battle-tabs" role="tablist"><button type="button" role="tab" aria-selected={state.battle === 1} className={state.battle === 1 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(1)}><b>1</b><span>BATTLE 1<small>Original questions</small></span></button><button type="button" role="tab" aria-selected={state.battle === 2} className={state.battle === 2 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(2)}><b>2</b><span>BATTLE 2<small>Grammar challenge</small></span></button><button type="button" role="tab" aria-selected={state.battle === 3} className={state.battle === 3 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(3)}><b>3</b><span>BATTLE 3<small>English board game</small></span></button><button type="button" role="tab" aria-selected={state.battle === 4} className={state.battle === 4 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(4)}><b>4</b><span>BATTLE 4<small>BM board game</small></span></button><button type="button" onClick={() => { window.location.href = '/grammar-room/battle5.html'; }}><b>5</b><span>BATTLE 5<small>The Grammar Room</small></span></button><button type="button" role="tab" aria-selected={state.battle === 6} className={state.battle === 6 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(6)}><b>6</b><span>BATTLE 6<small>Witch’s Potion</small></span></button></div>
+        <div className="battle-tabs" role="tablist"><button type="button" role="tab" aria-selected={state.battle === 1} className={state.battle === 1 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(1)}><b>1</b><span>BATTLE 1<small>Original questions</small></span></button><button type="button" role="tab" aria-selected={state.battle === 2} className={state.battle === 2 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(2)}><b>2</b><span>BATTLE 2<small>Grammar challenge</small></span></button><button type="button" role="tab" aria-selected={state.battle === 3} className={state.battle === 3 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(3)}><b>3</b><span>BATTLE 3<small>English board game</small></span></button><button type="button" role="tab" aria-selected={state.battle === 4} className={state.battle === 4 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(4)}><b>4</b><span>BATTLE 4<small>BM board game</small></span></button><button type="button" onClick={() => { window.location.href = '/grammar-room/battle5.html'; }}><b>5</b><span>BATTLE 5<small>The Grammar Room</small></span></button><button type="button" role="tab" aria-selected={state.battle === 6} className={state.battle === 6 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(6)}><b>6</b><span>BATTLE 6<small>Witch’s Potion</small></span></button><button type="button" onClick={() => { window.location.href = "/?battle=7"; }}><b>7</b><span>BATTLE 7<small>Crazy Kitchen</small></span></button></div>
       </section><section className="host-lobby-layout">
         <article className="scan-panel"><p className="panel-kicker">SCAN TO JOIN</p><p>Students join at</p><div className="qr-box" ref={qrRef}>{!qrReady && 'Loading QR…'}</div><span className="or-rule">OR</span><div className="lobby-pin">{roomCode || '•••••'}</div><button type="button" className="copy-link" onClick={copyJoinLink}>Copy join link</button></article>
         <article className="roster-panel"><div className="panel-heading"><div><p className="panel-kicker">BATTLE {state.battle} · LIVE JOINING</p><h2>{players.length} players ready</h2></div><span className="roster-live"><i /> LIVE</span></div>{isBoardBattle(state.battle) && state.board && <><div className="b3-lobby-config"><div><strong>Choose team players</strong><small>One player per colour. Changing this resets team choices.</small></div><select aria-label={`Number of Battle ${state.battle} team players`} value={state.board.teamCount} disabled={transitionBusy} onChange={(event) => void boardCommand('configureTeams',{teamCount:Number(event.target.value)})}>{[2,3,4,5,6].map((count) => <option key={count} value={count}>{count} players / teams</option>)}</select></div><div className="b3-lobby-teams">{state.board.teams.map((team,index) => { const status = state.boardTeamStatuses?.[index]; return <div key={team.name} className={status?.occupied ? 'taken' : ''} style={{borderColor:team.color}}><span style={{background:team.color}}>{team.emoji}</span><b>{team.name}</b><small>{status?.occupied ? `${status.memberName ?? 'Player'} · ${status.memberCount ? 'online' : 'saved'}` : 'Available'}</small></div>; })}</div></>}{isPotionBattle(state.battle) && state.potion && <><div className="b3-lobby-config p6-lobby-config"><div><strong>Choose potion teams</strong><small>One player per colour. Supports up to ten teams.</small></div><select aria-label="Number of Battle 6 team players" value={state.potion.teamCount} disabled={transitionBusy} onChange={(event) => void potionCommand('configureTeams',{teamCount:Number(event.target.value)})}>{[2,3,4,5,6,7,8,9,10].map((count) => <option key={count} value={count}>{count} players / teams</option>)}</select></div><div className="b3-lobby-teams p6-lobby-teams">{state.potion.teams.map((team,index) => { const status = state.potionTeamStatuses?.[index]; return <div key={team.name} className={status?.occupied ? 'taken' : ''} style={{borderColor:team.color}}><span style={{background:team.color}}>{team.emoji}</span><b>{team.name}</b><small>{status?.occupied ? `${status.memberName ?? 'Player'} · ${status.memberCount ? 'online' : 'saved'}` : 'Available'}</small></div>; })}</div></>}<div className="roster-list">{players.length === 0 ? <div className="waiting-roster"><span>✦</span><strong>Waiting for players…</strong><p>Names will appear here as students join.</p></div> : players.map((player, index) => <div className="roster-row" key={player.clientId}><span className={`avatar hue-${index % 5}`}>{player.name.slice(0, 1).toUpperCase()}</span><strong>{player.name}</strong><em>{player.online ? 'Just now' : 'Reconnecting'}</em><i className={player.online ? 'online-dot' : 'offline-dot'} /></div>)}</div><div className="lobby-footer"><span>{isBoardBattle(state.battle) ? `🎨 ${occupiedBoardTeams}/${state.board?.teamCount ?? 0} team places chosen` : isPotionBattle(state.battle) ? `🧪 ${occupiedPotionTeams}/${state.potion?.teamCount ?? 0} potion teams chosen` : `🎉 ${state.onlineCount} online`}</span><button type="button" className="game-button start-button" disabled={!roomReady || transitionBusy || !teamGameReady} onClick={() => isBoardBattle(state.battle) || isPotionBattle(state.battle) ? void startBoard() : beginQuestion(0)}>{transitionBusy ? 'STARTING…' : (isBoardBattle(state.battle) || isPotionBattle(state.battle)) && !teamGameReady ? 'WAITING FOR TEAMS…' : `START BATTLE ${state.battle}`} <b>➜</b></button></div></article>
@@ -736,9 +736,9 @@ function StudentGame({ roomCode, requestedBattle }: { roomCode: string; requeste
     setStatus(command === 'plantPoison' ? 'Planting secret poison…' : 'Opening potion…');
     try {
       for (let attempt = 0; attempt < 5; attempt += 1) {
-        const current = stateRef.current.potion;
+        const current: PotionGame | null | undefined = stateRef.current.potion;
         if (!current) return;
-        const result = await gameRequest<{ state: GameState; conflict?: boolean }>({ action:'potionCommand', room:roomCode, clientId, command, expectedPotionVersion:current.version, ...details });
+        const result: { state: GameState; conflict?: boolean } = await gameRequest<{ state: GameState; conflict?: boolean }>({ action:'potionCommand', room:roomCode, clientId, command, expectedPotionVersion:current.version, ...details });
         applyState(result.state);
         if (!result.conflict) {
           setStatus(command === 'plantPoison' ? 'Secret poison saved' : 'Potion choice saved');
@@ -817,17 +817,35 @@ function StudentGame({ roomCode, requestedBattle }: { roomCode: string; requeste
 }
 
 export default function Home() {
-  const [mode, setMode] = useState<'teacher' | 'student' | null>(null);
+  const [mode, setMode] = useState<'teacher' | 'student' | 'kitchen' | null>(null);
   const [roomCode, setRoomCode] = useState('');
   const [requestedBattle, setRequestedBattle] = useState<BattleId>(1);
   const [qrReady, setQrReady] = useState(false);
+  const [kitchenSearch, setKitchenSearch] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get('battle') === '7') {
+      // Battle Seven is an isolated same-origin module; Battles 1–6 stay unchanged.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setKitchenSearch(window.location.search);
+      setMode('kitchen');
+      const syncKitchenUrl = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin || event.source !== document.querySelector<HTMLIFrameElement>('.battle7-frame')?.contentWindow || event.data?.type !== 'crazy-kitchen:navigate' || typeof event.data.search !== 'string') return;
+        const next = new URLSearchParams(event.data.search);
+        const safe = new URLSearchParams({ battle: '7' });
+        for (const key of ['host', 'join', 'screen']) {
+          const value = next.get(key);
+          if (value && /^\d{5}$/.test(value)) safe.set(key, value);
+        }
+        window.history.replaceState({}, '', '/?' + safe.toString());
+      };
+      window.addEventListener('message', syncKitchenUrl);
+      return () => window.removeEventListener('message', syncKitchenUrl);
+    }
     const room = params.get('room');
     const battle: BattleId = params.get('battle') === '6' ? 6 : params.get('battle') === '4' ? 4 : params.get('battle') === '3' ? 3 : params.get('battle') === '2' ? 2 : 1;
     // This effect intentionally selects teacher/student mode from the join URL.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (room && /^\d{5}$/.test(room)) { setRoomCode(room); setRequestedBattle(battle); setMode('student'); } else setMode('teacher');
     if (window.QRCode) setQrReady(true);
     else {
@@ -839,5 +857,5 @@ export default function Home() {
     }
   }, []);
 
-  return mode === null ? <main className="loading-screen">Opening grammartest…</main> : mode === 'student' ? <StudentGame roomCode={roomCode} requestedBattle={requestedBattle} /> : <TeacherGame qrReady={qrReady} />;
+  return mode === 'kitchen' ? <iframe className="battle7-frame" title="Battle Seven: Crazy Kitchen" src={'/battle7/index.html' + kitchenSearch} allow="fullscreen" /> : mode === null ? <main className="loading-screen">Opening grammartest…</main> : mode === 'student' ? <StudentGame roomCode={roomCode} requestedBattle={requestedBattle} /> : <TeacherGame qrReady={qrReady} />;
 }
