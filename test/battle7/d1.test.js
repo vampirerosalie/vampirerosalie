@@ -16,8 +16,8 @@ async function setup(count = 3) {
   const teams = await Promise.all(identities.map((body) => store().join(host.pin, body)));
   const action = (token, type, extra = {}) => { const room=db.room(host.pin); return store().action(host.pin, token, { type, requestId: randomUUID(), questionId:room.questions[room.questionIndex]?.id, expectedPhase:room.phase, ...extra }); };
   const start = () => action(host.hostToken, 'host:start');
-  const rush = async () => { await start(); await action(host.hostToken, 'host:reveal'); await action(host.hostToken, 'host:advance'); };
-  return { db, store, host, teams, identities, action, start, rush, tick: (ms) => time += ms, options };
+  const cooking = async () => { await start(); await action(host.hostToken, 'host:reveal'); };
+  return { db, store, host, teams, identities, action, start, cooking, tick: (ms) => time += ms, options };
 }
 
 test('ten genuinely overlapping D1 joins preserve every team and reconnect token across requests', async () => {
@@ -73,7 +73,7 @@ test('simultaneous 10-team submit and teacher review never drop rewards or expos
 
 test('competing cook requests cannot overspend; same-receipt retries keep the original cook', async () => {
   const s = await setup();
-  await s.rush();
+  await s.cooking();
   s.db.seed(s.host.pin, (room) => Object.assign(room.teams[0].inventory, { Bread: 1, Cheese: 1, Tomato: 1 }));
   const results = await Promise.allSettled([1, 2].map(() => s.action(s.teams[0].teamToken, 'pupil:cook', { ingredients: ['Bread', 'Cheese', 'Tomato'] })));
   assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);
@@ -81,7 +81,7 @@ test('competing cook requests cannot overspend; same-receipt retries keep the or
   assert.equal(s.db.room(s.host.pin).teams[0].stars, 3);
   assert.equal(s.db.room(s.host.pin).teams[0].inventory.Bread, 0);
   s.db.seed(s.host.pin, (room) => Object.assign(room.teams[0].inventory, { Bread: 1, Cheese: 1, Tomato: 1 }));
-  const body = { type: 'pupil:cook', requestId: randomUUID(), questionId:s.db.room(s.host.pin).questions[s.db.room(s.host.pin).questionIndex].id, expectedPhase:'rush', ingredients: ['Bread', 'Cheese', 'Tomato'] };
+  const body = { type: 'pupil:cook', requestId: randomUUID(), questionId:s.db.room(s.host.pin).questions[s.db.room(s.host.pin).questionIndex].id, expectedPhase:'reveal', ingredients: ['Bread', 'Cheese', 'Tomato'] };
   const same = await Promise.all(Array.from({ length: 10 }, () => s.store().action(s.host.pin, s.teams[0].teamToken, body)));
   assert.equal(new Set(same.map((r) => r.result.cook.id)).size, 1);
   assert.equal(same.filter((r) => r.replayed).length, 9);
@@ -91,7 +91,7 @@ test('competing cook requests cannot overspend; same-receipt retries keep the or
 
 test('simultaneous recipe discovery awards exactly one global bonus', async () => {
   const s = await setup();
-  await s.rush();
+  await s.cooking();
   s.db.seed(s.host.pin, (room) => room.teams.slice(0, 2).forEach((team) => Object.assign(team.inventory, { Bread: 1, Cheese: 1, Tomato: 1 })));
   const results = await Promise.all(s.teams.slice(0, 2).map((team) => s.action(team.teamToken, 'pupil:cook', { ingredients: ['Bread', 'Cheese', 'Tomato'] })));
   assert.equal(results.reduce((n, result) => n + result.result.cook.discoveryBonus, 0), 1);
@@ -100,7 +100,7 @@ test('simultaneous recipe discovery awards exactly one global bonus', async () =
 
 test('concurrent thieves cannot bypass protection or steal unavailable inventory', async () => {
   const s = await setup();
-  await s.rush();
+  await s.cooking();
   s.db.seed(s.host.pin, (room) => {
     room.teams[0].powers.push({ id: 'power-a', type: 'steal' });
     room.teams[1].powers.push({ id: 'power-b', type: 'steal' });
@@ -186,4 +186,99 @@ test('migration and first-request bootstrap are idempotent in either order', asy
   const host = await new KitchenD1Store(db, { questions }).create({ teamCount: 2 });
   assert.equal(db.room(host.pin).teamCount, 2);
   assert.equal(db.sqlite.prepare('PRAGMA foreign_key_list(kitchen_presence)').get().on_delete, 'CASCADE');
+});
+
+test('concurrent cook and teacher rejection serialize without negative inventory or reversing spent rewards',async()=>{
+ for(const cookFirst of [true,false]){
+  const s=await setup();await s.start();
+  s.db.seed(s.host.pin,r=>Object.assign(r.teams[0].inventory,{Cheese:1,Tomato:1}));
+  await s.action(s.teams[0].teamToken,'pupil:submit',{answer:'Review this answer'});
+  await s.action(s.host.hostToken,'host:review',{teamId:s.teams[0].teamId,decision:'accepted'});
+  const cook=()=>s.action(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Cheese','Tomato']});
+  const reject=()=>s.action(s.host.hostToken,'host:review',{teamId:s.teams[0].teamId,decision:'rejected'});
+  const results=await Promise.allSettled((cookFirst?[cook,reject]:[reject,cook]).map(run=>run()));
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+  assert.ok(['REWARD_ALREADY_USED','NOT_ENOUGH_INGREDIENTS'].includes(results.find(r=>r.status==='rejected').reason.code));
+  const room=s.db.room(s.host.pin),team=room.teams[0],submission=room.submissions[room.questions[0].id][team.id];
+  assert.ok(Object.values(team.inventory).every(n=>n>=0));assert.equal(team.inventory.Bread,0);
+  assert.equal(team.stars,submission.status==='accepted'?3:0);
+  if(team.stars)assert.equal(submission.rewardSpent,true);
+ }
+});
+
+test('concurrent reveal and cooking both succeed for the same question without losing either update',async()=>{
+ const s=await setup();await s.start();
+ s.db.seed(s.host.pin,r=>Object.assign(r.teams[0].inventory,{Bread:1,Cheese:1,Tomato:1}));
+ const q=s.db.room(s.host.pin).questions[0];
+ const cook={type:'pupil:cook',requestId:randomUUID(),questionId:q.id,expectedPhase:'question',ingredients:['Bread','Cheese','Tomato']};
+ await Promise.all([
+  s.action(s.host.hostToken,'host:reveal'),
+  s.store().action(s.host.pin,s.teams[0].teamToken,cook),
+ ]);
+ const room=s.db.room(s.host.pin);assert.equal(room.phase,'reveal');assert.equal(room.teams[0].stars,3);
+ assert.equal(room.teams[0].inventory.Bread,0);assert.equal(room.latestCooks.length,1);
+});
+
+test('concurrent final advance and last cook never modify scores after the game is finished',async()=>{
+ for(const cookFirst of [true,false]){
+  const s=await setup();await s.cooking();
+  s.db.seed(s.host.pin,r=>{r.questionIndex=19;Object.assign(r.teams[0].inventory,{Bread:1,Cheese:1,Tomato:1});});
+  const cook=()=>s.action(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Cheese','Tomato']});
+  const finish=()=>s.action(s.host.hostToken,'host:advance');
+  const results=await Promise.allSettled((cookFirst?[cook,finish]:[finish,cook]).map(run=>run()));
+  const room=s.db.room(s.host.pin);assert.equal(room.phase,'finished');
+  assert.equal(results.filter(r=>r.status==='rejected').length,room.teams[0].stars?0:1);
+  if(!room.teams[0].stars)assert.equal(results.find(r=>r.status==='rejected').reason.code,'STALE_CONTEXT');
+  const before=JSON.stringify(room);
+  await assert.rejects(s.action(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Cheese','Tomato']}),{code:'WRONG_PHASE'});
+  assert.equal(JSON.stringify(s.db.room(s.host.pin)),before);
+ }
+});
+
+test('concurrent lobby configuration and new station joins cannot orphan a joined team',async()=>{
+ const s=await setup(2);await s.action(s.host.hostToken,'host:configure',{teamCount:3});
+ const results=await Promise.allSettled([
+  s.store().join(s.host.pin,{clientId:randomUUID(),teamSlot:3,name:'Third team'}),
+  s.action(s.host.hostToken,'host:configure',{teamCount:2}),
+ ]);
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+ const room=s.db.room(s.host.pin);assert.ok(room.teams.every(t=>t.slot<=room.teamCount));
+ assert.equal(room.teams.length,room.teamCount);
+ assert.ok(['STATION_OCCUPIED','INVALID_ACTION'].includes(results.find(r=>r.status==='rejected').reason.code));
+});
+
+test('all twenty rounds finish through D1 without rush phases and reconnect retains the final team result',async()=>{
+ const s=await setup(2);await s.start();
+ for(let i=0;i<20;i++){
+  const room=s.db.room(s.host.pin);assert.equal(room.phase,'question');assert.equal(room.questionIndex,i);
+  await s.action(s.teams[0].teamToken,'pupil:submit',{answer:'Team answer'});
+  await s.action(s.host.hostToken,'host:review',{teamId:s.teams[0].teamId,decision:'accepted'});
+  await s.action(s.host.hostToken,'host:reveal');
+  await s.action(s.host.hostToken,'host:advance');
+ }
+ const state=await s.store().state(s.host.pin,s.teams[0].teamToken);
+ assert.equal(state.phase,'finished');assert.equal(state.questionNumber,20);assert.deepEqual(state.winners,[s.teams[0].teamId]);
+ assert.equal(state.me.inventory.Bread,20);assert.equal(state.cookingAvailable,false);
+ assert.deepEqual(await s.store().join(s.host.pin,s.identities[0]),s.teams[0]);
+ assert.equal((await s.store().state(s.host.pin,s.teams[0].teamToken)).me.id,s.teams[0].teamId);
+});
+
+test('concurrent basic cooks spend stock once and replay the same one-star receipt without discovery bonuses',async()=>{
+ const s=await setup();await s.start();
+ s.db.seed(s.host.pin,r=>r.teams.slice(0,2).forEach(team=>Object.assign(team.inventory,{Chocolate:1,Chicken:1,Mushroom:1})));
+ const room=s.db.room(s.host.pin);
+ const body={type:'pupil:cook',requestId:randomUUID(),questionId:room.questions[0].id,expectedPhase:'question',ingredients:['Chocolate','Chicken','Mushroom']};
+ const results=await Promise.all([
+  ...Array.from({length:8},()=>s.store().action(s.host.pin,s.teams[0].teamToken,body)),
+  s.store().action(s.host.pin,s.teams[1].teamToken,{...body,requestId:randomUUID()}),
+ ]);
+ assert.equal(results.filter(r=>r.replayed).length,7);
+ assert.equal(new Set(results.slice(0,8).map(r=>r.result.cook.id)).size,1);
+ assert.ok(results.every(r=>r.result.cook.starsEarned===1&&r.result.cook.discoveryBonus===0&&r.result.cook.dish.type==='basic'));
+ const saved=s.db.room(s.host.pin);assert.equal(saved.latestCooks.length,2);assert.deepEqual(saved.discoveries,{});
+ for(const team of saved.teams.slice(0,2)){
+  assert.equal(team.stars,1);assert.equal(Object.values(team.inventory).reduce((a,b)=>a+b,0),0);assert.deepEqual(team.recipes,{});
+ }
+ await assert.rejects(s.action(s.teams[0].teamToken,'pupil:cook',{ingredients:body.ingredients}),{code:'NOT_ENOUGH_INGREDIENTS'});
+ assert.equal(s.db.room(s.host.pin).teams[0].stars,1);
 });

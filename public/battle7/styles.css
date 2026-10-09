@@ -17,3 +17,18 @@ body[data-role="join"] .game-header{max-width:690px;padding:18px 23px;border-bot
 @media print{.game-header,.privacy-note,.review-panel,.modal-backdrop,.pending-strip,.toast{display:none!important}.host-layout{display:block}.kitchen-scene{max-width:100%}.leaderboard{grid-template-columns:repeat(5,1fr)}}
 .landing-nav{display:flex;gap:26px;align-items:center}.all-battles{font-size:10px;color:var(--muted);white-space:nowrap}.game-header .all-battles{font-size:9px}.role-tag{padding-left:16px}.header-brand{gap:15px}@media(max-width:700px){.landing-nav{gap:16px}.landing-nav .text-link{font-size:10px}.game-header .all-battles{display:none}}
 @media(max-width:450px){body[data-role="landing"]{overflow-x:hidden}.hero-copy h1{font-size:clamp(40px,11vw,43px);letter-spacing:-2px}.hero-copy h1 em{letter-spacing:-2px}.hero-art{margin-right:0}.art-sticker{right:8px}.floating-recipe{right:8px;max-width:calc(100% - 16px)}}
+
+/* Cooking never blocks the lesson or captures the team's focus. */
+.cook-ready{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0;padding:18px;background:#e9f2d8;border:1px solid #b2c6a8;border-radius:18px}
+.cook-ready p{margin:6px 0 0;font-size:13px;line-height:1.5}
+.cook-ready .button{flex-shrink:0}
+.cook-anytime-note{font-size:14px;line-height:1.6;margin:0 0 20px;color:#4e6256}
+.dish-notice{position:fixed;z-index:80;right:20px;bottom:20px;width:min(380px,calc(100vw - 32px));display:flex;align-items:center;gap:12px;padding:16px 46px 16px 18px;border:2px solid #7da37c;background:#f1f8e9;color:#173e35;border-radius:18px;box-shadow:0 8px 32px #173e3529;pointer-events:auto}
+.dish-notice.burnt{background:#fff0e1;border-color:#d69e6e}
+.dish-notice>.icon-button{position:absolute;right:6px;top:6px}
+.dish-notice-icon{font-size:32px}.dish-notice b{display:block;font-size:17px}.dish-notice p{margin:4px 0 0;font-size:13px}
+.phone-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+.public-cook-popup{pointer-events:none}
+@media(max-width:480px){.phone-tab{padding:12px 5px;font-size:12px}.dish-notice{right:16px;bottom:16px}.cook-ready{align-items:flex-start;flex-direction:column}}
+
+body[data-embedded="true"][data-role="host"]>.game-header,body[data-embedded="true"][data-role="host"] #app>.game-header{display:none}

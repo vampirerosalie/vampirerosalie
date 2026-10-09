@@ -107,7 +107,7 @@ test('CAS overload and post-commit uncertainty are retriable without inventing a
   assert.equal((await recovered.json()).replayed, true);
 });
 
-test('public and rival cook reveals hide successful and failed ingredient combinations',async()=>{
+test('public and rival cook reveals hide named and basic ingredient combinations',async()=>{
  const {send,db}=setup();
  const host=await (await send('rooms',{teamCount:2})).json();
  const teams=[];
@@ -132,9 +132,9 @@ test('public and rival cook reveals hide successful and failed ingredient combin
   const state=await(await send(`rooms/${host.pin}/state`,undefined,token)).json();
   assert.equal(state.latestCooks.length,2);
   assertNoRecipeFields(state.latestCooks);
-  assert.deepEqual(state.latestCooks.map(c=>c.dish.name),['Mini Pizza','Burnt Disaster']);
-  assert.deepEqual(state.latestCooks.map(c=>c.dish.success),[true,false]);
-  assert.deepEqual(state.latestCooks.map(c=>c.starsEarned),[3,0]);
+  assert.deepEqual(state.latestCooks.map(c=>c.dish.name),['Mini Pizza','Creative Kitchen Dish']);
+  assert.deepEqual(state.latestCooks.map(c=>c.dish.success),[true,true]);
+  assert.deepEqual(state.latestCooks.map(c=>c.starsEarned),[3,1]);
  }
  for(const token of [host.hostToken,teams[0].teamToken]){
   const state=await(await send(`rooms/${host.pin}/state`,undefined,token)).json();
@@ -163,5 +163,32 @@ test('all five rebuild HTTP snapshots use opaque presentation IDs and preserve h
    assert.ok(state.question.tokens.every(t=>!original[index].tokens.some(source=>source.id===t.id)));
    assert.deepEqual(state.question.tokens,teacher.question.tokens);
   }
+ }
+});
+
+test('every teacher-only API action rejects independent student/public/forged capabilities without changing the room',async()=>{
+ const {send,db}=setup(),host=await(await send('rooms',{teamCount:2})).json();
+ const teams=[];for(let slot=1;slot<=2;slot++)teams.push(await(await send(`rooms/${host.pin}/join`,{clientId:randomUUID(),teamSlot:slot,name:`Role ${slot}`})).json());
+ for(const type of ['host:start','host:configure','host:review','host:reveal','host:advance','host:end-rush','host:close'])for(const [token,status] of [[undefined,401],[teams[0].teamToken,403],[teams[1].teamToken,403],['0'.repeat(64),401]]){
+  const before=JSON.stringify(db.room(host.pin));const result=await send(`rooms/${host.pin}/action`,{type,requestId:randomUUID(),teamCount:2,teamId:teams[0].teamId,decision:'accepted',questionId:'forged',expectedPhase:'question'},token);assert.equal(result.status,status,`${type} role rejected`);assert.equal(JSON.stringify(db.room(host.pin)),before);
+ }
+});
+
+test('HTTP finish/early close keep both independent teams read-only and reconnectable, including replayed receipts',async()=>{
+ for(const early of [false,true]){
+  const {send,db}=setup(),host=await(await send('rooms',{teamCount:2})).json(),identities=[],teams=[];
+  for(let slot=1;slot<=2;slot++){const body={clientId:randomUUID(),teamSlot:slot,name:`Final team ${slot}`};identities.push(body);teams.push(await(await send(`rooms/${host.pin}/join`,body)).json());}
+  async function act(token,type,extra={}){const r=db.room(host.pin);const body={type,requestId:randomUUID(),questionId:r.questions[r.questionIndex]?.id,expectedPhase:r.phase,...extra};const response=await send(`rooms/${host.pin}/action`,body,token);assert.equal(response.status,200,`${type} should succeed`);return{body,data:await response.json()};}
+  await act(host.hostToken,'host:start');
+  const question=db.room(host.pin).questions[0].id;
+  for(let i=0;i<2;i++){await act(teams[i].teamToken,'pupil:submit',{questionId:question,answer:'A reviewed answer'});await act(host.hostToken,'host:review',{questionId:question,teamId:teams[i].teamId,decision:'accepted'});}
+  db.seed(host.pin,r=>Object.assign(r.teams[0].inventory,{Bread:1,Cheese:1,Tomato:1}));const cooked=await act(teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Cheese','Tomato']});
+  if(early)await act(host.hostToken,'host:close');else{for(let round=0;round<20;round++){await act(host.hostToken,'host:reveal');await act(host.hostToken,'host:advance');}}
+  for(let i=0;i<2;i++){
+   const rejoined=await(await send(`rooms/${host.pin}/join`,identities[i])).json();assert.equal(rejoined.teamToken,teams[i].teamToken);
+   const state=await(await send(`rooms/${host.pin}/state`,undefined,rejoined.teamToken)).json();assert.equal(state.role,'team');assert.equal(state.me.id,teams[i].teamId);assert.equal(state.phase,early?'closed':'finished');assert.equal(state.answerKey,undefined);assert.equal(state.settings,undefined);assert.equal(state.submissions,undefined);assert.equal(state.cookingAvailable,false);assert.ok(state.winners.includes(teams[0].teamId));
+   const denied=await send(`rooms/${host.pin}/action`,{type:'host:configure',requestId:randomUUID(),teamCount:3},rejoined.teamToken);assert.equal(denied.status,403);
+  }
+  const replay=await(await send(`rooms/${host.pin}/action`,cooked.body,teams[0].teamToken)).json();assert.equal(replay.replayed,true);assert.deepEqual(replay.result,cooked.data.result);assert.equal(db.room(host.pin).teams[0].stars,3);
  }
 });

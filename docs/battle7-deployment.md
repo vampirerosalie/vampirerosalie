@@ -39,7 +39,7 @@ No push, remote migration, or production deployment is performed by the test/bui
 - A room has a monotonically increasing integer version. Joins/actions save with an atomic `UPDATE ... WHERE version = ? AND expires_at > ?`.
 - A losing compare-and-swap discards all local changes and reloads the latest state. Inventory, target protection, phase, and the global discovery bonus are revalidated. Up to 20 attempts are made with short jittered pauses; exhausted contention returns `503 CONCURRENT_UPDATE` and `Retry-After: 1`.
 - Every action requires a stable `requestId`. Its actor-scoped signature and result are stored in the same JSON write as the gameplay mutation. A repeated ID returns the original result, and a different payload with the same ID returns `409 RECEIPT_CONFLICT`.
-- Round-sensitive reveal, advance, end-cooking, cook and steal commands must capture `questionId` and `expectedPhase` when first created. These stay fixed on retry. A never-committed late command returns `409 STALE_CONTEXT`; an already-committed receipt is replayed before checking the current phase.
+- Round-sensitive reveal, advance, cook and steal commands capture `questionId` and `expectedPhase` when first created. Cooking/stealing may cross question-to-reveal for the same question, but never act on a later question. These stay fixed on retry. A never-committed late command returns `409 STALE_CONTEXT`; an already-committed receipt is replayed before checking the current phase.
 - Clients must retain and retry the same pending action/requestId after network failure, timeout, `429`, or `5xx`. A DB write can commit even if its response is lost. A new ID is not an appropriate retry after an uncertain response.
 - A join's client identity and per-room secret yield the same team token on reconnect, including after a Worker restart or a lost join response. The secret is persisted in a server-only column; bearer credentials and question answer keys are not included in public/team snapshots.
 - Room creation uses a collision-safe insert and an atomic 100-active-room capacity check. Creation is not action-receipt-based: a fresh create request can create another room, so the UI should not automatically repeat a teacher's creation after an uncertain response.
@@ -59,7 +59,7 @@ Rooms expire 48 hours after creation and become inaccessible immediately at expi
 
 Requests accept JSON objects only, capped at 8 KiB by actual byte count. POST requests reject foreign origins. Responses use `Cache-Control: no-store`. Bearer keys are accepted only via `Authorization`. The API has an isolate-local burst guard, not a distributed abuse quota; the authoritative room capacity and all gameplay limits are enforced in D1.
 
-A finite 20-question game stores up to 100 recent cooks so the projector can catch up on all practical cooking events. There are 40 ordinary recipes and one Sneaky Snack recipe, 2–10 configured teams, and every question is followed by a teacher-paced cooking interval.
+A finite 20-question game stores up to 100 recent cooks so the projector can catch up on all practical cooking events. There are 40 ordinary recipes and one Sneaky Snack recipe, 2–10 configured teams, and teams may cook anytime during an active question or reveal. Reveal advances directly to the next question (or final results after question 20). Exactly three ingredients are consumed. Legacy saved rush states remain untimed and can advance immediately.
 
 ## Verification coverage
 
@@ -72,3 +72,15 @@ A finite 20-question game stores up to 100 recent cooks so the projector can cat
 - HTTP route contract, local QR SVG, same-origin links, byte limits, role checks, answer/credential hiding, and retriable error responses.
 
 SQLite adapter tests validate SQL and algorithm behavior locally. They do not replace a production-region load test, device testing on school Wi-Fi, or a deployed Worker/D1 smoke test.
+
+
+## October 9 flow revision (base a1f58a3)
+
+- Selecting Battle 7 immediately opens/resumes the teacher lobby with the shared Grammar Battle header, battle chooser, QR/PIN and live teams. Configure 2–10 team stations before starting.
+- QR joins are student-only. A tab-scoped navigation marker preserves the student route through back, refresh and BFCache; teacher and pupil tabs can share localStorage without sharing role intent. Actual API permissions still require the server-validated host/team bearer capability.
+- Early End game and normal final results retain each student’s team/results view. Students may enter a new student PIN, never fall through to the old teacher menu.
+- The phone has Question, Cook, Pantry and Recipes tabs. Cooking is available during questions and reveals, and its result is a nonblocking dismissible notice.
+- Changing an accepted answer to rejected is allowed only until its awarded ingredient has been consumed or stolen. This prevents negative inventory and reversal/re-accept duplication; the teacher review explains a locked reward.
+- No new database migration or credential grant is required. Recipes stay hidden until discovered. Every ordinary valid three-ingredient cook now earns at least one star: uncatalogued combinations make a one-star basic dish, without a first-discovery bonus or a recipe-book unlock. Fixed named recipes keep their existing values and first-discovery bonuses. Sneaky Snack still gives a useful steal power instead of stars.
+- Revision checks: 87 automated tests (HTTP, real SQLite D1 adapter, frontend DOM contracts and shell lifecycle), TypeScript, focused lint and build pass. Aggregate lint still reports the pre-existing vendor `public/grammar-room/qrcode.min.js` `no-this-alias` error.
+- Real browser UI verification of this revision remains pending: the local executor could not launch Chromium because of a socket restriction, and the cloud browser could not reach the isolated local preview. The included browser QA script must run on a supported local preview before deployment. No production test or deployment was performed by this revision.

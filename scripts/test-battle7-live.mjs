@@ -23,7 +23,7 @@ async function request(path, { body, token } = {}) {
 const health = await request('health');
 assert.equal(health.data.ok, true, 'Battle 7 health probe failed.');
 
-const { data: host } = await request('rooms', { body: { teamCount: 2, rushSeconds: 15, roomName: 'Battle 7 deployment smoke' } });
+const { data: host } = await request('rooms', { body: { teamCount: 2, roomName: 'Battle 7 deployment smoke' } });
 assert.match(host.pin, /^\d{5}$/, 'Room PIN was not created.');
 assert.match(host.hostToken, /^[a-f0-9]{64}$/, 'Host token was not created.');
 
@@ -70,9 +70,11 @@ const revealed = (await request(`rooms/${host.pin}/state`, { token: host.hostTok
 assert.equal(revealed.phase, 'reveal');
 assert.ok(revealed.answerReveal?.canonicalAnswer, 'Teacher reveal did not include the answer.');
 await act(host.hostToken, 'host:advance', { questionId, expectedPhase: 'reveal' });
-const rush = (await request(`rooms/${host.pin}/state`, { token: teams[0].teamToken })).data;
-assert.equal(rush.phase, 'rush', 'Cooking phase did not open.');
-assert.equal(Object.values(rush.me.inventory).reduce((total, quantity) => total + quantity, 0), 1, 'Accepted answer did not award one ingredient.');
+const nextQuestion = (await request(`rooms/${host.pin}/state`, { token: teams[0].teamToken })).data;
+assert.equal(nextQuestion.phase, 'question', 'Next question should open without a cooking timer.');
+assert.equal(nextQuestion.cookingAvailable, true, 'Cooking must remain available during questions.');
+assert.equal(nextQuestion.rushEndsAt, null, 'No forced cooking timer should remain.');
+assert.equal(Object.values(nextQuestion.me.inventory).reduce((total, quantity) => total + quantity, 0), 1, 'Accepted answer did not award one ingredient.');
 
 await act(host.hostToken, 'host:close');
 
@@ -80,5 +82,5 @@ console.log(JSON.stringify({
   ok: true,
   endpoint: api,
   room: host.pin,
-  checks: ['health', 'room creation', 'two team joins', 'QR', 'privacy', 'submissions', 'teacher review', 'reveal', 'cooking phase', 'room close'],
+  checks: ['health', 'room creation', 'two team joins', 'QR', 'privacy', 'submissions', 'teacher review', 'reveal', 'anytime cooking', 'room close'],
 }, null, 2));
