@@ -88,7 +88,7 @@ test('Battle 7 entry immediately creates the teacher lobby and restores its capa
  const {store,host}=fixture(),saved=new Map(),sessionSaved=new Map(),normal=adapter(store);let creates=0;
  const fetcher=(path,options)=>{if(path==='/api/kitchen/rooms'){creates++;return response(host,201);}return normal(path,options);};
  const h=harness({saved,sessionSaved,search:'?teacher=1',boot:true,fetcher});await until(()=>h.frontend.get().state?.role==='host');
- assert.equal(creates,1);assert.equal(h.frontend.get().mode,'host');assert.match(h.frontend.get().html,/Scan. Join. Get cooking./);assert.match(h.frontend.get().html,/Start Battle 7/);assert.doesNotMatch(h.frontend.get().html,/A little grammar|create-form|rush-length/);
+ assert.equal(creates,1);assert.equal(h.frontend.get().mode,'host');assert.match(h.frontend.get().html,/Scan. Join. Get cooking./);assert.match(h.frontend.get().html,/host-join-details/);assert.match(h.frontend.get().html,/SCAN TO JOIN/);assert.match(h.frontend.get().html,/Start Battle 7/);assert.doesNotMatch(h.frontend.get().html,/A little grammar|create-form|rush-length/);
  const refreshed=harness({saved,sessionSaved,search:h.location.search,boot:true,fetcher});await until(()=>refreshed.frontend.get().state?.role==='host');assert.equal(creates,1);assert.equal(refreshed.frontend.get().token,host.hostToken);
 });
 
