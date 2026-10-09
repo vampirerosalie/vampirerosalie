@@ -133,6 +133,29 @@ test('concurrent thieves cannot bypass protection or steal unavailable inventory
   assert.equal(room.teams.reduce((n, team) => n + team.inventory.Egg, 0), 1);
 });
 
+test('D1 commits each Steal 1 Star power once and serializes simultaneous attackers behind per-question protection', async () => {
+  const s = await setup();
+  await s.cooking();
+  s.db.seed(s.host.pin, (room) => {
+    room.teams[0].powers.push({ id: 'retry-star-power', type: 'steal-star' });
+    room.teams[1].stars = 2;
+  });
+  const room = s.db.room(s.host.pin), questionId = room.questions[room.questionIndex].id;
+  const body = { type: 'pupil:steal-star', requestId: randomUUID(), questionId, expectedPhase: room.phase, powerId: 'retry-star-power', targetTeamId: s.teams[1].teamId };
+  const retries = await Promise.all(Array.from({ length: 10 }, () => s.store().action(s.host.pin, s.teams[0].teamToken, body)));
+  assert.equal(retries.filter((result) => result.replayed).length, 9);
+  let saved = s.db.room(s.host.pin);assert.equal(saved.teams[0].stars, 1);assert.equal(saved.teams[1].stars, 1);assert.equal(saved.teams[0].powers.length, 0);assert.equal(saved.incomingStarThefts[s.teams[1].teamId], true);
+  s.db.seed(s.host.pin, (next) => {
+    next.teams[1].powers.push({ id: 'star-power-b', type: 'steal-star' });
+    next.teams[2].powers.push({ id: 'star-power-c', type: 'steal-star' });
+  });
+  const attempts = await Promise.allSettled([1, 2].map((i) => s.action(s.teams[i].teamToken, 'pupil:steal-star', { powerId: `star-power-${i === 1 ? 'b' : 'c'}`, targetTeamId: s.teams[0].teamId })));
+  assert.equal(attempts.filter((result) => result.status === 'fulfilled').length, 1);
+  assert.equal(attempts.find((result) => result.status === 'rejected').reason.code, 'STAR_TARGET_PROTECTED');
+  saved = s.db.room(s.host.pin);assert.equal(saved.teams[0].stars, 0);assert.equal(saved.teams.reduce((sum, team) => sum + team.stars, 0), 2);assert.equal(saved.teams.slice(1).reduce((sum, team) => sum + team.powers.filter((power) => power.type === 'steal-star').length, 0), 1);
+  const reconnected = await s.store().state(s.host.pin, s.teams[0].teamToken);assert.equal(reconnected.me.stars, 0);assert.equal(reconnected.me.powers.length, 0);
+});
+
 test('ambiguous connection drop after D1 commit recovers safely from persisted receipt', async () => {
   const s = await setup();
   const body = { type: 'host:start', requestId: randomUUID() };

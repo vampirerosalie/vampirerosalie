@@ -40,3 +40,8 @@ body[data-role="join"] .game-header{max-width:690px;padding:18px 23px;border-bot
 @media(max-width:450px){.answer-countdown.phone{margin-bottom:15px}.answer-countdown.phone>strong{font-size:36px}.answer-countdown.phone>small{font-size:9px}.projector-side .answer-countdown>strong{font-size:40px}}
 
 body[data-embedded="true"][data-role="host"]>.game-header,body[data-embedded="true"][data-role="host"] #app>.game-header{display:none}
+
+/* Star Snatcher Tart keeps the existing power-card layout with a distinct saved-star cue. */
+.powers-card.star-snatcher{border-color:#d9b950;background:linear-gradient(135deg,#fff7ce,#f4dfb9)}
+.powers-card.star-snatcher .powers-heading .eyebrow,.powers-card.star-snatcher .powers-heading h2>span{color:#8b6512}
+.powers-card.star-snatcher p,.powers-card.star-snatcher>small{color:#765c25}

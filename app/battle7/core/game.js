@@ -43,7 +43,8 @@ const entries = [
  ['Fruity Chicken Rice','🍚',3,'Fruit Rice Chicken'],
  ['Cheesy Mushroom Risotto','🍚',2,'Mushroom Rice Cheese'],
  ['Garden Toast','🍞',1,'Bread Tomato Mushroom'],
- ['Sneaky Snack','🦝',0,'Bread Mushroom Fruit','steal'],
+  ['Sneaky Snack','🦝',0,'Bread Mushroom Fruit','steal'],
+  ['Star Snatcher Tart','🥧',0,'Bread Cheese Chocolate','steal-star'],
 ];
 export const RECIPES = Object.fromEntries(entries.map(([name,emoji,stars,items,type='dish']) => {
  const ingredients=items.split(' '); return [recipeKey(ingredients),{name,emoji,stars,ingredients,type,success:true}];
@@ -96,7 +97,7 @@ export class GameStore {
   let pin;do{pin=String(randomInt(10000,100000));}while(this.rooms.has(pin));
   const hostToken=randomBytes(32).toString('hex');const now=this.now();
   const questionSet=shuffle(this.questions).map(q=>({...structuredClone(q),...(q.options?{options:shuffle(q.options)}:{})}));
-  const r={pin,roomName:cleanName(roomName,48)||'Crazy Kitchen',hostHash:hash(hostToken),createdAt:now,expiresAt:now+this.retentionMs,phase:'lobby',version:1,teamCount,questionIndex:-1,questions:questionSet,teams:[],submissions:{},discoveries:{},latestCooks:[],events:[],rushEndsAt:null,answerCountdownEndsAt:null,rushNumber:0,incomingThefts:{},receipts:{},weights:this.weights};
+  const r={pin,roomName:cleanName(roomName,48)||'Crazy Kitchen',hostHash:hash(hostToken),createdAt:now,expiresAt:now+this.retentionMs,phase:'lobby',version:1,teamCount,questionIndex:-1,questions:questionSet,teams:[],submissions:{},discoveries:{},latestCooks:[],events:[],rushEndsAt:null,answerCountdownEndsAt:null,rushNumber:0,incomingThefts:{},incomingStarThefts:{},receipts:{},weights:this.weights};
   this.save(r);this.rooms.set(pin,r);return {pin,hostToken};
  }
  teamToken(r,clientId){return createHmac('sha256',this.secret).update(`team:${r.pin}:${r.createdAt}:${clientId}`).digest('hex');}
@@ -121,12 +122,12 @@ export class GameStore {
   const q=this.currentQuestion(r);const submissions=q?r.submissions[q.id]??{}:{};
   const showAnswer=['reveal','rush','finished'].includes(r.phase);
   const tokenId=id=>createHmac('sha256',this.secret).update(`rebuild:${r.pin}:${r.createdAt}:${q?.id}:${id}`).digest('hex').slice(0,24);
-  const data={pin:r.pin,roomName:r.roomName,phase:r.phase,version:r.version,serverTime:this.now(),expiresAt:r.expiresAt,role:auth.role,teamCount:r.teamCount,questionNumber:r.questionIndex+1,totalQuestions:r.questions.length,question:publicQuestion(q,tokenId),answerReveal:showAnswer&&q?{canonicalAnswer:q.canonicalAnswer,feedback:q.feedback}:null,cookingAvailable:this.cookingAvailable(r),rushEndsAt:null,answerCountdownEndsAt:r.answerCountdownEndsAt??null,rushEnded:false,rushNumber:r.rushNumber??0,teams:r.teams.map(t=>({id:t.id,slot:t.slot,name:t.name,stars:t.stars,inventoryCount:countBag(t.inventory),acceptedCount:Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length,submissionStatus:submissions[t.id]?.status??'waiting',online:(this.lastSeen.get(`${r.pin}:${t.id}`)??0)>this.now()-20000,recipesCount:Object.keys(t.recipes).length,canBeStolenFrom:this.cookingAvailable(r)&&countBag(t.inventory)>0&&!r.incomingThefts[t.id]})).sort((a,b)=>a.slot-b.slot),latestCooks:r.latestCooks.slice(-100).map(cook=>visibleCook(cook,auth)),events:r.events.slice(-10),takenSlots:r.teams.map(t=>t.slot),winners:['finished','closed'].includes(r.phase)?r.teams.filter(t=>t.stars===Math.max(...r.teams.map(t=>t.stars))).filter(t=>Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length===Math.max(...r.teams.filter(x=>x.stars===Math.max(...r.teams.map(y=>y.stars))).map(x=>Object.values(r.submissions).filter(s=>s[x.id]?.status==='accepted').length))).map(t=>t.id):[]};
-  if(auth.role==='host'){data.answerKey=q?Object.fromEntries(['canonicalAnswer','acceptedVariants','correctOptionId','targetTense','feedback','canonicalTokenOrder','acceptedTokenOrders'].filter(k=>q[k]!==undefined).map(k=>[k,k==='canonicalTokenOrder'?q[k].map(tokenId):k==='acceptedTokenOrders'?q[k].map(order=>order.map(tokenId)):q[k]])):null;data.submissions=r.teams.map(t=>{const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];return{teamId:t.id,teamName:t.name,answer:s?.answer??'',status:s?.status??'waiting',unanswered:Boolean(s?.unanswered),reward:rewards[0]??null,rewards,rewardLocked:rewardLocked(t,s)};});data.settings={cookingMode:'anytime',teamCount:r.teamCount,ingredientWeights:r.weights,theftRecipe:'Sneaky Snack',theftMaxIncomingPerQuestion:1};data.joinPath=`/?battle=7&join=${r.pin}`;}
+  const data={pin:r.pin,roomName:r.roomName,phase:r.phase,version:r.version,serverTime:this.now(),expiresAt:r.expiresAt,role:auth.role,teamCount:r.teamCount,questionNumber:r.questionIndex+1,totalQuestions:r.questions.length,question:publicQuestion(q,tokenId),answerReveal:showAnswer&&q?{canonicalAnswer:q.canonicalAnswer,feedback:q.feedback}:null,cookingAvailable:this.cookingAvailable(r),rushEndsAt:null,answerCountdownEndsAt:r.answerCountdownEndsAt??null,rushEnded:false,rushNumber:r.rushNumber??0,teams:r.teams.map(t=>({id:t.id,slot:t.slot,name:t.name,stars:t.stars,inventoryCount:countBag(t.inventory),acceptedCount:Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length,submissionStatus:submissions[t.id]?.status??'waiting',online:(this.lastSeen.get(`${r.pin}:${t.id}`)??0)>this.now()-20000,recipesCount:Object.keys(t.recipes).length,canBeStolenFrom:this.cookingAvailable(r)&&countBag(t.inventory)>0&&!r.incomingThefts[t.id],canLoseStar:this.cookingAvailable(r)&&t.stars>0&&!(r.incomingStarThefts??{})[t.id]})).sort((a,b)=>a.slot-b.slot),latestCooks:r.latestCooks.slice(-100).map(cook=>visibleCook(cook,auth)),events:r.events.slice(-10),takenSlots:r.teams.map(t=>t.slot),winners:['finished','closed'].includes(r.phase)?r.teams.filter(t=>t.stars===Math.max(...r.teams.map(t=>t.stars))).filter(t=>Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length===Math.max(...r.teams.filter(x=>x.stars===Math.max(...r.teams.map(y=>y.stars))).map(x=>Object.values(r.submissions).filter(s=>s[x.id]?.status==='accepted').length))).map(t=>t.id):[]};
+  if(auth.role==='host'){data.answerKey=q?Object.fromEntries(['canonicalAnswer','acceptedVariants','correctOptionId','targetTense','feedback','canonicalTokenOrder','acceptedTokenOrders'].filter(k=>q[k]!==undefined).map(k=>[k,k==='canonicalTokenOrder'?q[k].map(tokenId):k==='acceptedTokenOrders'?q[k].map(order=>order.map(tokenId)):q[k]])):null;data.submissions=r.teams.map(t=>{const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];return{teamId:t.id,teamName:t.name,answer:s?.answer??'',status:s?.status??'waiting',unanswered:Boolean(s?.unanswered),reward:rewards[0]??null,rewards,rewardLocked:rewardLocked(t,s)};});data.settings={cookingMode:'anytime',teamCount:r.teamCount,ingredientWeights:r.weights,theftRecipe:'Sneaky Snack',starTheftRecipe:'Star Snatcher Tart',theftMaxIncomingPerQuestion:1,starTheftMaxIncomingPerQuestion:1};data.joinPath=`/?battle=7&join=${r.pin}`;}
   if(auth.role==='team'){const t=auth.team;const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];data.me={id:t.id,name:t.name,slot:t.slot,stars:t.stars,inventory:{...t.inventory},recipes:Object.values(t.recipes),powers:t.powers.map(p=>({...p})),submission:s?{answer:s.answer,status:s.status,unanswered:Boolean(s.unanswered),reward:rewards[0]??null,rewards}:null};}
   return data;
  }
- event(r,text){r.events.push({id:randomBytes(8).toString('hex'),text,at:this.now()});r.events=r.events.slice(-100);}
+ event(r,text,type='info'){r.events.push({id:randomBytes(8).toString('hex'),text,type,at:this.now()});r.events=r.events.slice(-100);}
  ingredient(r){const total=Object.values(r.weights).reduce((a,b)=>a+b,0);let pick=this.random(total);for(const [item,weight] of Object.entries(r.weights)){pick-=weight;if(pick<0)return item;}throw new Error('Invalid ingredient roll');}
  consume(r,team,ingredients){
   for(const item of ingredients)team.inventory[item]--;
@@ -147,8 +148,8 @@ export class GameStore {
   // A never-committed offline command must not act on a later round/phase.
   // This check deliberately follows receipt replay, so a committed retry can
   // still retrieve its original result after the class has moved on.
-  if(['host:start-countdown','host:reveal','host:advance','host:end-rush','pupil:cook','pupil:steal'].includes(type)){
-   const sameCookingWindow=['pupil:cook','pupil:steal'].includes(type)&&this.cookingAvailable(r)&&['question','reveal','rush'].includes(body.expectedPhase);
+  if(['host:start-countdown','host:reveal','host:advance','host:end-rush','pupil:cook','pupil:steal','pupil:steal-star'].includes(type)){
+   const sameCookingWindow=['pupil:cook','pupil:steal','pupil:steal-star'].includes(type)&&this.cookingAvailable(r)&&['question','reveal','rush'].includes(body.expectedPhase);
    if(body.questionId!==this.currentQuestion(r)?.id||(body.expectedPhase!==r.phase&&!sameCookingWindow))fail('That round or phase has ended. Nothing was changed.','STALE_CONTEXT',409);
   }
   const backup=structuredClone(r);let result;
@@ -199,7 +200,7 @@ export class GameStore {
     if(!['reveal','rush'].includes(r.phase))fail('Reveal the answer before moving on.','WRONG_PHASE',409);
     r.rushEndsAt=null;r.answerCountdownEndsAt=null;
     if(r.questionIndex===r.questions.length-1){r.phase='finished';this.event(r,'Service complete. Meet your Master Chefs!');}
-    else{r.questionIndex++;r.phase='question';r.incomingThefts={};}
+    else{r.questionIndex++;r.phase='question';r.incomingThefts={};r.incomingStarThefts={};}
     return{phase:r.phase};
    }
    // Backward-compatible acknowledgement for an old client's queued command.
@@ -211,12 +212,12 @@ export class GameStore {
     const needed=freshBag();for(const x of xs)needed[x]++;const t=auth.team;if(INGREDIENTS.some(x=>t.inventory[x]<needed[x]))fail('Your ingredient bag changed. Choose again.','NOT_ENOUGH_INGREDIENTS',409);
     this.consume(r,t,xs);
     const key=recipeKey(xs);const recipe=RECIPES[key];let dish,starsEarned=0,discoveryBonus=0,isNewForTeam=false,power=null;
-    if(recipe){dish={...recipe};isNewForTeam=!t.recipes[key];t.recipes[key]=dish;if(recipe.type==='steal'){power={id:randomBytes(10).toString('hex'),type:'steal'};t.powers.push(power);}else{if(!r.discoveries[key]){r.discoveries[key]={teamId:t.id,at:this.now()};discoveryBonus=1;}starsEarned=recipe.stars+discoveryBonus;t.stars+=starsEarned;}}
+    if(recipe){dish={...recipe};isNewForTeam=!t.recipes[key];t.recipes[key]=dish;if(['steal','steal-star'].includes(recipe.type)){power={id:randomBytes(10).toString('hex'),type:recipe.type};t.powers.push(power);}else{if(!r.discoveries[key]){r.discoveries[key]={teamId:t.id,at:this.now()};discoveryBonus=1;}starsEarned=recipe.stars+discoveryBonus;t.stars+=starsEarned;}}
     // Any valid experiment makes a basic dish. Only catalogue recipes count
     // as discoveries; new combinations cannot farm first-discovery bonuses.
     else{dish={name:'Creative Kitchen Dish',emoji:'🍽️',stars:1,success:true,type:'basic'};starsEarned=1;t.stars+=starsEarned;}
     const cook={id:randomBytes(10).toString('hex'),teamId:t.id,teamName:t.name,dish,ingredients:[...xs],starsEarned,discoveryBonus,isNewForTeam,at:this.now()};r.latestCooks.push(cook);r.latestCooks=r.latestCooks.slice(-100);
-    this.event(r,`${t.name} cooked ${dish.name}${starsEarned?` and earned ${starsEarned} star${starsEarned===1?'':'s'}`:recipe?.type==='steal'?' and found a Sneaky Snack power':'! A brave experiment'}.`);
+    this.event(r,`${t.name} cooked ${dish.name}${starsEarned?` and earned ${starsEarned} star${starsEarned===1?'':'s'}`:recipe?.type==='steal'?' and found a Sneaky Snack power':recipe?.type==='steal-star'?' and saved a Steal 1 Star power':'! A brave experiment'}.`);
     return{cook,power};
    }
    case 'pupil:steal':{
@@ -224,7 +225,16 @@ export class GameStore {
     const t=auth.team;const p=t.powers.find(p=>p.id===b.powerId&&p.type==='steal');if(!p)fail('That Sneaky Snack has already been used or is unavailable.','NO_POWER',409);
     const rival=r.teams.find(t=>t.id===b.targetTeamId);if(!rival||rival.id===t.id)fail('Choose a rival team.');if(r.incomingThefts[rival.id])fail('This rival has already lost an ingredient this question. Your power is still saved.','TARGET_PROTECTED',409);
     const available=INGREDIENTS.flatMap(x=>Array(rival.inventory[x]).fill(x));if(!available.length)fail('That rival has no ingredients. Your power is still saved.','EMPTY_TARGET',409);
-    const item=available[this.random(available.length)];this.consume(r,rival,[item]);t.inventory[item]++;t.powers=t.powers.filter(x=>x.id!==p.id);r.incomingThefts[rival.id]=true;this.event(r,`${t.name} used a Sneaky Snack to take one ${item} from ${rival.name}.`);return{ingredient:item,targetTeamId:rival.id};
+   const item=available[this.random(available.length)];this.consume(r,rival,[item]);t.inventory[item]++;t.powers=t.powers.filter(x=>x.id!==p.id);r.incomingThefts[rival.id]=true;this.event(r,`${t.name} used a Sneaky Snack to take one ${item} from ${rival.name}.`);return{ingredient:item,targetTeamId:rival.id};
+   }
+   case 'pupil:steal-star':{
+    requireCooking();
+    const t=auth.team;const p=t.powers.find(p=>p.id===b.powerId&&p.type==='steal-star');if(!p)fail('That Steal 1 Star power has already been used or is unavailable.','NO_STAR_POWER',409);
+    const rival=r.teams.find(team=>team.id===b.targetTeamId);if(!rival||rival.id===t.id)fail('Choose another team.','INVALID_STAR_TARGET',409);
+    const protectedTeams=r.incomingStarThefts??={};if(protectedTeams[rival.id])fail('This rival already lost a star this question. Your power is still saved.','STAR_TARGET_PROTECTED',409);
+    if(rival.stars<1)fail('That rival has no stars to steal. Your power is still saved.','NO_STARS',409);
+    rival.stars--;t.stars++;t.powers=t.powers.filter(x=>x.id!==p.id);protectedTeams[rival.id]=true;
+    this.event(r,`${t.name} stole 1 star from ${rival.name} with Star Snatcher Tart.`,'star-theft');return{stars:1,targetTeamId:rival.id,targetTeamName:rival.name};
    }
    case 'host:close':r.phase='closed';r.rushEndsAt=null;r.answerCountdownEndsAt=null;return{closed:true};
    default:fail('Unknown action.');
