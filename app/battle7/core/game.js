@@ -96,7 +96,7 @@ export class GameStore {
   let pin;do{pin=String(randomInt(10000,100000));}while(this.rooms.has(pin));
   const hostToken=randomBytes(32).toString('hex');const now=this.now();
   const questionSet=shuffle(this.questions).map(q=>({...structuredClone(q),...(q.options?{options:shuffle(q.options)}:{})}));
-  const r={pin,roomName:cleanName(roomName,48)||'Crazy Kitchen',hostHash:hash(hostToken),createdAt:now,expiresAt:now+this.retentionMs,phase:'lobby',version:1,teamCount,questionIndex:-1,questions:questionSet,teams:[],submissions:{},discoveries:{},latestCooks:[],events:[],rushEndsAt:null,rushNumber:0,incomingThefts:{},receipts:{},weights:this.weights};
+  const r={pin,roomName:cleanName(roomName,48)||'Crazy Kitchen',hostHash:hash(hostToken),createdAt:now,expiresAt:now+this.retentionMs,phase:'lobby',version:1,teamCount,questionIndex:-1,questions:questionSet,teams:[],submissions:{},discoveries:{},latestCooks:[],events:[],rushEndsAt:null,answerCountdownEndsAt:null,rushNumber:0,incomingThefts:{},receipts:{},weights:this.weights};
   this.save(r);this.rooms.set(pin,r);return {pin,hostToken};
  }
  teamToken(r,clientId){return createHmac('sha256',this.secret).update(`team:${r.pin}:${r.createdAt}:${clientId}`).digest('hex');}
@@ -121,9 +121,9 @@ export class GameStore {
   const q=this.currentQuestion(r);const submissions=q?r.submissions[q.id]??{}:{};
   const showAnswer=['reveal','rush','finished'].includes(r.phase);
   const tokenId=id=>createHmac('sha256',this.secret).update(`rebuild:${r.pin}:${r.createdAt}:${q?.id}:${id}`).digest('hex').slice(0,24);
-  const data={pin:r.pin,roomName:r.roomName,phase:r.phase,version:r.version,serverTime:this.now(),expiresAt:r.expiresAt,role:auth.role,teamCount:r.teamCount,questionNumber:r.questionIndex+1,totalQuestions:r.questions.length,question:publicQuestion(q,tokenId),answerReveal:showAnswer&&q?{canonicalAnswer:q.canonicalAnswer,feedback:q.feedback}:null,cookingAvailable:this.cookingAvailable(r),rushEndsAt:null,rushEnded:false,rushNumber:r.rushNumber??0,teams:r.teams.map(t=>({id:t.id,slot:t.slot,name:t.name,stars:t.stars,inventoryCount:countBag(t.inventory),acceptedCount:Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length,submissionStatus:submissions[t.id]?.status??'waiting',online:(this.lastSeen.get(`${r.pin}:${t.id}`)??0)>this.now()-20000,recipesCount:Object.keys(t.recipes).length,canBeStolenFrom:this.cookingAvailable(r)&&countBag(t.inventory)>0&&!r.incomingThefts[t.id]})).sort((a,b)=>a.slot-b.slot),latestCooks:r.latestCooks.slice(-100).map(cook=>visibleCook(cook,auth)),events:r.events.slice(-10),takenSlots:r.teams.map(t=>t.slot),winners:['finished','closed'].includes(r.phase)?r.teams.filter(t=>t.stars===Math.max(...r.teams.map(t=>t.stars))).filter(t=>Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length===Math.max(...r.teams.filter(x=>x.stars===Math.max(...r.teams.map(y=>y.stars))).map(x=>Object.values(r.submissions).filter(s=>s[x.id]?.status==='accepted').length))).map(t=>t.id):[]};
-  if(auth.role==='host'){data.answerKey=q?Object.fromEntries(['canonicalAnswer','acceptedVariants','correctOptionId','targetTense','feedback','canonicalTokenOrder','acceptedTokenOrders'].filter(k=>q[k]!==undefined).map(k=>[k,k==='canonicalTokenOrder'?q[k].map(tokenId):k==='acceptedTokenOrders'?q[k].map(order=>order.map(tokenId)):q[k]])):null;data.submissions=r.teams.map(t=>{const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];return{teamId:t.id,teamName:t.name,answer:s?.answer??'',status:s?.status??'waiting',reward:rewards[0]??null,rewards,rewardLocked:rewardLocked(t,s)};});data.settings={cookingMode:'anytime',teamCount:r.teamCount,ingredientWeights:r.weights,theftRecipe:'Sneaky Snack',theftMaxIncomingPerQuestion:1};data.joinPath=`/?battle=7&join=${r.pin}`;}
-  if(auth.role==='team'){const t=auth.team;const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];data.me={id:t.id,name:t.name,slot:t.slot,stars:t.stars,inventory:{...t.inventory},recipes:Object.values(t.recipes),powers:t.powers.map(p=>({...p})),submission:s?{answer:s.answer,status:s.status,reward:rewards[0]??null,rewards}:null};}
+  const data={pin:r.pin,roomName:r.roomName,phase:r.phase,version:r.version,serverTime:this.now(),expiresAt:r.expiresAt,role:auth.role,teamCount:r.teamCount,questionNumber:r.questionIndex+1,totalQuestions:r.questions.length,question:publicQuestion(q,tokenId),answerReveal:showAnswer&&q?{canonicalAnswer:q.canonicalAnswer,feedback:q.feedback}:null,cookingAvailable:this.cookingAvailable(r),rushEndsAt:null,answerCountdownEndsAt:r.answerCountdownEndsAt??null,rushEnded:false,rushNumber:r.rushNumber??0,teams:r.teams.map(t=>({id:t.id,slot:t.slot,name:t.name,stars:t.stars,inventoryCount:countBag(t.inventory),acceptedCount:Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length,submissionStatus:submissions[t.id]?.status??'waiting',online:(this.lastSeen.get(`${r.pin}:${t.id}`)??0)>this.now()-20000,recipesCount:Object.keys(t.recipes).length,canBeStolenFrom:this.cookingAvailable(r)&&countBag(t.inventory)>0&&!r.incomingThefts[t.id]})).sort((a,b)=>a.slot-b.slot),latestCooks:r.latestCooks.slice(-100).map(cook=>visibleCook(cook,auth)),events:r.events.slice(-10),takenSlots:r.teams.map(t=>t.slot),winners:['finished','closed'].includes(r.phase)?r.teams.filter(t=>t.stars===Math.max(...r.teams.map(t=>t.stars))).filter(t=>Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length===Math.max(...r.teams.filter(x=>x.stars===Math.max(...r.teams.map(y=>y.stars))).map(x=>Object.values(r.submissions).filter(s=>s[x.id]?.status==='accepted').length))).map(t=>t.id):[]};
+  if(auth.role==='host'){data.answerKey=q?Object.fromEntries(['canonicalAnswer','acceptedVariants','correctOptionId','targetTense','feedback','canonicalTokenOrder','acceptedTokenOrders'].filter(k=>q[k]!==undefined).map(k=>[k,k==='canonicalTokenOrder'?q[k].map(tokenId):k==='acceptedTokenOrders'?q[k].map(order=>order.map(tokenId)):q[k]])):null;data.submissions=r.teams.map(t=>{const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];return{teamId:t.id,teamName:t.name,answer:s?.answer??'',status:s?.status??'waiting',unanswered:Boolean(s?.unanswered),reward:rewards[0]??null,rewards,rewardLocked:rewardLocked(t,s)};});data.settings={cookingMode:'anytime',teamCount:r.teamCount,ingredientWeights:r.weights,theftRecipe:'Sneaky Snack',theftMaxIncomingPerQuestion:1};data.joinPath=`/?battle=7&join=${r.pin}`;}
+  if(auth.role==='team'){const t=auth.team;const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];data.me={id:t.id,name:t.name,slot:t.slot,stars:t.stars,inventory:{...t.inventory},recipes:Object.values(t.recipes),powers:t.powers.map(p=>({...p})),submission:s?{answer:s.answer,status:s.status,unanswered:Boolean(s.unanswered),reward:rewards[0]??null,rewards}:null};}
   return data;
  }
  event(r,text){r.events.push({id:randomBytes(8).toString('hex'),text,at:this.now()});r.events=r.events.slice(-100);}
@@ -147,7 +147,7 @@ export class GameStore {
   // A never-committed offline command must not act on a later round/phase.
   // This check deliberately follows receipt replay, so a committed retry can
   // still retrieve its original result after the class has moved on.
-  if(['host:reveal','host:advance','host:end-rush','pupil:cook','pupil:steal'].includes(type)){
+  if(['host:start-countdown','host:reveal','host:advance','host:end-rush','pupil:cook','pupil:steal'].includes(type)){
    const sameCookingWindow=['pupil:cook','pupil:steal'].includes(type)&&this.cookingAvailable(r)&&['question','reveal','rush'].includes(body.expectedPhase);
    if(body.questionId!==this.currentQuestion(r)?.id||(body.expectedPhase!==r.phase&&!sameCookingWindow))fail('That round or phase has ended. Nothing was changed.','STALE_CONTEXT',409);
   }
@@ -165,16 +165,27 @@ export class GameStore {
     if(r.teams.some(t=>t.slot>b.teamCount))fail('A joined team is using a higher station. Keep that station available.','STATION_OCCUPIED',409);
     r.teamCount=b.teamCount;return{teamCount:r.teamCount};
    }
-   case 'host:start': requirePhase('lobby');if(r.teams.length<r.teamCount)fail(`Waiting for all ${r.teamCount} team stations to join.`, 'NEED_TEAMS',409);r.phase='question';r.questionIndex=0;this.event(r,'The kitchen is open!');return{started:true};
+   case 'host:start': requirePhase('lobby');if(r.teams.length<r.teamCount)fail(`Waiting for all ${r.teamCount} team stations to join.`, 'NEED_TEAMS',409);r.phase='question';r.questionIndex=0;r.answerCountdownEndsAt=null;this.event(r,'The kitchen is open!');return{started:true};
+   case 'host:start-countdown':{
+    requirePhase('question');if(b.questionId!==q.id)fail('That question is no longer open.','STALE_QUESTION',409);
+    if(!r.answerCountdownEndsAt)r.answerCountdownEndsAt=this.now()+10000;
+    return{answerCountdownEndsAt:r.answerCountdownEndsAt};
+   }
    case 'pupil:submit':{
     requirePhase('question');if(b.questionId!==q.id)fail('That question has ended. Your answer was not submitted to the new round.','STALE_QUESTION',409);
+    if(r.answerCountdownEndsAt&&this.now()>=r.answerCountdownEndsAt)fail('Time is up. Your teacher can review the answers now.','ANSWER_TIME_UP',409);
     if(typeof b.answer!=='string'||!b.answer.trim()||b.answer.length>500)fail('Enter an answer of 1–500 characters.');
     const subs=r.submissions[q.id]??={};if(subs[auth.team.id])fail('Your team has already submitted this answer.','ALREADY_SUBMITTED',409);
     subs[auth.team.id]={answer:b.answer.trim(),status:'submitted',rewards:null,at:this.now()};return{submitted:true};
    }
    case 'host:review':{
     requirePhase('question');if(b.questionId!==q.id)fail('That question is no longer open.','STALE_QUESTION',409);if(!['accepted','rejected'].includes(b.decision))fail('Choose Accept or Reject.');
-    const team=r.teams.find(t=>t.id===b.teamId);const sub=r.submissions[q.id]?.[b.teamId];if(!team||!sub)fail('There is no answer to review.','NO_SUBMISSION',409);
+    const team=r.teams.find(t=>t.id===b.teamId);if(!team)fail('That team is unavailable.','TEAM_NOT_FOUND',404);
+    const subs=r.submissions[q.id]??={};let sub=subs[b.teamId];
+    if(!sub){
+     if(b.decision!=='rejected')fail('A team that did not answer can only be marked wrong.','NO_SUBMISSION',409);
+     sub={answer:'',status:'rejected',rewards:null,at:this.now(),unanswered:true};subs[b.teamId]=sub;return{decision:'rejected',reward:null,rewards:[],unanswered:true};
+    }
     if(sub.status===b.decision){const rewards=sub.status==='accepted'?rewardItems(sub):[];return{decision:sub.status,reward:rewards[0]??null,rewards};}
     if(sub.status==='accepted'){
      if(rewardLocked(team,sub))fail('One or both of this answer’s ingredients have already been used or stolen. Its accepted reward can no longer be reversed.','REWARD_ALREADY_USED',409);
@@ -183,10 +194,10 @@ export class GameStore {
     if(b.decision==='accepted'){if(!rewardItems(sub).length)sub.rewards=[this.ingredient(r),this.ingredient(r)];for(const item of rewardItems(sub))team.inventory[item]++;}
     sub.status=b.decision;const rewards=sub.status==='accepted'?rewardItems(sub):[];return{decision:sub.status,reward:rewards[0]??null,rewards};
    }
-   case 'host:reveal': requirePhase('question');if(Object.values(r.submissions[q.id]??{}).some(s=>s.status==='submitted'))fail('Review every submitted answer before revealing.','REVIEWS_PENDING',409);r.phase='reveal';return{revealed:true};
+   case 'host:reveal': requirePhase('question');if(Object.values(r.submissions[q.id]??{}).some(s=>s.status==='submitted'))fail('Review every submitted answer before revealing.','REVIEWS_PENDING',409);r.phase='reveal';r.answerCountdownEndsAt=null;return{revealed:true};
    case 'host:advance':{
     if(!['reveal','rush'].includes(r.phase))fail('Reveal the answer before moving on.','WRONG_PHASE',409);
-    r.rushEndsAt=null;
+    r.rushEndsAt=null;r.answerCountdownEndsAt=null;
     if(r.questionIndex===r.questions.length-1){r.phase='finished';this.event(r,'Service complete. Meet your Master Chefs!');}
     else{r.questionIndex++;r.phase='question';r.incomingThefts={};}
     return{phase:r.phase};
@@ -215,7 +226,7 @@ export class GameStore {
     const available=INGREDIENTS.flatMap(x=>Array(rival.inventory[x]).fill(x));if(!available.length)fail('That rival has no ingredients. Your power is still saved.','EMPTY_TARGET',409);
     const item=available[this.random(available.length)];this.consume(r,rival,[item]);t.inventory[item]++;t.powers=t.powers.filter(x=>x.id!==p.id);r.incomingThefts[rival.id]=true;this.event(r,`${t.name} used a Sneaky Snack to take one ${item} from ${rival.name}.`);return{ingredient:item,targetTeamId:rival.id};
    }
-   case 'host:close':r.phase='closed';r.rushEndsAt=null;return{closed:true};
+   case 'host:close':r.phase='closed';r.rushEndsAt=null;r.answerCountdownEndsAt=null;return{closed:true};
    default:fail('Unknown action.');
   }
  }

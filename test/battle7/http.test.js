@@ -169,7 +169,7 @@ test('all five rebuild HTTP snapshots use opaque presentation IDs and preserve h
 test('every teacher-only API action rejects independent student/public/forged capabilities without changing the room',async()=>{
  const {send,db}=setup(),host=await(await send('rooms',{teamCount:2})).json();
  const teams=[];for(let slot=1;slot<=2;slot++)teams.push(await(await send(`rooms/${host.pin}/join`,{clientId:randomUUID(),teamSlot:slot,name:`Role ${slot}`})).json());
- for(const type of ['host:start','host:configure','host:review','host:reveal','host:advance','host:end-rush','host:close'])for(const [token,status] of [[undefined,401],[teams[0].teamToken,403],[teams[1].teamToken,403],['0'.repeat(64),401]]){
+ for(const type of ['host:start','host:configure','host:start-countdown','host:review','host:reveal','host:advance','host:end-rush','host:close'])for(const [token,status] of [[undefined,401],[teams[0].teamToken,403],[teams[1].teamToken,403],['0'.repeat(64),401]]){
   const before=JSON.stringify(db.room(host.pin));const result=await send(`rooms/${host.pin}/action`,{type,requestId:randomUUID(),teamCount:2,teamId:teams[0].teamId,decision:'accepted',questionId:'forged',expectedPhase:'question'},token);assert.equal(result.status,status,`${type} role rejected`);assert.equal(JSON.stringify(db.room(host.pin)),before);
  }
 });

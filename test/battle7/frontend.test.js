@@ -91,6 +91,13 @@ test('accepted rewards show two animated ingredients on student and teacher scre
  assert.match(h.frontend.get().html,/Each accepted answer awards two ingredients exactly once/);assert.match(h.frontend.get().html,/\+1 Bread/);assert.match(h.frontend.get().html,/\+1 Rice/);
 });
 
+test('answer countdown stays non-blocking while running, locks at zero, and teacher review includes unanswered teams',()=>{
+ const h=harness(),team={id:'a',slot:1,name:'Team',stars:0,inventory:{},recipes:[],powers:[],submission:null},base={...snapshot(),role:'team',serverTime:Date.now(),answerCountdownEndsAt:Date.now()+10000,teams:[{id:'a',slot:1,name:'Team',stars:0,inventoryCount:0,acceptedCount:0,submissionStatus:'waiting',online:true}],me:team};
+ h.frontend.configure('join',base);assert.match(h.frontend.get().html,/TIME LEFT/);assert.match(h.frontend.get().html,/phones stay active/);assert.doesNotMatch(h.frontend.get().html,/id="team-answer"[^>]*disabled/);assert.doesNotMatch(h.frontend.get().html,/answer-locked/);
+ h.frontend.configure('join',{...base,version:2,serverTime:Date.now(),answerCountdownEndsAt:Date.now()-1});assert.match(h.frontend.get().html,/TIME'S UP/);assert.match(h.frontend.get().html,/answer-locked/);assert.match(h.frontend.get().html,/id="team-answer"[^>]*disabled/);
+ h.frontend.configure('host',{...base,version:3,role:'host',me:undefined,answerCountdownEndsAt:null,submissions:[{teamId:'a',teamName:'Team',answer:'',status:'waiting',unanswered:false,rewards:[],rewardLocked:false}]});assert.match(h.frontend.get().html,/Review answers/);assert.doesNotMatch(h.frontend.get().html,/data-action="toggle-review"[^>]*disabled/);h.frontend.ui.review=true;h.frontend.render();assert.match(h.frontend.get().html,/No answer submitted/);assert.match(h.frontend.get().html,/Mark wrong/);assert.match(h.frontend.get().html,/data-action="accept"[^>]*disabled/);assert.doesNotMatch(h.frontend.get().html,/data-action="reject"[^>]*disabled/);
+});
+
 
 test('Battle 7 entry immediately creates the teacher lobby and restores its capability on refresh',async()=>{
  const {store,host}=fixture(),saved=new Map(),sessionSaved=new Map(),normal=adapter(store);let creates=0;

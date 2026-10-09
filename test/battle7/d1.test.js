@@ -71,6 +71,24 @@ test('simultaneous 10-team submit and teacher review never drop rewards or expos
   assert.equal((await s.store().state(s.host.pin, s.host.hostToken)).answerKey.canonicalAnswer, q.canonicalAnswer);
 });
 
+test('D1 persists one shared answer countdown across reconnects and lets the teacher reject a missing response after zero', async () => {
+  const s = await setup(3);
+  await s.start();
+  const q = s.db.room(s.host.pin).questions[0];
+  const started = await s.action(s.host.hostToken, 'host:start-countdown');
+  const endsAt = started.result.answerCountdownEndsAt;
+  assert.equal((await s.store().state(s.host.pin, s.teams[0].teamToken)).answerCountdownEndsAt, endsAt);
+  assert.equal((await s.store().state(s.host.pin, s.host.hostToken)).answerCountdownEndsAt, endsAt);
+  s.tick(10000);
+  await assert.rejects(s.action(s.teams[1].teamToken, 'pupil:submit', { questionId: q.id, answer: 'Late' }), (error) => error.code === 'ANSWER_TIME_UP');
+  const rejected = await s.action(s.host.hostToken, 'host:review', { questionId: q.id, teamId: s.teams[1].teamId, decision: 'rejected' });
+  assert.equal(rejected.result.unanswered, true);
+  const restored = await s.store().state(s.host.pin, s.teams[1].teamToken);
+  assert.equal(restored.me.submission.status, 'rejected');
+  assert.equal(restored.me.submission.unanswered, true);
+  assert.equal(Object.values(restored.me.inventory).reduce((sum, quantity) => sum + quantity, 0), 0);
+});
+
 test('competing cook requests cannot overspend; same-receipt retries keep the original cook', async () => {
   const s = await setup();
   await s.cooking();

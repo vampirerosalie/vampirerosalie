@@ -55,10 +55,13 @@ assert.equal(pupilState.phase, 'question');
 assert.equal(pupilState.answerKey, undefined, 'Private answer key leaked to a pupil.');
 assert.equal(pupilState.question.canonicalAnswer, undefined, 'Canonical answer leaked to a pupil.');
 const questionId = pupilState.question.id;
-
-for (const team of teams) {
-  await act(team.teamToken, 'pupil:submit', { questionId, answer: 'Deployment smoke answer' });
-}
+const countdown = await act(host.hostToken, 'host:start-countdown', { questionId, expectedPhase: 'question' });
+assert.ok(countdown.data.result.answerCountdownEndsAt > Date.now(), 'Teacher countdown did not start.');
+const connectedCountdown = (await request(`rooms/${host.pin}/state`, { token: teams[1].teamToken })).data;
+assert.equal(connectedCountdown.answerCountdownEndsAt, countdown.data.result.answerCountdownEndsAt, 'Student did not receive the shared countdown.');
+await act(teams[0].teamToken, 'pupil:submit', { questionId, answer: 'Deployment smoke answer' });
+await new Promise((resolve) => setTimeout(resolve, Math.max(0, countdown.data.result.answerCountdownEndsAt - Date.now() + 250)));
+await assert.rejects(act(teams[1].teamToken, 'pupil:submit', { questionId, answer: 'Late deployment answer' }), /409 Time is up/);
 
 const reviewState = (await request(`rooms/${host.pin}/state`, { token: host.hostToken })).data;
 const acceptedReview = { type: 'host:review', requestId: requestId(), teamId: reviewState.teams[0].id, questionId, decision: 'accepted' };
@@ -70,6 +73,7 @@ const reviewedTeam = (await request(`rooms/${host.pin}/state`, { token: teams[0]
 const rejectedTeam = (await request(`rooms/${host.pin}/state`, { token: teams[1].teamToken })).data;
 assert.equal(Object.values(reviewedTeam.me.inventory).reduce((total, quantity) => total + quantity, 0), 2, 'Accepted answer did not award exactly two ingredients once.');
 assert.equal(Object.values(rejectedTeam.me.inventory).reduce((total, quantity) => total + quantity, 0), 0, 'Rejected answer awarded ingredients.');
+assert.equal(rejectedTeam.me.submission.unanswered, true, 'Missing answer was not recorded as teacher-reviewed wrong.');
 
 await act(host.hostToken, 'host:reveal', { questionId, expectedPhase: 'question' });
 const revealed = (await request(`rooms/${host.pin}/state`, { token: host.hostToken })).data;
@@ -99,5 +103,5 @@ console.log(JSON.stringify({
   ok: true,
   endpoint: api,
   room: host.pin,
-  checks: ['health', 'room creation', 'two team joins', 'QR', 'privacy', 'submissions', 'two-unit accepted reward', 'zero rejected reward', 'retry idempotency', 'reveal', 'three-ingredient anytime cooking', 'room close'],
+  checks: ['health', 'room creation', 'two team joins', 'QR', 'privacy', 'shared 10-second countdown', 'typing before zero', 'lock at zero', 'missing-answer rejection', 'two-unit accepted reward', 'zero rejected reward', 'retry idempotency', 'reveal', 'three-ingredient anytime cooking', 'room close'],
 }, null, 2));
