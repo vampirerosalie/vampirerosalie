@@ -60,7 +60,9 @@ assert.ok(countdown.data.result.answerCountdownEndsAt > Date.now(), 'Teacher cou
 const connectedCountdown = (await request(`rooms/${host.pin}/state`, { token: teams[1].teamToken })).data;
 assert.equal(connectedCountdown.answerCountdownEndsAt, countdown.data.result.answerCountdownEndsAt, 'Student did not receive the shared countdown.');
 await act(teams[0].teamToken, 'pupil:submit', { questionId, answer: 'Deployment smoke answer' });
-await new Promise((resolve) => setTimeout(resolve, Math.max(0, countdown.data.result.answerCountdownEndsAt - Date.now() + 250)));
+// Compare Worker timestamps with the Worker's clock, not the test computer's:
+// a few hundred milliseconds of clock skew can otherwise make this late test early.
+await new Promise((resolve) => setTimeout(resolve, Math.max(0, countdown.data.result.answerCountdownEndsAt - countdown.data.state.serverTime + 750)));
 await assert.rejects(act(teams[1].teamToken, 'pupil:submit', { questionId, answer: 'Late deployment answer' }), /409 Time is up/);
 
 const reviewState = (await request(`rooms/${host.pin}/state`, { token: host.hostToken })).data;
