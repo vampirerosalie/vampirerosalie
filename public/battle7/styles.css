@@ -50,3 +50,4 @@ body[data-embedded="true"][data-role="host"]>.game-header,body[data-embedded="tr
 .cook-item.disaster-dish,.dish-notice.disaster-dish{border-color:#c65d4c;background:#fff0ea;color:#8e3025}
 .public-cook-popup.disaster-dish{background:linear-gradient(160deg,#fff0ea,#ffd8ce);border-color:#c65d4c;color:#8e3025}
 .public-cook-popup.disaster-dish strong,.cook-item.disaster-dish .cook-stars{color:#a52e24}
+.review-dialog .judge.selected:disabled{opacity:1}

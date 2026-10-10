@@ -117,6 +117,23 @@ test('accepted rewards show two animated ingredients on student and teacher scre
  assert.match(h.frontend.get().html,/Each accepted answer awards two ingredients exactly once/);assert.match(h.frontend.get().html,/\+1 Bread/);assert.match(h.frontend.get().html,/\+1 Rice/);
 });
 
+test('teacher review marks Accept or Reject instantly, then confirms or rolls back without a flashing pending strip',async()=>{
+ const team={id:'team-1',slot:1,name:'Red',stars:0,inventoryCount:0,acceptedCount:0,submissionStatus:'submitted',online:true};
+ const submitted={teamId:team.id,teamName:team.name,answer:'am listening',status:'submitted',unanswered:false,rewards:[],rewardLocked:false};
+ const base={...snapshot(),role:'host',teams:[team],submissions:[submitted]};
+ for(const [decision,willFail] of [['accepted',false],['rejected',true]]){
+  const gate=deferred(),h=harness({fetcher:(path)=>path.endsWith('/action')?gate.promise:response(base)});
+  h.frontend.configure('host',base);h.frontend.ui.review=true;h.frontend.render();
+  const saving=h.frontend.sendAction('host:review',{teamId:team.id,questionId:base.question.id,decision});
+  assert.match(h.frontend.get().html,new RegExp(`status-badge ${decision}`));
+  assert.match(h.frontend.get().html,new RegExp(`judge ${decision==='accepted'?'accept':'reject'} selected`));
+  assert.doesNotMatch(h.frontend.get().html,/class="pending-strip"/);
+  if(willFail){gate.resolve(response({error:'Review refused'},409));await saving;assert.match(h.frontend.get().html,/status-badge submitted/);assert.doesNotMatch(h.frontend.get().html,/judge (accept|reject) selected/);assert.match(h.frontend.ui.error,/Review refused/);}
+  else{gate.resolve(response({state:{...base,version:2,teams:[{...team,acceptedCount:1,inventoryCount:2,submissionStatus:'accepted'}],submissions:[{...submitted,status:'accepted',reward:'Bread',rewards:['Bread','Rice']}]}}));await saving;assert.match(h.frontend.get().html,/status-badge accepted/);assert.match(h.frontend.get().html,/\+1 Bread/);assert.match(h.frontend.get().html,/\+1 Rice/);assert.equal(h.frontend.ui.reviewOverride,null);}
+  assert.equal(h.frontend.get().pending,null);
+ }
+});
+
 test('answer countdown stays non-blocking while running, locks at zero, and teacher review includes unanswered teams',()=>{
  const h=harness(),team={id:'a',slot:1,name:'Team',stars:0,inventory:{},recipes:[],powers:[],submission:null},base={...snapshot(),role:'team',serverTime:Date.now(),answerCountdownEndsAt:Date.now()+10000,teams:[{id:'a',slot:1,name:'Team',stars:0,inventoryCount:0,acceptedCount:0,submissionStatus:'waiting',online:true}],me:team};
  h.frontend.configure('join',base);assert.match(h.frontend.get().html,/TIME LEFT/);assert.match(h.frontend.get().html,/phones stay active/);assert.doesNotMatch(h.frontend.get().html,/id="team-answer"[^>]*disabled/);assert.doesNotMatch(h.frontend.get().html,/answer-locked/);
