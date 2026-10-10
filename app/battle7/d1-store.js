@@ -48,9 +48,10 @@ export async function ensureKitchenSchema(db) {
  * The only write of gameplay state is an atomic version-checked UPDATE.
  */
 export class KitchenD1Store {
-  constructor(db, { questions, now = Date.now, random, sleep = pause, maxAttempts = 20 } = {}) {
+  constructor(db, { questions, questionSets = {}, now = Date.now, random, sleep = pause, maxAttempts = 20 } = {}) {
     this.db = db;
     this.questions = questions;
+    this.questionSets = questionSets;
     this.now = now;
     this.random = random;
     this.sleep = sleep;
@@ -58,7 +59,7 @@ export class KitchenD1Store {
   }
 
   game(secret) {
-    return new GameStore({ questions: this.questions, now: this.now, random: this.random, secret });
+    return new GameStore({ questions: this.questions, questionSets: this.questionSets, now: this.now, random: this.random, secret });
   }
 
   async create(options = {}) {

@@ -78,9 +78,9 @@ function links(state, origin) {
 /**
  * @param {Request} request
  * @param {D1Database} db
- * @param {{ questions: object[], now?: () => number, random?: (max: number) => number, sleep?: (ms: number) => Promise<void>, maxAttempts?: number }} options
+ * @param {{ questions: object[], questionSets?: Record<string, object[]>, now?: () => number, random?: (max: number) => number, sleep?: (ms: number) => Promise<void>, maxAttempts?: number }} options
  */
-export async function handleKitchenRequest(request, db, { questions, now = Date.now, random, sleep, maxAttempts } = {}) {
+export async function handleKitchenRequest(request, db, { questions, questionSets, now = Date.now, random, sleep, maxAttempts } = {}) {
   try {
     const url = new URL(request.url);
     const ip = request.headers.get('cf-connecting-ip') ?? 'local';
@@ -93,7 +93,7 @@ export async function handleKitchenRequest(request, db, { questions, now = Date.
       limit(`post:${ip}`, 1500, 60000, time);
     }
     if (!db) throw new GameError('The kitchen database is unavailable. Please try again.', 'DATABASE_UNAVAILABLE', 503);
-    const store = new KitchenD1Store(db, { questions, now, random, sleep, maxAttempts });
+    const store = new KitchenD1Store(db, { questions, questionSets, now, random, sleep, maxAttempts });
     if (url.pathname === '/api/kitchen/health' && request.method === 'GET') {
       return json({ ok: true, service: 'crazy-kitchen', battle: 7 });
     }

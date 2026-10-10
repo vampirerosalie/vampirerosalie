@@ -45,3 +45,8 @@ body[data-embedded="true"][data-role="host"]>.game-header,body[data-embedded="tr
 .powers-card.star-snatcher{border-color:#d9b950;background:linear-gradient(135deg,#fff7ce,#f4dfb9)}
 .powers-card.star-snatcher .powers-heading .eyebrow,.powers-card.star-snatcher .powers-heading h2>span{color:#8b6512}
 .powers-card.star-snatcher p,.powers-card.star-snatcher>small{color:#765c25}
+
+/* Hidden disaster combinations are shown as results, never in the recipe book. */
+.cook-item.disaster-dish,.dish-notice.disaster-dish{border-color:#c65d4c;background:#fff0ea;color:#8e3025}
+.public-cook-popup.disaster-dish{background:linear-gradient(160deg,#fff0ea,#ffd8ce);border-color:#c65d4c;color:#8e3025}
+.public-cook-popup.disaster-dish strong,.cook-item.disaster-dish .cook-stars{color:#a52e24}

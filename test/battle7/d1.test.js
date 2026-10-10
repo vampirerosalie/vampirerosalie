@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { KitchenD1Store } from '../../app/battle7/d1-store.js';
 import { TestD1 } from './d1-helper.js';
 const questions = JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank.json', import.meta.url))).questions;
+const set2 = JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set2.json', import.meta.url))).questions;
 
 async function setup(count = 3) {
   const db = new TestD1();
@@ -302,6 +303,29 @@ test('all twenty rounds finish through D1 without rush phases and reconnect reta
  assert.equal(state.me.inventory.Bread,40);assert.equal(state.cookingAvailable,false);
  assert.deepEqual(await s.store().join(s.host.pin,s.identities[0]),s.teams[0]);
  assert.equal((await s.store().state(s.host.pin,s.teams[0].teamToken)).me.id,s.teams[0].teamId);
+});
+
+test('D1 keeps the chosen Set 2 through request-local reloads and refuses midgame set changes',async()=>{
+ const db=new TestD1(),options={questions,questionSets:{set2},random:()=>0,sleep:async()=>{}},store=()=>new KitchenD1Store(db,options);
+ const host=await store().create({teamCount:2});
+ const selected=await store().action(host.pin,host.hostToken,{type:'host:select-set',questionSetId:'set2',requestId:randomUUID(),expectedPhase:'lobby'});
+ assert.equal(selected.state.questionSetId,'set2');assert.deepEqual(new Set(db.room(host.pin).questions.map(q=>q.id)),new Set(set2.map(q=>q.id)));
+ const teams=await Promise.all([1,2].map(teamSlot=>store().join(host.pin,{teamSlot,name:`Team ${teamSlot}`,clientId:randomUUID()})));
+ assert.equal((await store().state(host.pin,teams[0].teamToken)).questionSetId,'set2');
+ await store().action(host.pin,host.hostToken,{type:'host:start',requestId:randomUUID(),expectedPhase:'lobby'});
+ await assert.rejects(store().action(host.pin,host.hostToken,{type:'host:select-set',questionSetId:'set1',requestId:randomUUID(),questionId:db.room(host.pin).questions[0].id,expectedPhase:'question'}),{code:'WRONG_PHASE'});
+ assert.equal((await store().state(host.pin,host.hostToken)).questionSetId,'set2');
+});
+
+test('concurrent D1 disaster cooks and retries deduct once per real cook and preserve negative results',async()=>{
+ const s=await setup(2);await s.start();s.db.seed(s.host.pin,r=>{r.teams[0].inventory.Mushroom=2;r.teams[0].inventory.Chocolate=2;r.teams[0].inventory.Tomato=2;});
+ const room=s.db.room(s.host.pin),body={type:'pupil:cook',requestId:randomUUID(),questionId:room.questions[0].id,expectedPhase:'question',ingredients:['Tomato','Mushroom','Chocolate']};
+ const replayed=await Promise.all(Array.from({length:6},()=>s.store().action(s.host.pin,s.teams[0].teamToken,body)));
+ assert.equal(new Set(replayed.map(x=>x.result.cook.id)).size,1);assert.equal(replayed[0].result.cook.starsEarned,-1);assert.equal(s.db.room(s.host.pin).teams[0].stars,-1);
+ const second=await s.action(s.teams[0].teamToken,'pupil:cook',{ingredients:['Mushroom','Chocolate','Tomato']});assert.equal(second.result.cook.starsEarned,-1);
+ const saved=s.db.room(s.host.pin);assert.equal(saved.teams[0].stars,-2);assert.equal(saved.latestCooks.length,2);assert.deepEqual(saved.teams[0].recipes,{});assert.deepEqual(saved.discoveries,{});
+ assert.equal((await s.store().state(s.host.pin,s.teams[0].teamToken)).me.stars,-2);
+ await assert.rejects(s.action(s.teams[0].teamToken,'pupil:cook',{ingredients:body.ingredients}),{code:'NOT_ENOUGH_INGREDIENTS'});
 });
 
 test('concurrent basic cooks spend stock once and replay the same one-star receipt without discovery bonuses',async()=>{

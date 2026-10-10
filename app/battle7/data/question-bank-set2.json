@@ -1,0 +1,162 @@
+{
+  "title": "Present Perfect, Past Simple and Past Perfect",
+  "questions": [
+    {
+      "id": "S2-01", "format": "multiple_choice", "targetTense": "present_perfect",
+      "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "This is the first time I ___ this game.", "bold": false}],
+      "options": [{"id":"A","text":"have played"},{"id":"B","text":"played"},{"id":"C","text":"had played"},{"id":"D","text":"has played"}],
+      "correctOptionId": "A", "canonicalAnswer": "have played", "acceptedVariants": ["have played"],
+      "feedback": {"explanation": "“This is the first time” describes an experience up to the present."}
+    },
+    {
+      "id": "S2-02", "format": "typed_correction", "targetTense": "past_simple",
+      "instruction": "Replace only the bold verb phrase.",
+      "promptSegments": [{"text":"Yesterday, we ","bold":false},{"text":"have bought","bold":true},{"text":" some apples at the market.","bold":false}],
+      "canonicalAnswer": "bought", "acceptedVariants": ["bought"],
+      "feedback": {"explanation": "“Yesterday” is a finished past time, so use the past simple."}
+    },
+    {
+      "id": "S2-03", "format": "multiple_choice", "targetTense": "past_perfect",
+      "instruction": "Choose the best answer.",
+      "promptSegments": [{"text":"The train left at 9:00. We arrived at 9:10. By the time we arrived, the train ___.","bold":false}],
+      "options": [{"id":"A","text":"has left"},{"id":"B","text":"had left"},{"id":"C","text":"was leaving"},{"id":"D","text":"will leave"}],
+      "correctOptionId": "B", "canonicalAnswer": "had left", "acceptedVariants": ["had left"],
+      "feedback": {"explanation": "The departure was completed before our arrival. It was not still happening when we arrived."}
+    },
+    {
+      "id": "S2-04", "format": "sentence_rebuild", "targetTense": "present_perfect",
+      "instruction": "Your task is still unfinished now. Start with “I”. Use every token exactly once.",
+      "promptSegments": [{"text":"Your task is still unfinished now.","bold":false}],
+      "tokens": [{"id":"t5","text":"yet"},{"id":"t4","text":"finished"},{"id":"t1","text":"I"},{"id":"t3","text":"not"},{"id":"t2","text":"have"},{"id":"t6","text":"."}],
+      "canonicalTokenOrder": ["t1","t2","t3","t4","t5","t6"],
+      "acceptedTokenOrders": [["t1","t2","t3","t4","t5","t6"],["t1","t2","t3","t5","t4","t6"]],
+      "canonicalAnswer": "I have not finished yet.", "acceptedVariants": ["I have not finished yet.","I have not yet finished."],
+      "feedback": {"explanation": "The present perfect with “not … yet” describes something not completed up to now."}
+    },
+    {
+      "id": "S2-05", "format": "typed_correction", "targetTense": "present_perfect",
+      "instruction": "Replace only the bold verb phrase.",
+      "promptSegments": [{"text":"I ","bold":false},{"text":"have saw","bold":true},{"text":" this film twice since Monday.","bold":false}],
+      "canonicalAnswer": "have seen", "acceptedVariants": ["have seen"],
+      "feedback": {"explanation": "“Since Monday” connects the past to now. Use have + past participle; see → seen."}
+    },
+    {
+      "id": "S2-06", "format": "multiple_choice", "targetTense": "past_simple",
+      "instruction": "Choose the best answer.",
+      "promptSegments": [{"text":"At the school concert last Friday, Ben ___ a song.","bold":false}],
+      "options": [{"id":"A","text":"sings"},{"id":"B","text":"has sung"},{"id":"C","text":"sang"},{"id":"D","text":"is singing"}],
+      "correctOptionId": "C", "canonicalAnswer": "sang", "acceptedVariants": ["sang"],
+      "feedback": {"explanation": "“Last Friday” places the event at a finished past time."}
+    },
+    {
+      "id": "S2-07", "format": "typed_correction", "targetTense": "past_perfect",
+      "instruction": "Replace only the bold verb phrase.",
+      "promptSegments": [{"text":"By the time the taxi arrived, we ","bold":false},{"text":"had took","bold":true},{"text":" our bags outside.","bold":false}],
+      "canonicalAnswer": "had taken", "acceptedVariants": ["had taken"],
+      "feedback": {"explanation": "The bags were taken outside before the taxi arrived. Use had + taken."}
+    },
+    {
+      "id": "S2-08", "format": "multiple_choice", "targetTense": "present_perfect",
+      "instruction": "Choose the best answer.",
+      "promptSegments": [{"text":"Nora moved here in 2020 and still lives here. She ___ here since 2020.","bold":false}],
+      "options": [{"id":"A","text":"lived"},{"id":"B","text":"had lived"},{"id":"C","text":"lives"},{"id":"D","text":"has lived"}],
+      "correctOptionId": "D", "canonicalAnswer": "has lived", "acceptedVariants": ["has lived"],
+      "feedback": {"explanation": "The situation began in the past and continues now."}
+    },
+    {
+      "id": "S2-09", "format": "sentence_rebuild", "targetTense": "past_simple",
+      "instruction": "Ask your friend about yesterday’s football game. Start with “Where”. Use every token exactly once.",
+      "promptSegments": [{"text":"Ask your friend about yesterday’s football game.","bold":false}],
+      "tokens": [{"id":"t5","text":"football"},{"id":"t2","text":"did"},{"id":"t3","text":"you"},{"id":"t4","text":"play"},{"id":"t1","text":"Where"},{"id":"t6","text":"?"}],
+      "canonicalTokenOrder": ["t1","t2","t3","t4","t5","t6"], "acceptedTokenOrders": [["t1","t2","t3","t4","t5","t6"]],
+      "canonicalAnswer": "Where did you play football?", "acceptedVariants": ["Where did you play football?"],
+      "feedback": {"explanation": "A past-simple question uses did + subject + base verb."}
+    },
+    {
+      "id": "S2-10", "format": "typed_correction", "targetTense": "present_perfect",
+      "instruction": "Replace only the bold verb phrase.",
+      "promptSegments": [{"text":"So far today, Sam ","bold":false},{"text":"have written","bold":true},{"text":" three emails.","bold":false}],
+      "canonicalAnswer": "has written", "acceptedVariants": ["has written"],
+      "feedback": {"explanation": "“So far today” means up to now. The singular subject Sam takes has."}
+    },
+    {
+      "id": "S2-11", "format": "multiple_choice", "targetTense": "past_perfect",
+      "instruction": "Choose the best answer.",
+      "promptSegments": [{"text":"I wasn’t hungry when lunch was served. I ___ a big breakfast two hours earlier.","bold":false}],
+      "options": [{"id":"A","text":"have eaten"},{"id":"B","text":"am eating"},{"id":"C","text":"had eaten"},{"id":"D","text":"will eat"}],
+      "correctOptionId": "C", "canonicalAnswer": "had eaten", "acceptedVariants": ["had eaten"],
+      "feedback": {"explanation": "Breakfast happened before the past moment when lunch was served."}
+    },
+    {
+      "id": "S2-12", "format": "typed_correction", "targetTense": "past_simple",
+      "instruction": "Replace only the bold verb phrase.",
+      "promptSegments": [{"text":"Last Saturday, Mia ","bold":false},{"text":"goes","bold":true},{"text":" to the museum.","bold":false}],
+      "canonicalAnswer": "went", "acceptedVariants": ["went"],
+      "feedback": {"explanation": "The event happened at a finished past time. Go → went."}
+    },
+    {
+      "id": "S2-13", "format": "multiple_choice", "targetTense": "present_perfect",
+      "instruction": "Choose the best answer.",
+      "promptSegments": [{"text":"We started this worksheet ten minutes ago and are still working on it. So far, we ___ only two questions.","bold":false}],
+      "options": [{"id":"A","text":"answer"},{"id":"B","text":"have answered"},{"id":"C","text":"had answered"},{"id":"D","text":"will answer"}],
+      "correctOptionId": "B", "canonicalAnswer": "have answered", "acceptedVariants": ["have answered"],
+      "feedback": {"explanation": "“So far” reports progress up to the present moment."}
+    },
+    {
+      "id": "S2-14", "format": "sentence_rebuild", "targetTense": "past_perfect",
+      "instruction": "Nina ate dinner at 6:30. I arrived at 7:00. Start with “She”. Use the past perfect for the earlier action and every token exactly once.",
+      "promptSegments": [{"text":"Nina ate dinner at 6:30. I arrived at 7:00.","bold":false}],
+      "tokens": [{"id":"t3","text":"eaten"},{"id":"t6","text":"I"},{"id":"t2","text":"had"},{"id":"t7","text":"arrived"},{"id":"t1","text":"She"},{"id":"t4","text":"dinner"},{"id":"t5","text":"when"},{"id":"t8","text":"."}],
+      "canonicalTokenOrder": ["t1","t2","t3","t4","t5","t6","t7","t8"], "acceptedTokenOrders": [["t1","t2","t3","t4","t5","t6","t7","t8"]],
+      "canonicalAnswer": "She had eaten dinner when I arrived.", "acceptedVariants": ["She had eaten dinner when I arrived."],
+      "feedback": {"explanation": "Had eaten identifies the action completed before my arrival."}
+    },
+    {
+      "id": "S2-15", "format": "typed_correction", "targetTense": "past_simple",
+      "instruction": "Replace only the bold verb phrase.",
+      "promptSegments": [{"text":"At lunchtime yesterday, I ","bold":false},{"text":"seen","bold":true},{"text":" a rainbow.","bold":false}],
+      "canonicalAnswer": "saw", "acceptedVariants": ["saw"],
+      "feedback": {"explanation": "This is a completed past event. Use saw, not the past participle seen."}
+    },
+    {
+      "id": "S2-16", "format": "multiple_choice", "targetTense": "past_simple",
+      "instruction": "Choose the best answer.",
+      "promptSegments": [{"text":"When I was six, I ___ my first bike.","bold":false}],
+      "options": [{"id":"A","text":"get"},{"id":"B","text":"have got"},{"id":"C","text":"will get"},{"id":"D","text":"got"}],
+      "correctOptionId": "D", "canonicalAnswer": "got", "acceptedVariants": ["got"],
+      "feedback": {"explanation": "“When I was six” refers to a finished past period."}
+    },
+    {
+      "id": "S2-17", "format": "typed_correction", "targetTense": "past_perfect",
+      "instruction": "Replace only the bold verb phrase.",
+      "promptSegments": [{"text":"Dinner finished at 7:30. We arrived at 8:00. By the time we arrived, everyone ","bold":false},{"text":"has eaten","bold":true},{"text":" dinner.","bold":false}],
+      "canonicalAnswer": "had eaten", "acceptedVariants": ["had eaten"],
+      "feedback": {"explanation": "Change has to had because the completed eating is earlier than another past event."}
+    },
+    {
+      "id": "S2-18", "format": "multiple_choice", "targetTense": "present_perfect",
+      "instruction": "Choose the best answer.",
+      "promptSegments": [{"text":"The school term is still in progress. Since it began, there ___ three class trips.","bold":false}],
+      "options": [{"id":"A","text":"have been"},{"id":"B","text":"had been"},{"id":"C","text":"was"},{"id":"D","text":"is"}],
+      "correctOptionId": "A", "canonicalAnswer": "have been", "acceptedVariants": ["have been"],
+      "feedback": {"explanation": "The period extends to now, and the plural “three class trips” takes have."}
+    },
+    {
+      "id": "S2-19", "format": "typed_correction", "targetTense": "present_perfect",
+      "instruction": "Replace only the bold verb phrase.",
+      "promptSegments": [{"text":"Lena ","bold":false},{"text":"has","bold":true},{"text":" these glasses since June, and she still wears them every day.","bold":false}],
+      "canonicalAnswer": "has had", "acceptedVariants": ["has had"],
+      "feedback": {"explanation": "Her possession began in June and continues now. The present perfect of have is has had."}
+    },
+    {
+      "id": "S2-20", "format": "sentence_rebuild", "targetTense": "past_perfect",
+      "instruction": "We first met Alex last Friday. Describe the time before that meeting. Start with “We”. Use every token exactly once.",
+      "promptSegments": [{"text":"We first met Alex last Friday. Describe the time before that meeting.","bold":false}],
+      "tokens": [{"id":"t5","text":"met"},{"id":"t1","text":"We"},{"id":"t3","text":"not"},{"id":"t2","text":"had"},{"id":"t4","text":"Alex"},{"id":"t6","text":"."}],
+      "canonicalTokenOrder": ["t1","t2","t3","t5","t4","t6"], "acceptedTokenOrders": [["t1","t2","t3","t5","t4","t6"]],
+      "canonicalAnswer": "We had not met Alex.", "acceptedVariants": ["We had not met Alex."],
+      "feedback": {"explanation": "The past perfect looks back from last Friday to the time before our first meeting."}
+    }
+  ]
+}

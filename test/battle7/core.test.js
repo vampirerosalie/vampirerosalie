@@ -4,12 +4,35 @@ import {readFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {GameStore,INGREDIENTS,RECIPES,recipeKey,normalizeAnswer} from '../../app/battle7/core/game.js';
 const questions=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank.json',import.meta.url),'utf8')).questions;
+const set2=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set2.json',import.meta.url),'utf8')).questions;
+const disasters=[['Mushroom','Chocolate','Tomato'],['Bread','Egg','Mushroom'],['Rice','Fruit','Cheese'],['Chicken','Chocolate','Milk'],['Egg','Tomato','Fruit']];
 function setup(extra={}){let time=1770000000000;const store=new GameStore({questions,now:()=>time,random:()=>0,...extra});const host=store.create({teamCount:extra.roomTeamCount??3});const teams=[1,2,3].map(i=>store.join(host.pin,{teamSlot:i,name:`Team ${i}`,clientId:randomUUID()}));const act=(token,type,values={})=>store.action(host.pin,token,{type,requestId:randomUUID(),questionId:store.currentQuestion(store.room(host.pin))?.id,expectedPhase:store.room(host.pin).phase,...values});return{store,host,teams,act,room:()=>store.room(host.pin),tick:n=>time+=n};}
 function start(s){s.act(s.host.hostToken,'host:start');return s.room().questions[s.room().questionIndex];}
 function cookPhase(s){if(s.room().phase==='lobby')start(s);s.act(s.host.hostToken,'host:reveal');}
 const count=t=>Object.values(t.inventory).reduce((a,b)=>a+b,0);
 
 test('bank has 20 unique mixed questions, four per tense, rebuild tokens conserve words',()=>{assert.equal(questions.length,20);assert.equal(new Set(questions.map(q=>q.id)).size,20);const tenses={};const formats={};for(const q of questions){tenses[q.targetTense]=(tenses[q.targetTense]??0)+1;formats[q.format]=(formats[q.format]??0)+1;if(q.tokens){assert.deepEqual([...q.canonicalTokenOrder].sort(),q.tokens.map(t=>t.id).sort());}}assert.deepEqual(Object.values(tenses),[4,4,4,4,4]);assert.equal(formats.typed_correction,10);assert.equal(formats.multiple_choice,5);assert.equal(formats.sentence_rebuild,5);});
+test('Set 2 has the exact format and tense balance, answer-letter balance and complete rebuilds',()=>{
+ assert.equal(set2.length,20);assert.equal(new Set(set2.map(q=>q.id)).size,20);
+ const count=field=>Object.fromEntries([...new Set(set2.map(q=>q[field]))].map(value=>[value,set2.filter(q=>q[field]===value).length]));
+ assert.deepEqual(count('format'),{multiple_choice:8,typed_correction:8,sentence_rebuild:4});
+ assert.deepEqual(count('targetTense'),{present_perfect:8,past_simple:6,past_perfect:6});
+ assert.deepEqual(Object.fromEntries('ABCD'.split('').map(letter=>[letter,set2.filter(q=>q.correctOptionId===letter).length])),{A:2,B:2,C:2,D:2});
+ for(const q of set2){assert.ok(q.canonicalAnswer&&q.feedback?.explanation&&q.acceptedVariants?.length);if(q.format==='typed_correction'){assert.equal(q.promptSegments.filter(s=>s.bold).length,1);assert.match(q.instruction,/Replace only/);}if(q.format==='multiple_choice'){assert.equal(q.options.length,4);assert.equal(q.options.find(o=>o.id===q.correctOptionId).text,q.canonicalAnswer);}if(q.format==='sentence_rebuild'){assert.deepEqual([...q.canonicalTokenOrder].sort(),q.tokens.map(t=>t.id).sort());assert.equal(q.acceptedTokenOrders.length,q.acceptedVariants.length);for(const order of q.acceptedTokenOrders)assert.deepEqual([...order].sort(),q.tokens.map(t=>t.id).sort());}}
+ assert.deepEqual(set2[3].acceptedVariants,['I have not finished yet.','I have not yet finished.']);
+});
+test('teacher can choose Set 2 in lobby, persistence and reconnect keep it, active rooms cannot switch, legacy rooms default to Set 1',()=>{
+ const s=setup({questionSets:{set2}});assert.equal(s.store.state(s.host.pin,s.host.hostToken).questionSetId,'set1');
+ assert.throws(()=>s.act(s.teams[0].teamToken,'host:select-set',{questionSetId:'set2'}),/another role/);
+ assert.throws(()=>s.act(s.host.hostToken,'host:select-set',{questionSetId:'set3'}),e=>e.code==='INVALID_QUESTION_SET');
+ s.act(s.host.hostToken,'host:select-set',{questionSetId:'set2'});assert.equal(s.room().questionSetId,'set2');assert.deepEqual(new Set(s.room().questions.map(q=>q.id)),new Set(set2.map(q=>q.id)));
+ const restored=new GameStore({questions,questionSets:{set2},secret:s.store.secret,now:()=>1770000001000});restored.rooms.set(s.host.pin,JSON.parse(JSON.stringify(s.room())));
+ assert.equal(restored.state(s.host.pin,s.host.hostToken).questionSetId,'set2');assert.equal(restored.state(s.host.pin,s.teams[0].teamToken).questionSetId,'set2');
+ start(s);assert.throws(()=>s.act(s.host.hostToken,'host:select-set',{questionSetId:'set1'}),e=>e.code==='WRONG_PHASE');
+ const seen=[];for(let i=0;i<20;i++){seen.push(s.store.currentQuestion(s.room()).id);s.act(s.host.hostToken,'host:reveal');s.act(s.host.hostToken,'host:advance');}
+ assert.deepEqual(new Set(seen),new Set(set2.map(q=>q.id)));assert.equal(s.room().phase,'finished');
+ const old=setup({questionSets:{set2}});delete old.room().questionSetId;assert.equal(old.store.state(old.host.pin,old.host.hostToken).questionSetId,'set1');assert.deepEqual(new Set(old.room().questions.map(q=>q.id)),new Set(questions.map(q=>q.id)));
+});
 test('ten distinct stations; retry join restores identity and cannot occupy a second slot',()=>{const s=setup({roomTeamCount:10});const id=randomUUID();const t=s.store.join(s.host.pin,{teamSlot:4,name:'Owls',clientId:id});assert.deepEqual(s.store.join(s.host.pin,{teamSlot:7,name:'ignored',clientId:id}),t);assert.throws(()=>s.store.join(s.host.pin,{teamSlot:4,name:'Other',clientId:randomUUID()}),/taken/);for(let i=5;i<=10;i++)s.store.join(s.host.pin,{teamSlot:i,name:`Team${i}`,clientId:randomUUID()});assert.equal(s.room().teams.length,10);assert.throws(()=>s.store.join(s.host.pin,{teamSlot:11,name:'Extra',clientId:randomUUID()}),/available/);});
 test('public and pupil snapshots hide teacher answer key and entire hidden catalogue',()=>{const s=setup();const q=start(s);for(const token of [undefined,s.teams[0].teamToken]){const state=s.store.state(s.host.pin,token);assert.equal(state.answerKey,undefined);assert.equal(state.answerReveal,null);assert.equal(state.question.canonicalAnswer,undefined);assert.equal(state.question.targetTense,undefined);assert.equal(state.question.canonicalTokenOrder,undefined);assert.equal(state.recipes,undefined);}assert.equal(s.store.state(s.host.pin,s.host.hostToken).answerKey.canonicalAnswer,q.canonicalAnswer);});
 test('manual accept rewards a pair once; retries and repeated decisions do not duplicate; reversal reuses the pair',()=>{const s=setup();const q=start(s);const t=s.teams[0];s.act(t.teamToken,'pupil:submit',{questionId:q.id,answer:'Teacher decides this'});assert.equal(count(s.room().teams[0]),0);const action={type:'host:review',requestId:randomUUID(),teamId:t.teamId,questionId:q.id,decision:'accepted'};const first=s.store.action(s.host.pin,s.host.hostToken,action);assert.equal(count(s.room().teams[0]),2);assert.deepEqual(first.result.rewards,['Bread','Bread']);assert.equal(s.store.action(s.host.pin,s.host.hostToken,action).replayed,true);s.act(s.host.hostToken,'host:review',{...action,requestId:randomUUID()});assert.equal(count(s.room().teams[0]),2);s.act(s.host.hostToken,'host:review',{teamId:t.teamId,questionId:q.id,decision:'rejected'});assert.equal(count(s.room().teams[0]),0);s.act(s.host.hostToken,'host:review',{teamId:t.teamId,questionId:q.id,decision:'accepted'});assert.equal(count(s.room().teams[0]),2);assert.equal(s.room().teams[0].inventory.Bread,2);});
@@ -45,6 +68,22 @@ test('cooks work during questions and reveals with exact-three stock, determinis
  assert.equal(s.act(s.teams[1].teamToken,'pupil:cook',{ingredients:['Bread','Cheese','Tomato']}).result.cook.starsEarned,2);
 });
 test('basic cooking consumes three and earns one star; duplicates still require enough quantity',()=>{const s=setup();cookPhase(s);const t=s.room().teams[0];Object.assign(t.inventory,{Chocolate:1,Chicken:1,Mushroom:1,Bread:1,Cheese:1});t.stars=5;assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Bread','Cheese']}),/bag changed/);assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Cheese']}),/exactly three/);const r=s.act(s.teams[0].teamToken,'pupil:cook',{ingredients:['Mushroom','Chocolate','Chicken']});assert.equal(r.result.cook.dish.success,true);assert.equal(r.result.cook.dish.type,'basic');assert.equal(r.result.cook.starsEarned,1);assert.equal(s.room().teams[0].stars,6);assert.equal(count(s.room().teams[0]),2);});
+test('five hidden disasters work in any order, consume three, go negative, never discover and replay once',()=>{
+ const s=setup();start(s);const team=s.room().teams[0],token=s.teams[0].teamToken;
+ for(const items of disasters){
+  assert.equal(RECIPES[recipeKey(items)],undefined);
+  for(const item of items)team.inventory[item]=(team.inventory[item]||0)+2;
+  const reversed=[...items].reverse(),body={type:'pupil:cook',requestId:randomUUID(),questionId:s.store.currentQuestion(s.room()).id,expectedPhase:s.room().phase,ingredients:reversed};
+  const before=team.stars,first=s.store.action(s.host.pin,token,body),replayed=s.store.action(s.host.pin,token,body);
+  assert.equal(first.result.cook.dish.name,'Kitchen Disaster!');assert.equal(first.result.cook.starsEarned,-1);assert.equal(first.result.cook.discoveryBonus,0);assert.equal(first.result.power,null);assert.equal(team.stars,before-1);assert.equal(replayed.replayed,true);assert.equal(team.stars,before-1);
+  const second=s.act(token,'pupil:cook',{ingredients:items});assert.equal(second.result.cook.starsEarned,-1);assert.equal(team.stars,before-2);assert.equal(count(team),0);
+  assert.equal(team.recipes[recipeKey(items)],undefined);assert.equal(s.room().discoveries[recipeKey(items)],undefined);
+ }
+ assert.equal(team.stars,-10);assert.deepEqual(team.recipes,{});assert.deepEqual(s.room().discoveries,{});
+ const reconnected=new GameStore({questions,secret:s.store.secret,now:()=>1770000001000});reconnected.rooms.set(s.host.pin,JSON.parse(JSON.stringify(s.room())));
+ const state=reconnected.state(s.host.pin,token);assert.equal(state.me.stars,-10);assert.equal(state.me.recipes.length,0);assert.equal(state.teams[0].recipesCount,0);assert.equal(state.latestCooks.length,10);
+ Object.assign(team.inventory,{Bread:1,Cheese:1,Tomato:1});const good=s.act(token,'pupil:cook',{ingredients:['Tomato','Bread','Cheese']});assert.equal(good.result.cook.starsEarned,3);assert.equal(team.stars,-7);
+});
 test('two simultaneous cook attempts cannot overspend the same inventory',async()=>{const s=setup();cookPhase(s);Object.assign(s.room().teams[0].inventory,{Bread:1,Cheese:1,Tomato:1});const outcomes=await Promise.allSettled([1,2].map(()=>Promise.resolve().then(()=>s.act(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Cheese','Tomato']}))));assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);assert.equal(count(s.room().teams[0]),0);});
 test('Sneaky Snack has no stars/bonus, stores power on invalid target, steals one once and protects rival for round',()=>{const s=setup();cookPhase(s);const a=s.room().teams[0];Object.assign(a.inventory,{Bread:2,Mushroom:2,Fruit:2});for(let i=0;i<2;i++)s.act(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Mushroom','Fruit']});assert.equal(a.stars,0);assert.equal(a.powers.length,2);const power=a.powers[0].id;assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:steal',{powerId:power,targetTeamId:s.teams[1].teamId}),/no ingredients/);assert.equal(s.room().teams[0].powers.length,2);s.room().teams[1].inventory.Egg=2;const request={type:'pupil:steal',requestId:randomUUID(),questionId:s.store.currentQuestion(s.room()).id,expectedPhase:s.room().phase,powerId:power,targetTeamId:s.teams[1].teamId};s.store.action(s.host.pin,s.teams[0].teamToken,request);s.store.action(s.host.pin,s.teams[0].teamToken,request);assert.equal(s.room().teams[1].inventory.Egg,1);assert.equal(s.room().teams[0].inventory.Egg,1);assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:steal',{powerId:s.room().teams[0].powers[0].id,targetTeamId:s.teams[1].teamId}),/already lost/);assert.equal(s.room().teams[0].powers.length,1);});
 test('Star Snatcher Tart stores a zero-star power, transfers one star once, and resets separate target protection only on the next question',()=>{
@@ -53,6 +92,7 @@ test('Star Snatcher Tart stores a zero-star power, transfers one star once, and 
  const s=setup();start(s);const [attackerId,rivalId,otherId]=s.room().teams.map(team=>team.id);Object.assign(s.room().teams[0].inventory,{Bread:1,Cheese:1,Chocolate:1});const before=s.room().teams[0].stars;
  const cooked=s.act(s.teams[0].teamToken,'pupil:cook',{ingredients:['Chocolate','Bread','Cheese']}).result;
  assert.equal(cooked.cook.dish.name,'Star Snatcher Tart');assert.equal(cooked.cook.starsEarned,0);assert.equal(cooked.cook.discoveryBonus,0);assert.equal(s.room().teams[0].stars,before);assert.equal(cooked.power.type,'steal-star');assert.equal(s.room().discoveries[recipeKey(['Bread','Cheese','Chocolate'])],undefined);
+ assert.equal(s.room().teams[0].recipes[recipeKey(['Bread','Cheese','Chocolate'])].name,'Star Snatcher Tart');assert.equal(s.store.state(s.host.pin,s.teams[0].teamToken).me.recipes.filter(r=>r.name==='Star Snatcher Tart').length,1);
  const power=cooked.power.id;assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:steal-star',{powerId:power,targetTeamId:attackerId}),e=>e.code==='INVALID_STAR_TARGET');assert.equal(s.room().teams[0].powers.length,1);
  assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:steal-star',{powerId:power,targetTeamId:rivalId}),e=>e.code==='NO_STARS');assert.equal(s.room().teams[0].powers.length,1);
  s.room().teams[1].stars=2;const request={type:'pupil:steal-star',requestId:randomUUID(),questionId:s.store.currentQuestion(s.room()).id,expectedPhase:s.room().phase,powerId:power,targetTeamId:rivalId};
@@ -318,23 +358,27 @@ test('basic dishes are deterministic, reward every try once, and never discover 
  }
 });
 
-test('every unordered valid three-ingredient combination earns at least one star except the two sabotage powers',()=>{
- const s=setup();start(s);let expectedStars=0,ordinary=0,specials=0;
+test('every unordered valid three-ingredient combination has its intended recipe, power, disaster or basic result',()=>{
+ const s=setup();start(s);let expectedStars=0,ordinary=0,specials=0,disasterCount=0;
  for(let a=0;a<INGREDIENTS.length;a++)for(let b=a;b<INGREDIENTS.length;b++)for(let c=b;c<INGREDIENTS.length;c++){
   const ingredients=[INGREDIENTS[a],INGREDIENTS[b],INGREDIENTS[c]],team=s.room().teams[0];
   for(const item of INGREDIENTS)team.inventory[item]=0;
   for(const item of ingredients)team.inventory[item]++;
   const {cook,power}=s.act(s.teams[0].teamToken,'pupil:cook',{ingredients}).result;
   const recipe=RECIPES[recipeKey(ingredients)];
-  assert.equal(count(s.room().teams[0]),0);assert.equal(cook.dish.success,true);
-  if(['steal','steal-star'].includes(recipe?.type)){
+  assert.equal(count(s.room().teams[0]),0);
+  if(disasters.some(items=>recipeKey(items)===recipeKey(ingredients))){
+   disasterCount++;assert.equal(recipe,undefined);assert.equal(cook.dish.type,'disaster');assert.equal(cook.dish.success,false);assert.equal(cook.starsEarned,-1);assert.equal(cook.discoveryBonus,0);assert.equal(power,null);
+  }else if(['steal','steal-star'].includes(recipe?.type)){
+   assert.equal(cook.dish.success,true);
    specials++;assert.equal(cook.starsEarned,0);assert.equal(cook.discoveryBonus,0);assert.equal(power.type,recipe.type);
   }else{
+   assert.equal(cook.dish.success,true);
    ordinary++;assert.ok(cook.starsEarned>=1);assert.equal(power,null);
    assert.equal(cook.starsEarned,recipe?recipe.stars+1:1);assert.equal(cook.discoveryBonus,recipe?1:0);
   }
   expectedStars+=cook.starsEarned;
  }
- assert.equal(ordinary,218);assert.equal(specials,2);assert.equal(s.room().teams[0].stars,expectedStars);
+ assert.equal(ordinary,213);assert.equal(specials,2);assert.equal(disasterCount,5);assert.equal(s.room().teams[0].stars,expectedStars);
  assert.equal(Object.keys(s.room().discoveries).length,40);assert.equal(Object.keys(s.room().teams[0].recipes).length,42);
 });
