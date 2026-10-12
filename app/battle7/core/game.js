@@ -68,7 +68,7 @@ const rewardCounts=submission=>rewardItems(submission).reduce((bag,item)=>(bag[i
 const rewardLocked=(team,submission)=>submission?.status==='accepted'&&(submission.rewardSpent===true||Object.entries(rewardCounts(submission)).some(([item,quantity])=>team.inventory[item]<quantity));
 export const MAX_OPEN_TEAMS=40;
 function suggestedDecision(q,answer){
- if(!q||!['typed_correction','multiple_choice','sentence_rebuild'].includes(q.format))return null;
+ if(!q||!['typed_correction','multiple_choice','sentence_rebuild','letter_spell'].includes(q.format))return null;
  if(q.format==='multiple_choice'){
   const matches=q.options?.filter(option=>normalizeAnswer(option.text)===normalizeAnswer(answer))??[];
   return matches.length===1&&q.correctOptionId?(matches[0].id===q.correctOptionId?'accepted':'rejected'):null;
@@ -83,7 +83,7 @@ function suggestedDecision(q,answer){
 // but reveals no original position, including for previously saved rooms.
 const publicQuestion=(q,tokenId)=>{
  if(!q)return null;
- const shown=Object.fromEntries(['id','format','instruction','instructionZh','promptSegments','options'].filter(k=>q[k]!==undefined).map(k=>[k,q[k]]));
+ const shown=Object.fromEntries(['id','format','instruction','instructionZh','promptSegments','options','initialLetter','answerLength'].filter(k=>q[k]!==undefined).map(k=>[k,q[k]]));
  if(q.tokens)shown.tokens=q.tokens.map(({id,text})=>({id:tokenId(id),text}));
  return shown;
 };
@@ -100,7 +100,7 @@ export class GameStore {
  constructor({questions,questionSets={},now=Date.now,random=randomInt,retentionHours=48,ingredientWeights={},secret=randomBytes(32).toString('hex')}={}){
   if(!questions||questions.length!==20)throw new Error('Exactly 20 questions required.');
   this.questions=questions;this.questionSets={set1:questions,...questionSets};
-  if(Object.values(this.questionSets).some(set=>!Array.isArray(set)||set.length!==20))throw new Error('Each question set needs exactly 20 questions.');
+  if(Object.values(this.questionSets).some(set=>!Array.isArray(set)||![20,25].includes(set.length)))throw new Error('Each question set needs 20 or 25 questions.');
   this.now=now;this.random=random;this.retentionMs=retentionHours*3600000;this.rooms=new Map();this.lastSeen=new Map();
   this.weights=Object.fromEntries(INGREDIENTS.map(x=>[x,ingredientWeights[x]??1]));
   if(Object.values(this.weights).some(x=>!Number.isInteger(x)||x<0||x>100)||!Object.values(this.weights).some(Boolean))throw new Error('Ingredient weights must be integers 0–100, with at least one positive weight.');
@@ -110,6 +110,10 @@ export class GameStore {
  save(){}
  prune(){for(const [pin,r]of this.rooms){if(r.expiresAt<=this.now())this.rooms.delete(pin);}}
  room(pin){if(!/^\d{5}$/.test(String(pin)))fail('Enter the five-digit kitchen PIN.','INVALID_PIN');const r=this.rooms.get(String(pin));if(!r||r.expiresAt<=this.now()){this.prune();fail('This kitchen is unavailable or has expired. Ask your teacher for the new PIN.','ROOM_NOT_FOUND',404);}return r;}
+ prepareQuestions(set){
+  const ordered=set.length===25?[...shuffle(set.slice(0,20)),...set.slice(20)]:shuffle(set);
+  return ordered.map(q=>({...structuredClone(q),...(q.options?{options:shuffle(q.options)}:{})}));
+ }
  create({teamCount=10,roomName='Crazy Kitchen',questionSetId='set1',openLobby=false}={}){
   if(typeof openLobby!=='boolean')fail('Choose a valid lobby setting.');
   if(!Number.isInteger(teamCount)||teamCount<2||teamCount>(openLobby?MAX_OPEN_TEAMS:10))fail(openLobby?`Choose 2–${MAX_OPEN_TEAMS} teams.`:'Choose 2–10 teams.');
@@ -117,7 +121,7 @@ export class GameStore {
   this.prune();if(this.rooms.size>=100)fail('This server has reached its room limit.','CAPACITY',503);
   let pin;do{pin=String(randomInt(10000,100000));}while(this.rooms.has(pin));
   const hostToken=randomBytes(32).toString('hex');const now=this.now();
-  const selectedQuestions=shuffle(this.questionSets[questionSetId]).map(q=>({...structuredClone(q),...(q.options?{options:shuffle(q.options)}:{})}));
+  const selectedQuestions=this.prepareQuestions(this.questionSets[questionSetId]);
   const r={pin,roomName:cleanName(roomName,48)||'Crazy Kitchen',hostHash:hash(hostToken),createdAt:now,expiresAt:now+this.retentionMs,phase:'lobby',version:1,teamCount,openLobby,deferredRewards:openLobby,questionSetId,questionIndex:-1,questions:selectedQuestions,teams:[],submissions:{},discoveries:{},latestCooks:[],events:[],rushEndsAt:null,answerCountdownEndsAt:null,rushNumber:0,incomingThefts:{},incomingStarThefts:{},receipts:{},weights:this.weights};
   this.save(r);this.rooms.set(pin,r);return {pin,hostToken};
  }
@@ -184,7 +188,7 @@ export class GameStore {
    case 'host:select-set':{
     requirePhase('lobby');if(!Object.hasOwn(this.questionSets,b.questionSetId))fail('Choose an available question set.','INVALID_QUESTION_SET');
     if((r.questionSetId??'set1')===b.questionSetId)return{questionSetId:b.questionSetId};
-    r.questionSetId=b.questionSetId;r.questions=shuffle(this.questionSets[b.questionSetId]).map(question=>({...structuredClone(question),...(question.options?{options:shuffle(question.options)}:{})}));
+    r.questionSetId=b.questionSetId;r.questions=this.prepareQuestions(this.questionSets[b.questionSetId]);
     return{questionSetId:r.questionSetId};
    }
    case 'host:configure':{
@@ -204,6 +208,7 @@ export class GameStore {
     requirePhase('question');if(b.questionId!==q.id)fail('That question has ended. Your answer was not submitted to the new round.','STALE_QUESTION',409);
     if(r.answerCountdownEndsAt&&this.now()>=r.answerCountdownEndsAt)fail('Time is up. Your teacher can review the answers now.','ANSWER_TIME_UP',409);
     if(typeof b.answer!=='string'||!b.answer.trim()||b.answer.length>500)fail('Enter an answer of 1–500 characters.');
+    if(q.format==='letter_spell'&&(!/^[a-z]+$/i.test(b.answer.trim())||b.answer.trim().length!==q.answerLength||b.answer.trim()[0].toLowerCase()!==q.initialLetter.toLowerCase()))fail('Complete the word using the given first letter and the letter tiles.');
     const subs=r.submissions[q.id]??={};if(subs[auth.team.id])fail('Your team has already submitted this answer.','ALREADY_SUBMITTED',409);
     const suggestion=r.deferredRewards?suggestedDecision(q,b.answer):null;
     subs[auth.team.id]={answer:b.answer.trim(),status:suggestion??'submitted',decisionSource:suggestion?'auto':null,rewards:null,at:this.now()};return{submitted:true};

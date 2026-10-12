@@ -10,18 +10,19 @@ import {GameStore} from '../../app/battle7/core/game.js';
 const source=readFileSync(new URL('../../public/battle7/app.js',import.meta.url),'utf8');
 const questions=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank.json',import.meta.url),'utf8')).questions;
 const set2=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set2.json',import.meta.url),'utf8')).questions;
+const set3=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set3.json',import.meta.url),'utf8')).questions;
 const copy=value=>JSON.parse(JSON.stringify(value));
 const response=(data,status=200)=>({ok:status<400,status,json:async()=>data});
 const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};};
 async function until(check){for(let i=0;i<100;i++){if(check())return;await new Promise(resolve=>setImmediate(resolve));}assert.fail('Frontend condition did not settle');}
 function harness({saved=new Map(),sessionSaved=new Map(),search='',boot=false,fetcher=async()=>response({})}={}){
- const appEvents=new Map();const app={innerHTML:'',addEventListener:(name,fn)=>appEvents.set(name,fn)},announcer={textContent:''},windowEvents=new Map();
+ const appEvents=new Map(),captureEvents=new Map();const app={innerHTML:'',addEventListener:(name,fn,capture)=>{if(capture===true)captureEvents.set(name,[...(captureEvents.get(name)||[]),fn]);else appEvents.set(name,fn);}},announcer={textContent:''},windowEvents=new Map();
  const document={body:{dataset:{}},activeElement:null,querySelector:s=>s==='#app'?app:s==='#announcer'?announcer:null,querySelectorAll:()=>[],addEventListener(){}};
  const window={addEventListener:(name,fn)=>windowEvents.set(name,fn),scrollTo(){},postMessage(){}};window.parent=window;
  const calls=[];let network=fetcher;const location={origin:'https://school.test',search};const history={replaceState(_state,_unused,url){location.search=url.includes('?')?'?'+url.split('?')[1]:'';},pushState(_state,_unused,url){this.replaceState(_state,_unused,url);}};
  const context=vm.createContext({document,window,navigator:{onLine:true},location,history,URLSearchParams,Map,Set,Date,Math,JSON,String,Number,Object,Array,Promise,Error,AbortController,crypto:{randomUUID},setInterval(){},setTimeout(){return 1;},clearTimeout(){},sessionStorage:{getItem:key=>sessionSaved.get(key)??null,setItem:(key,value)=>sessionSaved.set(key,value)},localStorage:{getItem:key=>saved.get(key)??null,setItem:(key,value)=>saved.set(key,value),removeItem:key=>saved.delete(key)},fetch:async(path,options)=>{calls.push({path,options,body:options.body?JSON.parse(options.body):null});return network(path,options);}});
  vm.runInContext((boot?source:source.slice(0,source.lastIndexOf('readRoute();')))+`;globalThis.frontend={ui,render,readRoute,openKitchen,studentRoute,cookingView,powersView,modal,canSendAction,loadState,beginJoin,deliverPendingJoin,sendAction,deliverPending,navigate,applyState,hostControl,answerValue,shareUrl,queuePublicCooks,configure(nextMode,nextState,credential='test-token'){routeGeneration++;mode=nextMode;pin=String(nextState.pin);token=credential;state=null;applyState({...nextState,role:nextState.role??(nextMode==='host'?'host':nextMode==='join'&&credential?'team':'public')},true);},get(){return{mode,pin,token,state,pending,pendingJoin,routeGeneration,joinRetryDelay,retryDelay,joinInFlight:!!joinInFlight,actionInFlight:!!actionInFlight,html:app.innerHTML,cookQueueLength:cookQueue.length};}};`,context);
- return {frontend:context.frontend,saved,sessionSaved,location,click:action=>appEvents.get('click')({target:{classList:{contains:()=>false},closest:()=>({dataset:{action},disabled:false})}}),change:(id,value)=>appEvents.get('change')({target:{id,value}}),calls,network:fn=>network=fn,online:()=>windowEvents.get('online')?.(),back:()=>windowEvents.get('popstate')?.(),pageshow:()=>windowEvents.get('pageshow')?.({persisted:true})};
+ return {frontend:context.frontend,saved,sessionSaved,location,click:(action,extra={})=>{let stopped=false;const target={dataset:{action,...extra},disabled:false,classList:{contains:()=>false},closest(selector){if(selector==='[data-action="more-teams"]'&&action!=='more-teams')return null;if(selector==='[data-action^="spell-"]'&&!action.startsWith('spell-'))return null;return target;}};const event={target,stopImmediatePropagation(){stopped=true;}};for(const handler of captureEvents.get('click')||[])handler(event);if(!stopped)return appEvents.get('click')(event);},change:(id,value)=>appEvents.get('change')({target:{id,value}}),calls,network:fn=>network=fn,online:()=>windowEvents.get('online')?.(),back:()=>windowEvents.get('popstate')?.(),pageshow:()=>windowEvents.get('pageshow')?.({persisted:true})};
 }
 function fixture(teamCount=2){const store=new GameStore({questions});const host=store.create({teamCount});return {store,host};}
 function adapter(store){return async(path,options)=>{const m=path.match(/\/rooms\/(\d{5})\/(join|state|action)$/);assert.ok(m,`Unexpected API path: ${path}`);const[,pin,op]=m,body=options.body?JSON.parse(options.body):null,token=options.headers.Authorization?.slice(7);try{if(op==='join')return response(store.join(pin,body));if(op==='action')return response(store.action(pin,token,body));return response(store.state(pin,token));}catch(error){return response({error:error.message,code:error.code},error.status||500);}};}
@@ -170,6 +171,31 @@ test('new Battle 7 UI opens a flexible lobby and keeps provisional results off s
  teacher.frontend.applyState(store.state(host.pin,host.hostToken));teacher.frontend.ui.review=true;teacher.frontend.render();
  assert.match(teacher.frontend.get().html,/Finalize & reveal answer/);
  assert.match(teacher.frontend.get().html,/Auto suggestion/);
+});
+
+test('Set 3 phone spells with 26 tap-only letters and teacher shows 25-question progress',async()=>{
+ const store=new GameStore({questions,questionSets:{set3}}),host=store.create({teamCount:40,openLobby:true,questionSetId:'set3'});
+ const team=store.join(host.pin,{teamSlot:1,name:'Vocabulary crew',clientId:randomUUID()});
+ const teacher=harness({fetcher:adapter(store)});teacher.frontend.configure('host',store.state(host.pin,host.hostToken),host.hostToken);
+ assert.match(teacher.frontend.get().html,/Set 3 — Grammar \+ Travel Vocabulary/);
+ assert.match(teacher.frontend.get().html,/value="set3" selected/);
+ action(store,host,'host:start');store.room(host.pin).questionIndex=20;
+ const q=store.room(host.pin).questions[20];assert.equal(q.canonicalAnswer,'journey');
+ const h=harness({fetcher:adapter(store)});h.frontend.configure('join',store.state(host.pin,team.teamToken),team.teamToken);
+ assert.match(h.frontend.get().html,/Q21\/25/);
+ assert.match(h.frontend.get().html,/data-action="spell-letter"/);
+ assert.equal((h.frontend.get().html.match(/data-action="spell-letter"/g)||[]).length,26);
+ assert.doesNotMatch(h.frontend.get().html,/<textarea/);
+ assert.match(h.frontend.get().html,/spell-slots/);
+ assert.match(h.frontend.get().html,/class="given">J/);
+ await h.click('spell-letter',{letter:'O'});await h.click('spell-letter',{letter:'X'});
+ assert.equal(h.frontend.answerValue(q),'JOX');await h.click('spell-back');assert.equal(h.frontend.answerValue(q),'JO');
+ await h.click('spell-clear');assert.equal(h.frontend.answerValue(q),'J');
+ for(const letter of 'OURNEY')await h.click('spell-letter',{letter});
+ assert.equal(h.frontend.answerValue(q),'JOURNEY');assert.match(h.frontend.get().html,/data-action="spell-letter"[^>]*disabled/);
+ await h.frontend.sendAction('pupil:submit',{questionId:q.id,answer:h.frontend.answerValue(q)});
+ assert.equal(store.room(host.pin).submissions[q.id][team.teamId].status,'accepted');
+ assert.match(h.frontend.get().html,/Order received!/);
 });
 
 test('QR team stays student through teacher close, refresh, history back, bfcache and reconnect',async()=>{

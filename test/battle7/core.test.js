@@ -5,11 +5,59 @@ import {randomUUID} from 'node:crypto';
 import {GameStore,INGREDIENTS,RECIPES,recipeKey,normalizeAnswer} from '../../app/battle7/core/game.js';
 const questions=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank.json',import.meta.url),'utf8')).questions;
 const set2=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set2.json',import.meta.url),'utf8')).questions;
+const set3=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set3.json',import.meta.url),'utf8')).questions;
 const disasters=[['Mushroom','Chocolate','Tomato'],['Bread','Egg','Mushroom'],['Rice','Fruit','Cheese'],['Chicken','Chocolate','Milk'],['Egg','Tomato','Fruit']];
 function setup(extra={}){let time=1770000000000;const store=new GameStore({questions,now:()=>time,random:()=>0,...extra});const host=store.create({teamCount:extra.roomTeamCount??3});const teams=[1,2,3].map(i=>store.join(host.pin,{teamSlot:i,name:`Team ${i}`,clientId:randomUUID()}));const act=(token,type,values={})=>store.action(host.pin,token,{type,requestId:randomUUID(),questionId:store.currentQuestion(store.room(host.pin))?.id,expectedPhase:store.room(host.pin).phase,...values});return{store,host,teams,act,room:()=>store.room(host.pin),tick:n=>time+=n};}
 function start(s){s.act(s.host.hostToken,'host:start');return s.room().questions[s.room().questionIndex];}
 function cookPhase(s){if(s.room().phase==='lobby')start(s);s.act(s.host.hostToken,'host:reveal');}
 const count=t=>Object.values(t.inventory).reduce((a,b)=>a+b,0);
+
+test('Set 3 keeps all 20 keyed MCQs shuffled ahead of five fixed vocabulary words',()=>{
+ assert.equal(set3.length,25);
+ assert.equal(new Set(set3.map(q=>q.id)).size,25);
+ assert.deepEqual(set3.slice(0,20).map(q=>q.format),Array(20).fill('multiple_choice'));
+ assert.deepEqual(set3.slice(20).map(q=>[q.id,q.canonicalAnswer]),[['S3-21','journey'],['S3-22','ticket'],['S3-23','travel'],['S3-24','plane'],['S3-25','luggage']]);
+ for(const q of set3.slice(0,20)){
+  assert.equal(q.options.length,3);
+  assert.equal(q.options.find(o=>o.id===q.correctOptionId)?.text,q.canonicalAnswer);
+  assert.ok(q.feedback.explanation);
+ }
+ for(const q of set3.slice(20)){
+  assert.equal(q.format,'letter_spell');assert.equal(q.initialLetter.toLowerCase(),q.canonicalAnswer[0]);
+  assert.equal(q.answerLength,q.canonicalAnswer.length);assert.ok(q.feedback.explanation);
+ }
+ const store=new GameStore({questions,questionSets:{set3}}),host=store.create({teamCount:2,questionSetId:'set3'});
+ assert.equal(store.state(host.pin,host.hostToken).totalQuestions,25);
+ assert.deepEqual(store.room(host.pin).questions.slice(20).map(q=>q.id),set3.slice(20).map(q=>q.id));
+ assert.deepEqual(new Set(store.room(host.pin).questions.slice(0,20).map(q=>q.id)),new Set(set3.slice(0,20).map(q=>q.id)));
+ const other=store.create({teamCount:2});const action=(type,extra={})=>store.action(other.pin,other.hostToken,{type,requestId:randomUUID(),...extra});
+ action('host:select-set',{questionSetId:'set3'});
+ assert.equal(store.state(other.pin,other.hostToken).totalQuestions,25);
+ assert.deepEqual(store.room(other.pin).questions.slice(20).map(q=>q.id),set3.slice(20).map(q=>q.id));
+});
+
+test('Set 3 spelling answers require the given initial and exact length, remain private, and end at 25',()=>{
+ const store=new GameStore({questions,questionSets:{set3},random:()=>0});const host=store.create({teamCount:40,openLobby:true,questionSetId:'set3'});
+ const team=store.join(host.pin,{teamSlot:1,name:'Spellers',clientId:randomUUID()});
+ const act=(token,type,extra={})=>{const r=store.room(host.pin);return store.action(host.pin,token,{type,requestId:randomUUID(),questionId:r.questions[r.questionIndex]?.id,expectedPhase:r.phase,...extra});};
+ act(host.hostToken,'host:start');
+ for(let i=0;i<20;i++){assert.equal(store.room(host.pin).questions[i].format,'multiple_choice');act(host.hostToken,'host:reveal');act(host.hostToken,'host:advance');}
+ for(const [index,word] of ['journey','ticket','travel','plane','luggage'].entries()){
+  const q=store.room(host.pin).questions[20+index];assert.equal(q.canonicalAnswer,word);
+  const publicState=store.state(host.pin),teamState=store.state(host.pin,team.teamToken);
+  assert.equal(publicState.question.canonicalAnswer,undefined);assert.equal(publicState.question.initialLetter,word[0].toUpperCase());
+  assert.equal(publicState.question.answerLength,word.length);assert.equal(teamState.answerKey,undefined);
+  assert.throws(()=>act(team.teamToken,'pupil:submit',{answer:'x'+word.slice(1)}),/given first letter/);
+  assert.throws(()=>act(team.teamToken,'pupil:submit',{answer:word.slice(0,-1)}),/given first letter/);
+  act(team.teamToken,'pupil:submit',{answer:word.toUpperCase()});
+  assert.equal(store.state(host.pin,host.hostToken).submissions[0].status,'accepted');
+  assert.equal(store.state(host.pin,team.teamToken).me.submission.status,'submitted');
+  act(host.hostToken,'host:reveal');assert.equal(store.state(host.pin,team.teamToken).me.submission.status,'accepted');
+  assert.equal(store.state(host.pin,team.teamToken).me.submission.rewards.length,2);
+  act(host.hostToken,'host:advance');
+ }
+ assert.equal(store.room(host.pin).phase,'finished');assert.equal(store.state(host.pin,host.hostToken).questionNumber,25);
+});
 
 test('open lobby accepts more than ten unique teams and starts with any joined count',()=>{
  const store=new GameStore({questions});const host=store.create({teamCount:40,openLobby:true});

@@ -51,3 +51,14 @@ body[data-embedded="true"][data-role="host"]>.game-header,body[data-embedded="tr
 .public-cook-popup.disaster-dish{background:linear-gradient(160deg,#fff0ea,#ffd8ce);border-color:#c65d4c;color:#8e3025}
 .public-cook-popup.disaster-dish strong,.cook-item.disaster-dish .cook-stars{color:#a52e24}
 .review-dialog .judge.selected:disabled{opacity:1}
+
+/* Set 3 spelling questions keep the given letter fixed and use tap-only tiles. */
+.round-dots.long-set{gap:3px}.round-dots.long-set i{width:6px;min-width:6px}
+.spell-slots{display:flex;justify-content:center;gap:5px;width:100%;max-width:480px;margin:20px auto 24px}
+.spell-slots span{display:grid;place-items:center;flex:1;min-width:0;max-width:54px;min-height:49px;border-bottom:3px solid #9fb596;border-radius:7px;background:#f2f5e9;color:var(--green);font-size:24px;font-weight:900;text-transform:uppercase}
+.spell-slots .given{background:#ffdc82;border-color:#d89825;color:#493417}.spell-slots .filled{border-color:#568657;background:#e6f1dd}
+.spelling-form .input-label{display:block;margin-top:20px}.letter-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:18px 0}
+.letter-tile{min-height:47px;padding:7px 2px;border:1px solid #a7c3a7;border-radius:9px;background:#eaf3e6;color:#194333;font-size:18px;font-weight:900;box-shadow:0 3px 0 #b5cdb1;touch-action:manipulation}
+.letter-tile:active{transform:translateY(2px);box-shadow:0 1px 0 #b5cdb1}.spelling-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 20px}.spelling-actions .button{min-height:40px}
+.answer-locked .letter-tile{opacity:.45}
+@media(max-width:450px){.spell-slots{gap:3px}.spell-slots span{font-size:21px;min-height:43px}.letter-grid{gap:5px}.letter-tile{min-height:43px;font-size:17px}.round-dots.long-set{gap:2px}.round-dots.long-set i{width:5px;min-width:5px}}

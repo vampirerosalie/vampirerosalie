@@ -1,0 +1,176 @@
+{
+  "title": "Grammar and Travel Vocabulary",
+  "questionCount": 25,
+  "questions": [
+    {
+      "id": "S3-01", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "My sister usually ______ the piano, but last night she ______ the violin.", "bold": false}],
+      "options": [{"id": "A", "text": "practises / played"}, {"id": "B", "text": "practise / playing"}, {"id": "C", "text": "practised / plays"}],
+      "correctOptionId": "A", "canonicalAnswer": "practises / played", "acceptedVariants": ["practises / played"],
+      "feedback": {"explanation": "Usually signals a present habit, so the singular subject 'my sister' takes practises. 'Last night' is a finished past time, so use played."}
+    },
+    {
+      "id": "S3-02", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "The pupils ______ an experiment when the lights suddenly went out.", "bold": false}],
+      "options": [{"id": "A", "text": "conducted"}, {"id": "B", "text": "were conducting"}, {"id": "C", "text": "are conducting"}],
+      "correctOptionId": "B", "canonicalAnswer": "were conducting", "acceptedVariants": ["were conducting"],
+      "feedback": {"explanation": "The experiment was in progress when the lights went out. Use the past continuous for the ongoing background action."}
+    },
+    {
+      "id": "S3-03", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "The pupils felt ______ by the ______ accident.", "bold": false}],
+      "options": [{"id": "A", "text": "shocking / shocked"}, {"id": "B", "text": "shocked / shocking"}, {"id": "C", "text": "shock / shocking"}],
+      "correctOptionId": "B", "canonicalAnswer": "shocked / shocking", "acceptedVariants": ["shocked / shocking"],
+      "feedback": {"explanation": "The pupils experienced the feeling, so they were shocked. The accident caused the feeling, so it was shocking."}
+    },
+    {
+      "id": "S3-04", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "My grandfather ______ walk to school, but he ______ own a mobile phone.", "bold": false}],
+      "options": [{"id": "A", "text": "used to / didn't use to"}, {"id": "B", "text": "use to / didn't used to"}, {"id": "C", "text": "used to / doesn't use to"}],
+      "correctOptionId": "A", "canonicalAnswer": "used to / didn't use to", "acceptedVariants": ["used to / didn't use to"],
+      "feedback": {"explanation": "Use 'used to' for a past habit. After 'didn't', use the base form: 'didn't use to'."}
+    },
+    {
+      "id": "S3-05", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "Have you ever ______ a horse?", "bold": false}],
+      "options": [{"id": "A", "text": "rode"}, {"id": "B", "text": "ridden"}, {"id": "C", "text": "riding"}],
+      "correctOptionId": "B", "canonicalAnswer": "ridden", "acceptedVariants": ["ridden"],
+      "feedback": {"explanation": "The present perfect uses have + past participle. The past participle of ride is ridden."}
+    },
+    {
+      "id": "S3-06", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "Nadia has worked as a photographer ______ 2020, while her brother has done the same job ______ five years.", "bold": false}],
+      "options": [{"id": "A", "text": "for / since"}, {"id": "B", "text": "since / for"}, {"id": "C", "text": "during / from"}],
+      "correctOptionId": "B", "canonicalAnswer": "since / for", "acceptedVariants": ["since / for"],
+      "feedback": {"explanation": "Since introduces the starting point, 2020. For introduces a length of time, five years."}
+    },
+    {
+      "id": "S3-07", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "We have ______ finished the poster, but we haven't printed it ______.", "bold": false}],
+      "options": [{"id": "A", "text": "yet / already"}, {"id": "B", "text": "already / yet"}, {"id": "C", "text": "since / for"}],
+      "correctOptionId": "B", "canonicalAnswer": "already / yet", "acceptedVariants": ["already / yet"],
+      "feedback": {"explanation": "Already fits a completed action in the positive clause. Yet fits an action that has not happened in the negative clause."}
+    },
+    {
+      "id": "S3-08", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "The science club ______ research before it ______ plans for an experiment.", "bold": false}],
+      "options": [{"id": "A", "text": "makes / does"}, {"id": "B", "text": "does / makes"}, {"id": "C", "text": "did / make"}],
+      "correctOptionId": "B", "canonicalAnswer": "does / makes", "acceptedVariants": ["does / makes"],
+      "feedback": {"explanation": "The natural collocations are 'do research' and 'make plans'. With the singular subject 'the science club', use does and makes."}
+    },
+    {
+      "id": "S3-09", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "A motorcycle is not ______ comfortable ______ a car.", "bold": false}],
+      "options": [{"id": "A", "text": "as / as"}, {"id": "B", "text": "too / as"}, {"id": "C", "text": "as / enough"}],
+      "correctOptionId": "A", "canonicalAnswer": "as / as", "acceptedVariants": ["as / as"],
+      "feedback": {"explanation": "Use the comparison pattern 'not as + adjective + as': not as comfortable as a car."}
+    },
+    {
+      "id": "S3-10", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "This suitcase is ______ heavy to lift, and it is not small ______ to fit into the locker.", "bold": false}],
+      "options": [{"id": "A", "text": "enough / too"}, {"id": "B", "text": "too / enough"}, {"id": "C", "text": "as / too"}],
+      "correctOptionId": "B", "canonicalAnswer": "too / enough", "acceptedVariants": ["too / enough"],
+      "feedback": {"explanation": "Too comes before an adjective to mean more than is possible: too heavy. Enough comes after an adjective: small enough."}
+    },
+    {
+      "id": "S3-11", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "The broken ticket machine is ______, but the staff are very ______.", "bold": false}],
+      "options": [{"id": "A", "text": "useful / helpless"}, {"id": "B", "text": "useless / helpful"}, {"id": "C", "text": "use / help"}],
+      "correctOptionId": "B", "canonicalAnswer": "useless / helpful", "acceptedVariants": ["useless / helpful"],
+      "feedback": {"explanation": "A broken machine is useless, but staff who assist people are helpful. Both words are adjectives."}
+    },
+    {
+      "id": "S3-12", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "These plastic bottles ______ washed before they are reused.", "bold": false}],
+      "options": [{"id": "A", "text": "is"}, {"id": "B", "text": "are"}, {"id": "C", "text": "was"}],
+      "correctOptionId": "B", "canonicalAnswer": "are", "acceptedVariants": ["are"],
+      "feedback": {"explanation": "Bottles is plural, so the present passive form is 'are washed'."}
+    },
+    {
+      "id": "S3-13", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "The ring is made ______ gold, but recycled paper is made ______ old newspapers.", "bold": false}],
+      "options": [{"id": "A", "text": "from / of"}, {"id": "B", "text": "for / from"}, {"id": "C", "text": "of / from"}],
+      "correctOptionId": "C", "canonicalAnswer": "of / from", "acceptedVariants": ["of / from"],
+      "feedback": {"explanation": "Use made of when the original material remains recognisable, as with a gold ring. Use made from when a material is transformed, as with newspapers becoming recycled paper."}
+    },
+    {
+      "id": "S3-14", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "According to the timetable, the show ______ at eight, and I think everyone ______ enjoy it.", "bold": false}],
+      "options": [{"id": "A", "text": "starts / will"}, {"id": "B", "text": "start / is going to"}, {"id": "C", "text": "starting / would"}],
+      "correctOptionId": "A", "canonicalAnswer": "starts / will", "acceptedVariants": ["starts / will"],
+      "feedback": {"explanation": "A fixed timetable can use the present simple: 'the show starts'. 'I think' introduces a prediction: 'everyone will enjoy it'."}
+    },
+    {
+      "id": "S3-15", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "If the storm ______ tonight, we ______ indoors.", "bold": false}],
+      "options": [{"id": "A", "text": "will start / stay"}, {"id": "B", "text": "starts / will stay"}, {"id": "C", "text": "started / will stay"}],
+      "correctOptionId": "B", "canonicalAnswer": "starts / will stay", "acceptedVariants": ["starts / will stay"],
+      "feedback": {"explanation": "In a first conditional, use the present simple in the if-clause and will + base verb in the result clause."}
+    },
+    {
+      "id": "S3-16", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "Farah said, \"I want a longer break,\" and the teacher later reported that she ______ a longer break.", "bold": false}],
+      "options": [{"id": "A", "text": "wants"}, {"id": "B", "text": "wanted"}, {"id": "C", "text": "want"}],
+      "correctOptionId": "B", "canonicalAnswer": "wanted", "acceptedVariants": ["wanted"],
+      "feedback": {"explanation": "In reported speech after the past reporting verb 'said', 'want' is usually backshifted to 'wanted'."}
+    },
+    {
+      "id": "S3-17", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "______ left ______ on the teacher's desk, but nobody knew who had done it.", "bold": false}],
+      "options": [{"id": "A", "text": "Someone / something"}, {"id": "B", "text": "Anyone / anything"}, {"id": "C", "text": "No one / nothing"}],
+      "correctOptionId": "A", "canonicalAnswer": "Someone / something", "acceptedVariants": ["Someone / something"],
+      "feedback": {"explanation": "Someone refers to an unknown person and something to an unknown object. The sentence says an unknown person left an object."}
+    },
+    {
+      "id": "S3-18", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "Every room was noisy, so there was ______ quiet to study and the pupils held a short ______ outside.", "bold": false}],
+      "options": [{"id": "A", "text": "nowhere / discussion"}, {"id": "B", "text": "anywhere / discuss"}, {"id": "C", "text": "somewhere / discussing"}],
+      "correctOptionId": "A", "canonicalAnswer": "nowhere / discussion", "acceptedVariants": ["nowhere / discussion"],
+      "feedback": {"explanation": "Nowhere means there was no quiet place. After 'a short', a noun is needed: discussion."}
+    },
+    {
+      "id": "S3-19", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "The security cameras work at night, ______?", "bold": false}],
+      "options": [{"id": "A", "text": "aren't they"}, {"id": "B", "text": "don't they"}, {"id": "C", "text": "do they"}],
+      "correctOptionId": "B", "canonicalAnswer": "don't they", "acceptedVariants": ["don't they"],
+      "feedback": {"explanation": "The main clause is positive and uses the present simple verb 'work', so the negative question tag is 'don't they?'"}
+    },
+    {
+      "id": "S3-20", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "Museum rules state that visitors ______ register before entering, but they ______ touch the evidence.", "bold": false}],
+      "options": [{"id": "A", "text": "don't have to / must"}, {"id": "B", "text": "must / mustn't"}, {"id": "C", "text": "can / don't have to"}],
+      "correctOptionId": "B", "canonicalAnswer": "must / mustn't", "acceptedVariants": ["must / mustn't"],
+      "feedback": {"explanation": "Must expresses a requirement to register. Mustn't expresses a prohibition on touching the evidence."}
+    },
+    {
+      "id": "S3-21", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "A trip from one place to another, especially one that takes some time.", "bold": false}],
+      "initialLetter": "J", "answerLength": 7, "canonicalAnswer": "journey", "acceptedVariants": ["journey"],
+      "feedback": {"explanation": "A journey is a trip from one place to another, especially one that takes some time."}
+    },
+    {
+      "id": "S3-22", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "A piece of paper, card or digital pass that allows someone to travel on a bus, train or plane, or enter a place.", "bold": false}],
+      "initialLetter": "T", "answerLength": 6, "canonicalAnswer": "ticket", "acceptedVariants": ["ticket"],
+      "feedback": {"explanation": "A ticket is a paper or digital pass for travel or entry."}
+    },
+    {
+      "id": "S3-23", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "To go from one place to another, especially to different cities or countries.", "bold": false}],
+      "initialLetter": "T", "answerLength": 6, "canonicalAnswer": "travel", "acceptedVariants": ["travel"],
+      "feedback": {"explanation": "To travel means to go from one place to another, often between cities or countries."}
+    },
+    {
+      "id": "S3-24", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "A large vehicle with wings that flies through the sky and carries passengers or goods.", "bold": false}],
+      "initialLetter": "P", "answerLength": 5, "canonicalAnswer": "plane", "acceptedVariants": ["plane"],
+      "feedback": {"explanation": "A plane is a winged vehicle that carries passengers or goods through the air."}
+    },
+    {
+      "id": "S3-25", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "Bags and suitcases that people take with them when they go on a trip.", "bold": false}],
+      "initialLetter": "L", "answerLength": 7, "canonicalAnswer": "luggage", "acceptedVariants": ["luggage"],
+      "feedback": {"explanation": "Luggage means the bags and suitcases someone takes on a journey."}
+    }
+  ]
+}
