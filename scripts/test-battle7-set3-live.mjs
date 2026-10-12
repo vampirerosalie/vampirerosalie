@@ -4,21 +4,32 @@ const base = process.env.GRAMMARTEST_URL || 'https://grammartest.grammarclassroo
 const api = `${base}/api/kitchen/rooms`;
 
 async function request(path = '', { body, token, expected = 200 } = {}) {
-  const response = await fetch(`${api}${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
-    headers: {
-      ...(body === undefined ? {} : { 'content-type': 'application/json', origin: base }),
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(15_000),
-  });
-  const data = await response.json();
-  assert.equal(response.status, expected, data.error || JSON.stringify(data));
-  return data;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const response = await fetch(`${api}${path}`, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: {
+          ...(body === undefined ? {} : { 'content-type': 'application/json', origin: base }),
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if ([429, 503].includes(response.status) && attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, 250 * (attempt + 1)));
+        continue;
+      }
+      const data = await response.json();
+      assert.equal(response.status, expected, data.error || JSON.stringify(data));
+      return data;
+    } catch (error) {
+      if (error instanceof assert.AssertionError || attempt === 3) throw error;
+      await new Promise(resolve => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  }
 }
 
-const created = await request('', { body: { teamCount: 2, roomName: 'Set 3 deployment smoke' }, expected: 201 });
+const created = await request('', { body: { teamCount: 40, openLobby: true, roomName: 'Set 3 deployment smoke' }, expected: 201 });
 const path = `/${created.pin}`;
 const hostAction = (type, extra = {}) => request(`${path}/action`, {
   token: created.hostToken,
@@ -37,6 +48,9 @@ try {
   assert.equal(lobby.totalQuestions, 25);
   joined = await request(`${path}/join`, {
     body: { teamSlot: 1, name: 'Set 3 smoke student', clientId: crypto.randomUUID() },
+  });
+  await request(`${path}/join`, {
+    body: { teamSlot: 2, name: 'Set 3 second student', clientId: crypto.randomUUID() },
   });
   await hostAction('host:start', { expectedPhase: 'lobby' });
 
