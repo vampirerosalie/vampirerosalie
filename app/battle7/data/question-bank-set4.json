@@ -1,0 +1,176 @@
+{
+  "title": "Year 5 English Revision",
+  "questionCount": 25,
+  "questions": [
+    {
+      "id": "S4-01", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "Yasmin ______ my cousin, and ______ favourite hobby is art.", "bold": false}],
+      "options": [{"id": "A", "text": "is / her"}, {"id": "B", "text": "are / she"}, {"id": "C", "text": "am / hers"}],
+      "correctOptionId": "A", "canonicalAnswer": "is / her", "acceptedVariants": ["is / her"],
+      "feedback": {"explanation": "Use is with the singular subject Yasmin. Her is the possessive adjective before favourite hobby."}
+    },
+    {
+      "id": "S4-02", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "These are ______ notebooks, but ______ pencil is mine.", "bold": false}],
+      "options": [{"id": "A", "text": "Farah / these"}, {"id": "B", "text": "Farah's / this"}, {"id": "C", "text": "Farahs / those"}],
+      "correctOptionId": "B", "canonicalAnswer": "Farah's / this", "acceptedVariants": ["Farah's / this"],
+      "feedback": {"explanation": "Farah's shows possession. This refers to one nearby pencil."}
+    },
+    {
+      "id": "S4-03", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "______ you got a camera in your bag?", "bold": false}],
+      "options": [{"id": "A", "text": "Have"}, {"id": "B", "text": "Has"}, {"id": "C", "text": "Are"}],
+      "correctOptionId": "A", "canonicalAnswer": "Have", "acceptedVariants": ["Have"],
+      "feedback": {"explanation": "Use Have you got to ask whether someone possesses something."}
+    },
+    {
+      "id": "S4-04", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "______ any parks near your house?", "bold": false}],
+      "options": [{"id": "A", "text": "Is there"}, {"id": "B", "text": "There are"}, {"id": "C", "text": "Are there"}],
+      "correctOptionId": "C", "canonicalAnswer": "Are there", "acceptedVariants": ["Are there"],
+      "feedback": {"explanation": "Parks is plural, so a question about their existence begins Are there."}
+    },
+    {
+      "id": "S4-05", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "This park is ______ than the one near my home.", "bold": false}],
+      "options": [{"id": "A", "text": "more quiet"}, {"id": "B", "text": "quieter"}, {"id": "C", "text": "quietest"}],
+      "correctOptionId": "B", "canonicalAnswer": "quieter", "acceptedVariants": ["quieter"],
+      "feedback": {"explanation": "Than compares two parks. The usual comparative form of quiet is quieter."}
+    },
+    {
+      "id": "S4-06", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "My brother ______ to school by bus every day.", "bold": false}],
+      "options": [{"id": "A", "text": "goes"}, {"id": "B", "text": "go"}, {"id": "C", "text": "is going"}],
+      "correctOptionId": "A", "canonicalAnswer": "goes", "acceptedVariants": ["goes"],
+      "feedback": {"explanation": "Every day describes a habit. With the singular subject my brother, use goes."}
+    },
+    {
+      "id": "S4-07", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "My father ______ drive to work, but he ______ the bus every morning.", "bold": false}],
+      "options": [{"id": "A", "text": "don't / takes"}, {"id": "B", "text": "doesn't / take"}, {"id": "C", "text": "doesn't / takes"}],
+      "correctOptionId": "C", "canonicalAnswer": "doesn't / takes", "acceptedVariants": ["doesn't / takes"],
+      "feedback": {"explanation": "With he, use doesn't before the base verb drive. In the positive present simple, use he takes."}
+    },
+    {
+      "id": "S4-08", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "The blue whale is ______ animal in the world.", "bold": false}],
+      "options": [{"id": "A", "text": "largest"}, {"id": "B", "text": "the largest"}, {"id": "C", "text": "larger"}],
+      "correctOptionId": "B", "canonicalAnswer": "the largest", "acceptedVariants": ["the largest"],
+      "feedback": {"explanation": "Use the before the superlative: the largest animal in the world."}
+    },
+    {
+      "id": "S4-09", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "My sister ______ swim well, but my little brother ______ swim yet.", "bold": false}],
+      "options": [{"id": "A", "text": "can / can't"}, {"id": "B", "text": "does / couldn't"}, {"id": "C", "text": "can / doesn't"}],
+      "correctOptionId": "A", "canonicalAnswer": "can / can't", "acceptedVariants": ["can / can't"],
+      "feedback": {"explanation": "Can expresses ability. Can't expresses that the little brother is not able to swim yet."}
+    },
+    {
+      "id": "S4-10", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "______ the children ______ in the hall right now?", "bold": false}],
+      "options": [{"id": "A", "text": "Do / dance"}, {"id": "B", "text": "Are / dancing"}, {"id": "C", "text": "Is / dancing"}],
+      "correctOptionId": "B", "canonicalAnswer": "Are / dancing", "acceptedVariants": ["Are / dancing"],
+      "feedback": {"explanation": "Right now calls for the present continuous. Children is plural, so use Are the children dancing?"}
+    },
+    {
+      "id": "S4-11", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "Hana usually ______ in the library, but today she ______ at home.", "bold": false}],
+      "options": [{"id": "A", "text": "is studying / studies"}, {"id": "B", "text": "study / studying"}, {"id": "C", "text": "studies / is studying"}],
+      "correctOptionId": "C", "canonicalAnswer": "studies / is studying", "acceptedVariants": ["studies / is studying"],
+      "feedback": {"explanation": "Usually describes a habit, so use studies. Today describes a temporary current activity, so use is studying."}
+    },
+    {
+      "id": "S4-12", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "How ______ water do we need, and how ______ apples should we buy?", "bold": false}],
+      "options": [{"id": "A", "text": "much / many"}, {"id": "B", "text": "many / much"}, {"id": "C", "text": "much / much"}],
+      "correctOptionId": "A", "canonicalAnswer": "much / many", "acceptedVariants": ["much / many"],
+      "feedback": {"explanation": "Water is uncountable, so use much. Apples are countable and plural, so use many."}
+    },
+    {
+      "id": "S4-13", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "My sister enjoys ______, so please ______ some vegetables for dinner.", "bold": false}],
+      "options": [{"id": "A", "text": "cooking / washing"}, {"id": "B", "text": "cook / wash"}, {"id": "C", "text": "cooking / wash"}],
+      "correctOptionId": "C", "canonicalAnswer": "cooking / wash", "acceptedVariants": ["cooking / wash"],
+      "feedback": {"explanation": "Enjoys is followed by an -ing form: cooking. After please, use the base verb wash."}
+    },
+    {
+      "id": "S4-14", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "There ______ many spectators at the stadium, but there ______ only one winner.", "bold": false}],
+      "options": [{"id": "A", "text": "was / were"}, {"id": "B", "text": "were / was"}, {"id": "C", "text": "were / were"}],
+      "correctOptionId": "B", "canonicalAnswer": "were / was", "acceptedVariants": ["were / was"],
+      "feedback": {"explanation": "Use were with the plural spectators and was with the singular one winner."}
+    },
+    {
+      "id": "S4-15", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "He ______ a gold medal after he ______ the race last year.", "bold": false}],
+      "options": [{"id": "A", "text": "won / finished"}, {"id": "B", "text": "win / finished"}, {"id": "C", "text": "won / finishing"}],
+      "correctOptionId": "A", "canonicalAnswer": "won / finished", "acceptedVariants": ["won / finished"],
+      "feedback": {"explanation": "Last year refers to completed past events, so use the past simple forms won and finished."}
+    },
+    {
+      "id": "S4-16", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "I saw Aina yesterday, but I didn't ______ to ______.", "bold": false}],
+      "options": [{"id": "A", "text": "talked / she"}, {"id": "B", "text": "talk / her"}, {"id": "C", "text": "talking / hers"}],
+      "correctOptionId": "B", "canonicalAnswer": "talk / her", "acceptedVariants": ["talk / her"],
+      "feedback": {"explanation": "After didn't, use the base verb talk. After the preposition to, use the object pronoun her."}
+    },
+    {
+      "id": "S4-17", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "______ you ______ the football match last Sunday?", "bold": false}],
+      "options": [{"id": "A", "text": "Does / watch"}, {"id": "B", "text": "Did / watched"}, {"id": "C", "text": "Did / watch"}],
+      "correctOptionId": "C", "canonicalAnswer": "Did / watch", "acceptedVariants": ["Did / watch"],
+      "feedback": {"explanation": "Last Sunday requires a past-tense question. After Did, use the base verb watch."}
+    },
+    {
+      "id": "S4-18", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "They ______ travel to Sabah next month; the tickets are already booked.", "bold": false}],
+      "options": [{"id": "A", "text": "is going to"}, {"id": "B", "text": "are going to"}, {"id": "C", "text": "were going to"}],
+      "correctOptionId": "B", "canonicalAnswer": "are going to", "acceptedVariants": ["are going to"],
+      "feedback": {"explanation": "The tickets show a future plan. With the plural subject they, use are going to."}
+    },
+    {
+      "id": "S4-19", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "I think the Tigers ______ win tomorrow's match.", "bold": false}],
+      "options": [{"id": "A", "text": "will"}, {"id": "B", "text": "are"}, {"id": "C", "text": "have"}],
+      "correctOptionId": "A", "canonicalAnswer": "will", "acceptedVariants": ["will"],
+      "feedback": {"explanation": "I think introduces a prediction about tomorrow, so use will win."}
+    },
+    {
+      "id": "S4-20", "format": "multiple_choice", "instruction": "Choose the best answer.",
+      "promptSegments": [{"text": "Your bag looks heavy; I ______ carry it for you.", "bold": false}],
+      "options": [{"id": "A", "text": "am"}, {"id": "B", "text": "was"}, {"id": "C", "text": "will"}],
+      "correctOptionId": "C", "canonicalAnswer": "will", "acceptedVariants": ["will"],
+      "feedback": {"explanation": "Will expresses a spontaneous offer made at the moment of speaking."}
+    },
+    {
+      "id": "S4-21", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "A place where people pay to eat meals that are prepared and served to them.", "bold": false}],
+      "initialLetter": "R", "answerLength": 10, "canonicalAnswer": "restaurant", "acceptedVariants": ["restaurant"],
+      "feedback": {"explanation": "A restaurant is a place where meals are prepared and served to paying customers."}
+    },
+    {
+      "id": "S4-22", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "An insect with large, often colourful wings that can fly.", "bold": false}],
+      "initialLetter": "B", "answerLength": 9, "canonicalAnswer": "butterfly", "acceptedVariants": ["butterfly"],
+      "feedback": {"explanation": "A butterfly is an insect with broad, often colourful wings."}
+    },
+    {
+      "id": "S4-23", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "Hair that grows above a man's upper lip.", "bold": false}],
+      "initialLetter": "M", "answerLength": 9, "canonicalAnswer": "moustache", "acceptedVariants": ["moustache"],
+      "feedback": {"explanation": "A moustache is hair that grows above the upper lip. This set uses the British spelling."}
+    },
+    {
+      "id": "S4-24", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "A bag that you carry on your back, especially when travelling or hiking.", "bold": false}],
+      "initialLetter": "R", "answerLength": 8, "canonicalAnswer": "rucksack", "acceptedVariants": ["rucksack"],
+      "feedback": {"explanation": "A rucksack is a bag carried on the back, especially for travelling or hiking."}
+    },
+    {
+      "id": "S4-25", "format": "letter_spell", "instruction": "Vocabulary: tap the letters to complete the word. The first letter is given.",
+      "promptSegments": [{"text": "Weather in which thick mist makes it difficult to see clearly.", "bold": false}],
+      "initialLetter": "F", "answerLength": 3, "canonicalAnswer": "fog", "acceptedVariants": ["fog"],
+      "feedback": {"explanation": "Fog is a thick cloud of tiny water droplets near the ground that makes it difficult to see."}
+    }
+  ]
+}

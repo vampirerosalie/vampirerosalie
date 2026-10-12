@@ -11,6 +11,7 @@ const source=readFileSync(new URL('../../public/battle7/app.js',import.meta.url)
 const questions=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank.json',import.meta.url),'utf8')).questions;
 const set2=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set2.json',import.meta.url),'utf8')).questions;
 const set3=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set3.json',import.meta.url),'utf8')).questions;
+const set4=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set4.json',import.meta.url),'utf8')).questions;
 const copy=value=>JSON.parse(JSON.stringify(value));
 const response=(data,status=200)=>({ok:status<400,status,json:async()=>data});
 const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};};
@@ -196,6 +197,26 @@ test('Set 3 phone spells with 26 tap-only letters and teacher shows 25-question 
  await h.frontend.sendAction('pupil:submit',{questionId:q.id,answer:h.frontend.answerValue(q)});
  assert.equal(store.room(host.pin).submissions[q.id][team.teamId].status,'accepted');
  assert.match(h.frontend.get().html,/Order received!/);
+});
+
+test('Set 4 is selectable and its vocabulary uses the same 26 letter tiles',async()=>{
+ const store=new GameStore({questions,questionSets:{set4}}),host=store.create({teamCount:40,openLobby:true,questionSetId:'set4'});
+ const team=store.join(host.pin,{teamSlot:1,name:'Year 5 crew',clientId:randomUUID()});
+ const teacher=harness({fetcher:adapter(store)});teacher.frontend.configure('host',store.state(host.pin,host.hostToken),host.hostToken);
+ assert.match(teacher.frontend.get().html,/Set 4 — Year 5 English Revision/);
+ assert.match(teacher.frontend.get().html,/value="set4" selected/);
+ assert.match(teacher.frontend.get().html,/Question 0 of 25/);
+ action(store,host,'host:start');store.room(host.pin).questionIndex=22;
+ const q=store.room(host.pin).questions[22];assert.equal(q.canonicalAnswer,'moustache');
+ const phone=harness({fetcher:adapter(store)});phone.frontend.configure('join',store.state(host.pin,team.teamToken),team.teamToken);
+ assert.match(phone.frontend.get().html,/Q23\/25/);
+ assert.match(phone.frontend.get().html,/class="given">M/);
+ assert.equal((phone.frontend.get().html.match(/data-action="spell-letter"/g)||[]).length,26);
+ assert.doesNotMatch(phone.frontend.get().html,/<textarea/);
+ for(const letter of 'OUSTACHE')await phone.click('spell-letter',{letter});
+ assert.equal(phone.frontend.answerValue(q),'MOUSTACHE');
+ await phone.frontend.sendAction('pupil:submit',{questionId:q.id,answer:phone.frontend.answerValue(q)});
+ assert.equal(store.room(host.pin).submissions[q.id][team.teamId].status,'accepted');
 });
 
 test('QR team stays student through teacher close, refresh, history back, bfcache and reconnect',async()=>{

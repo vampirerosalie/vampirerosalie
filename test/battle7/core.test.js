@@ -6,6 +6,7 @@ import {GameStore,INGREDIENTS,RECIPES,recipeKey,normalizeAnswer} from '../../app
 const questions=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank.json',import.meta.url),'utf8')).questions;
 const set2=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set2.json',import.meta.url),'utf8')).questions;
 const set3=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set3.json',import.meta.url),'utf8')).questions;
+const set4=JSON.parse(readFileSync(new URL('../../app/battle7/data/question-bank-set4.json',import.meta.url),'utf8')).questions;
 const disasters=[['Mushroom','Chocolate','Tomato'],['Bread','Egg','Mushroom'],['Rice','Fruit','Cheese'],['Chicken','Chocolate','Milk'],['Egg','Tomato','Fruit']];
 function setup(extra={}){let time=1770000000000;const store=new GameStore({questions,now:()=>time,random:()=>0,...extra});const host=store.create({teamCount:extra.roomTeamCount??3});const teams=[1,2,3].map(i=>store.join(host.pin,{teamSlot:i,name:`Team ${i}`,clientId:randomUUID()}));const act=(token,type,values={})=>store.action(host.pin,token,{type,requestId:randomUUID(),questionId:store.currentQuestion(store.room(host.pin))?.id,expectedPhase:store.room(host.pin).phase,...values});return{store,host,teams,act,room:()=>store.room(host.pin),tick:n=>time+=n};}
 function start(s){s.act(s.host.hostToken,'host:start');return s.room().questions[s.room().questionIndex];}
@@ -57,6 +58,49 @@ test('Set 3 spelling answers require the given initial and exact length, remain 
   act(host.hostToken,'host:advance');
  }
  assert.equal(store.room(host.pin).phase,'finished');assert.equal(store.state(host.pin,host.hostToken).questionNumber,25);
+});
+
+test('Set 4 has the verified answer key, shuffled grammar and fixed final vocabulary',()=>{
+ assert.equal(set4.length,25);
+ assert.equal(new Set(set4.map(q=>q.id)).size,25);
+ assert.deepEqual(set4.slice(0,20).map(q=>q.format),Array(20).fill('multiple_choice'));
+ assert.deepEqual(set4.slice(0,20).map(q=>q.correctOptionId),['A','B','A','C','B','A','C','B','A','B','C','A','C','B','A','B','C','B','A','C']);
+ assert.deepEqual(set4.slice(20).map(q=>[q.id,q.canonicalAnswer]),[['S4-21','restaurant'],['S4-22','butterfly'],['S4-23','moustache'],['S4-24','rucksack'],['S4-25','fog']]);
+ for(const q of set4.slice(0,20)){assert.equal(q.options.length,3);assert.equal(q.options.find(o=>o.id===q.correctOptionId)?.text,q.canonicalAnswer);assert.ok(q.feedback.explanation);}
+ for(const q of set4.slice(20)){assert.equal(q.format,'letter_spell');assert.equal(q.initialLetter.toLowerCase(),q.canonicalAnswer[0]);assert.equal(q.answerLength,q.canonicalAnswer.length);assert.ok(q.feedback.explanation);}
+ const store=new GameStore({questions,questionSets:{set4}}),host=store.create({teamCount:2,questionSetId:'set4'});
+ assert.equal(store.state(host.pin,host.hostToken).totalQuestions,25);
+ assert.deepEqual(new Set(store.room(host.pin).questions.slice(0,20).map(q=>q.id)),new Set(set4.slice(0,20).map(q=>q.id)));
+ assert.deepEqual(store.room(host.pin).questions.slice(20).map(q=>q.id),set4.slice(20).map(q=>q.id));
+ const other=store.create({teamCount:2});
+ store.action(other.pin,other.hostToken,{type:'host:select-set',questionSetId:'set4',requestId:randomUUID()});
+ assert.equal(store.state(other.pin,other.hostToken).questionSetId,'set4');
+});
+
+test('Set 4 tap-to-spell words stay private until reveal and the game ends after 25',()=>{
+ const store=new GameStore({questions,questionSets:{set4},random:()=>0});
+ const host=store.create({teamCount:40,openLobby:true,questionSetId:'set4'});
+ const team=store.join(host.pin,{teamSlot:1,name:'Year 5 team',clientId:randomUUID()});
+ const act=(token,type,extra={})=>{const r=store.room(host.pin);return store.action(host.pin,token,{type,requestId:randomUUID(),questionId:r.questions[r.questionIndex]?.id,expectedPhase:r.phase,...extra});};
+ act(host.hostToken,'host:start');
+ for(let i=0;i<20;i++){assert.equal(store.room(host.pin).questions[i].format,'multiple_choice');act(host.hostToken,'host:reveal');act(host.hostToken,'host:advance');}
+ for(const [index,word] of ['restaurant','butterfly','moustache','rucksack','fog'].entries()){
+  const q=store.room(host.pin).questions[index+20];
+  const teamState=store.state(host.pin,team.teamToken);
+  assert.equal(q.canonicalAnswer,word);assert.equal(teamState.question.initialLetter,word[0].toUpperCase());
+  assert.equal(teamState.question.answerLength,word.length);
+  assert.equal(teamState.question.canonicalAnswer,undefined);assert.equal(teamState.answerKey,undefined);
+  assert.throws(()=>act(team.teamToken,'pupil:submit',{answer:word.slice(0,-1)}),/given first letter/);
+  act(team.teamToken,'pupil:submit',{answer:word.toUpperCase()});
+  assert.equal(store.state(host.pin,host.hostToken).submissions[0].status,'accepted');
+  assert.equal(store.state(host.pin,team.teamToken).me.submission.status,'submitted');
+  act(host.hostToken,'host:reveal');
+  assert.equal(store.state(host.pin,team.teamToken).me.submission.status,'accepted');
+  assert.equal(store.state(host.pin,team.teamToken).me.submission.rewards.length,2);
+  act(host.hostToken,'host:advance');
+ }
+ assert.equal(store.state(host.pin,host.hostToken).phase,'finished');
+ assert.equal(store.state(host.pin,host.hostToken).questionNumber,25);
 });
 
 test('open lobby accepts more than ten unique teams and starts with any joined count',()=>{
