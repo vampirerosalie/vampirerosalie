@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+
+const base=process.env.GRAMMARTEST_URL||'https://grammartest.grammarclassroom.workers.dev';
+const api=`${base}/api/kitchen/rooms`;
+const receipt=()=>crypto.randomUUID();
+async function call(path,{body,token}={}){
+ const response=await fetch(`${api}${path}`,{method:body?'POST':'GET',headers:{...(body?{'content-type':'application/json',origin:base}:{}),...(token?{authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(15000)});
+ const data=await response.json();
+ if(!response.ok)throw new Error(`${response.status} ${data.error||JSON.stringify(data)}`);
+ return data;
+}
+const host=await call('',{body:{teamCount:40,openLobby:true,roomName:'Open-lobby smoke test'}});
+const teams=[];
+for(let slot=1;slot<=11;slot++)teams.push(await call(`/${host.pin}/join`,{body:{clientId:crypto.randomUUID(),teamSlot:slot,name:`Smoke crew ${slot}`}}));
+const act=(token,type,extra={})=>call(`/${host.pin}/action`,{token,body:{type,requestId:receipt(),...extra}});
+let teacher=await call(`/${host.pin}/state`,{token:host.hostToken});
+assert.equal(teacher.openLobby,true);
+assert.equal(teacher.teams.length,11);
+await act(host.hostToken,'host:start');
+teacher=await call(`/${host.pin}/state`,{token:host.hostToken});
+const q=teacher.question;
+const answer=teacher.answerKey.canonicalAnswer;
+await act(teams[0].teamToken,'pupil:submit',{questionId:q.id,answer});
+teacher=await call(`/${host.pin}/state`,{token:host.hostToken});
+assert.equal(teacher.submissions[0].status,'accepted');
+assert.equal(teacher.submissions[0].decisionSource,'auto');
+let pupil=await call(`/${host.pin}/state`,{token:teams[0].teamToken});
+assert.equal(pupil.me.submission.status,'submitted');
+assert.equal(pupil.answerKey,undefined);
+assert.equal(Object.values(pupil.me.inventory).reduce((sum,n)=>sum+n,0),0);
+await act(host.hostToken,'host:review',{teamId:teams[0].teamId,questionId:q.id,decision:'rejected'});
+await act(host.hostToken,'host:review',{teamId:teams[0].teamId,questionId:q.id,decision:'accepted'});
+const reveal={type:'host:reveal',requestId:receipt(),questionId:q.id,expectedPhase:'question'};
+await call(`/${host.pin}/action`,{token:host.hostToken,body:reveal});
+const replay=await call(`/${host.pin}/action`,{token:host.hostToken,body:reveal});
+assert.equal(replay.replayed,true);
+pupil=await call(`/${host.pin}/state`,{token:teams[0].teamToken});
+assert.equal(pupil.me.submission.status,'accepted');
+assert.equal(pupil.me.submission.rewards.length,2);
+assert.equal(Object.values(pupil.me.inventory).reduce((sum,n)=>sum+n,0),2);
+await act(host.hostToken,'host:close');
+console.log(`Open-lobby live smoke passed: 11 teams, private auto verdict, teacher override, exactly two rewards at reveal, retry safety, end-game student access. Room ${host.pin}.`);

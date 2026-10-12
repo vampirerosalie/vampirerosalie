@@ -11,6 +11,67 @@ function start(s){s.act(s.host.hostToken,'host:start');return s.room().questions
 function cookPhase(s){if(s.room().phase==='lobby')start(s);s.act(s.host.hostToken,'host:reveal');}
 const count=t=>Object.values(t.inventory).reduce((a,b)=>a+b,0);
 
+test('open lobby accepts more than ten unique teams and starts with any joined count',()=>{
+ const store=new GameStore({questions});const host=store.create({teamCount:40,openLobby:true});
+ const first=store.join(host.pin,{teamSlot:1,name:'First',clientId:randomUUID()});
+ assert.equal(store.state(host.pin,host.hostToken).openLobby,true);
+ assert.throws(()=>store.join(host.pin,{teamSlot:1,name:'Duplicate',clientId:randomUUID()}),e=>e.code==='SLOT_TAKEN');
+ for(let slot=2;slot<=25;slot++)store.join(host.pin,{teamSlot:slot,name:`Crew ${slot}`,clientId:randomUUID()});
+ assert.equal(store.room(host.pin).teams.length,25);
+ assert.throws(()=>store.join(host.pin,{teamSlot:41,name:'Too many',clientId:randomUUID()}),/available/);
+ const q=store.currentQuestion(store.room(host.pin));
+ store.action(host.pin,host.hostToken,{type:'host:start',requestId:randomUUID()});
+ assert.equal(store.room(host.pin).phase,'question');
+ assert.throws(()=>store.join(host.pin,{teamSlot:26,name:'Late',clientId:randomUUID()}),e=>e.code==='JOIN_CLOSED');
+ assert.ok(first.teamToken&&q===null);
+ const solo=new GameStore({questions});const room=solo.create({teamCount:40,openLobby:true});
+ solo.join(room.pin,{teamSlot:1,name:'Only team',clientId:randomUUID()});
+ solo.action(room.pin,room.hostToken,{type:'host:start',requestId:randomUUID()});
+ assert.equal(solo.room(room.pin).teams.length,1);
+});
+
+test('new rooms suggest objective verdicts privately and release rewards only on final reveal',()=>{
+ const store=new GameStore({questions,random:()=>0});const host=store.create({teamCount:40,openLobby:true});
+ const teams=[1,2,3].map(slot=>store.join(host.pin,{teamSlot:slot,name:`Crew ${slot}`,clientId:randomUUID()}));
+ const room=store.room(host.pin);room.questions=[questions.find(q=>q.format==='typed_correction'),...room.questions.slice(1)];
+ const act=(token,type,extra={})=>store.action(host.pin,token,{type,requestId:randomUUID(),questionId:room.questions[room.questionIndex]?.id,expectedPhase:room.phase,...extra});
+ act(host.hostToken,'host:start');const q=room.questions[0];
+ act(teams[0].teamToken,'pupil:submit',{answer:q.canonicalAnswer});
+ act(teams[1].teamToken,'pupil:submit',{answer:'clearly wrong'});
+ act(teams[2].teamToken,'pupil:submit',{answer:q.acceptedVariants[0].toUpperCase()+'!'});
+ const hostView=store.state(host.pin,host.hostToken),pupilView=store.state(host.pin,teams[0].teamToken),publicView=store.state(host.pin);
+ assert.deepEqual(hostView.submissions.map(s=>s.status),['accepted','rejected','accepted']);
+ assert.ok(hostView.submissions.every(s=>s.decisionSource==='auto'));
+ assert.equal(pupilView.me.submission.status,'submitted');assert.equal(pupilView.me.submission.rewards.length,0);
+ assert.equal(publicView.answerKey,undefined);assert.equal(pupilView.answerKey,undefined);
+ assert.equal(room.teams.every(team=>count(team)===0),true);
+ act(host.hostToken,'host:review',{teamId:teams[0].teamId,decision:'rejected'});
+ act(host.hostToken,'host:review',{teamId:teams[1].teamId,decision:'accepted'});
+ assert.equal(room.teams.every(team=>count(team)===0),true);
+ const reveal={type:'host:reveal',requestId:randomUUID(),questionId:q.id,expectedPhase:'question'};
+ const result=store.action(host.pin,host.hostToken,reveal);assert.equal(result.result.revealed,true);
+ assert.equal(store.action(host.pin,host.hostToken,reveal).replayed,true);
+ assert.deepEqual(room.teams.map(count),[0,2,2]);
+ assert.equal(store.state(host.pin,teams[1].teamToken).me.submission.status,'accepted');
+ assert.equal(store.state(host.pin,teams[1].teamToken).me.submission.rewards.length,2);
+ assert.throws(()=>act(host.hostToken,'host:review',{teamId:teams[0].teamId,decision:'accepted'}),e=>e.code==='WRONG_PHASE');
+});
+
+test('MCQ, rebuild and unkeyed open answers receive only safe provisional decisions',()=>{
+ const store=new GameStore({questions});const host=store.create({teamCount:40,openLobby:true});const team=store.join(host.pin,{teamSlot:1,name:'Crew',clientId:randomUUID()});const room=store.room(host.pin);
+ const act=(token,type,extra={})=>store.action(host.pin,token,{type,requestId:randomUUID(),questionId:room.questions[room.questionIndex]?.id,expectedPhase:room.phase,...extra});
+ room.questions=[questions.find(q=>q.format==='multiple_choice'),questions.find(q=>q.format==='sentence_rebuild'),{...questions[0],id:'OPEN',format:'open_ended',acceptedVariants:undefined},...questions.slice(3)];
+ act(host.hostToken,'host:start');
+ let q=room.questions[0];act(team.teamToken,'pupil:submit',{answer:q.options.find(o=>o.id===q.correctOptionId).text});assert.equal(room.submissions[q.id][team.teamId].status,'accepted');
+ act(host.hostToken,'host:reveal');act(host.hostToken,'host:advance');
+ q=room.questions[1];act(team.teamToken,'pupil:submit',{answer:q.canonicalAnswer});assert.equal(room.submissions[q.id][team.teamId].status,'accepted');
+ act(host.hostToken,'host:reveal');act(host.hostToken,'host:advance');
+ q=room.questions[2];act(team.teamToken,'pupil:submit',{answer:'A thoughtful paragraph'});assert.equal(room.submissions[q.id][team.teamId].status,'submitted');
+ assert.throws(()=>act(host.hostToken,'host:reveal'),e=>e.code==='REVIEWS_PENDING');
+ act(host.hostToken,'host:review',{teamId:team.teamId,decision:'accepted'});act(host.hostToken,'host:reveal');
+ assert.equal(count(store.room(host.pin).teams[0]),6);
+});
+
 test('bank has 20 unique mixed questions, four per tense, rebuild tokens conserve words',()=>{assert.equal(questions.length,20);assert.equal(new Set(questions.map(q=>q.id)).size,20);const tenses={};const formats={};for(const q of questions){tenses[q.targetTense]=(tenses[q.targetTense]??0)+1;formats[q.format]=(formats[q.format]??0)+1;if(q.tokens){assert.deepEqual([...q.canonicalTokenOrder].sort(),q.tokens.map(t=>t.id).sort());}}assert.deepEqual(Object.values(tenses),[4,4,4,4,4]);assert.equal(formats.typed_correction,10);assert.equal(formats.multiple_choice,5);assert.equal(formats.sentence_rebuild,5);});
 test('Set 2 has the exact format and tense balance, answer-letter balance and complete rebuilds',()=>{
  assert.equal(set2.length,20);assert.equal(new Set(set2.map(q=>q.id)).size,20);

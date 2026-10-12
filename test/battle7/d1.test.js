@@ -32,6 +32,25 @@ test('ten genuinely overlapping D1 joins preserve every team and reconnect token
   for (const team of s.teams) assert.equal((await s.store().state(s.host.pin, team.teamToken)).me.id, team.teamId);
 });
 
+test('open D1 room handles 20 concurrent joins and finalizes provisional rewards atomically',async()=>{
+ const db=new TestD1(),store=()=>new KitchenD1Store(db,{questions,random:()=>0,sleep:async()=>{}});
+ const host=await store().create({teamCount:40,openLobby:true});
+ const bodies=Array.from({length:20},(_,i)=>({clientId:randomUUID(),teamSlot:i+1,name:`Crew ${i+1}`}));
+ const teams=await Promise.all(bodies.map(body=>store().join(host.pin,body)));
+ assert.equal(db.room(host.pin).teams.length,20);
+ assert.deepEqual(await Promise.all(bodies.map(body=>store().join(host.pin,body))),teams);
+ const action=(token,type,extra={})=>{const room=db.room(host.pin);return store().action(host.pin,token,{type,requestId:randomUUID(),questionId:room.questions[room.questionIndex]?.id,expectedPhase:room.phase,...extra});};
+ await action(host.hostToken,'host:start');const q=db.room(host.pin).questions[0];
+ const wrong=q.format==='multiple_choice'?q.options.find(option=>option.id!==q.correctOptionId).text:'not the answer';
+ await Promise.all(teams.map((team,i)=>action(team.teamToken,'pupil:submit',{questionId:q.id,answer:i%2?q.canonicalAnswer:wrong})));
+ const before=db.room(host.pin);assert.ok(before.teams.every(team=>Object.values(team.inventory).every(value=>value===0)));
+ const expected=Object.values(before.submissions[q.id]).filter(s=>s.status==='accepted').length;
+ const reveal={type:'host:reveal',requestId:randomUUID(),questionId:q.id,expectedPhase:'question'};
+ await store().action(host.pin,host.hostToken,reveal);
+ assert.equal((await store().action(host.pin,host.hostToken,reveal)).replayed,true);
+ const after=db.room(host.pin);assert.equal(after.teams.reduce((sum,team)=>sum+Object.values(team.inventory).reduce((a,b)=>a+b,0),0),expected*2);
+});
+
 test('concurrent claims for one station have only one winner; same device retry has one identity', async () => {
   const db = new TestD1();
   const store = () => new KitchenD1Store(db, { questions, sleep: async () => {} });

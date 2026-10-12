@@ -66,6 +66,18 @@ const countBag=bag=>Object.values(bag).reduce((a,b)=>a+b,0);
 const rewardItems=submission=>Array.isArray(submission?.rewards)&&submission.rewards.length?submission.rewards:submission?.reward?[submission.reward]:[];
 const rewardCounts=submission=>rewardItems(submission).reduce((bag,item)=>(bag[item]=(bag[item]??0)+1,bag),{});
 const rewardLocked=(team,submission)=>submission?.status==='accepted'&&(submission.rewardSpent===true||Object.entries(rewardCounts(submission)).some(([item,quantity])=>team.inventory[item]<quantity));
+export const MAX_OPEN_TEAMS=40;
+function suggestedDecision(q,answer){
+ if(!q||!['typed_correction','multiple_choice','sentence_rebuild'].includes(q.format))return null;
+ if(q.format==='multiple_choice'){
+  const matches=q.options?.filter(option=>normalizeAnswer(option.text)===normalizeAnswer(answer))??[];
+  return matches.length===1&&q.correctOptionId?(matches[0].id===q.correctOptionId?'accepted':'rejected'):null;
+ }
+ const variants=[q.canonicalAnswer,...(Array.isArray(q.acceptedVariants)?q.acceptedVariants:[])].filter(Boolean);
+ if(!variants.length)return null;
+ const normalized=normalizeAnswer(answer);
+ return variants.some(variant=>normalizeAnswer(variant)===normalized)?'accepted':'rejected';
+}
 // Source token IDs are authoring metadata and may encode answer order. Never
 // publish them. A keyed, room-specific presentation ID is stable on reconnect
 // but reveals no original position, including for previously saved rooms.
@@ -98,14 +110,15 @@ export class GameStore {
  save(){}
  prune(){for(const [pin,r]of this.rooms){if(r.expiresAt<=this.now())this.rooms.delete(pin);}}
  room(pin){if(!/^\d{5}$/.test(String(pin)))fail('Enter the five-digit kitchen PIN.','INVALID_PIN');const r=this.rooms.get(String(pin));if(!r||r.expiresAt<=this.now()){this.prune();fail('This kitchen is unavailable or has expired. Ask your teacher for the new PIN.','ROOM_NOT_FOUND',404);}return r;}
- create({teamCount=10,roomName='Crazy Kitchen',questionSetId='set1'}={}){
-  if(!Number.isInteger(teamCount)||teamCount<2||teamCount>10)fail('Choose 2–10 teams.');
+ create({teamCount=10,roomName='Crazy Kitchen',questionSetId='set1',openLobby=false}={}){
+  if(typeof openLobby!=='boolean')fail('Choose a valid lobby setting.');
+  if(!Number.isInteger(teamCount)||teamCount<2||teamCount>(openLobby?MAX_OPEN_TEAMS:10))fail(openLobby?`Choose 2–${MAX_OPEN_TEAMS} teams.`:'Choose 2–10 teams.');
   if(!Object.hasOwn(this.questionSets,questionSetId))fail('Choose an available question set.','INVALID_QUESTION_SET');
   this.prune();if(this.rooms.size>=100)fail('This server has reached its room limit.','CAPACITY',503);
   let pin;do{pin=String(randomInt(10000,100000));}while(this.rooms.has(pin));
   const hostToken=randomBytes(32).toString('hex');const now=this.now();
   const selectedQuestions=shuffle(this.questionSets[questionSetId]).map(q=>({...structuredClone(q),...(q.options?{options:shuffle(q.options)}:{})}));
-  const r={pin,roomName:cleanName(roomName,48)||'Crazy Kitchen',hostHash:hash(hostToken),createdAt:now,expiresAt:now+this.retentionMs,phase:'lobby',version:1,teamCount,questionSetId,questionIndex:-1,questions:selectedQuestions,teams:[],submissions:{},discoveries:{},latestCooks:[],events:[],rushEndsAt:null,answerCountdownEndsAt:null,rushNumber:0,incomingThefts:{},incomingStarThefts:{},receipts:{},weights:this.weights};
+  const r={pin,roomName:cleanName(roomName,48)||'Crazy Kitchen',hostHash:hash(hostToken),createdAt:now,expiresAt:now+this.retentionMs,phase:'lobby',version:1,teamCount,openLobby,deferredRewards:openLobby,questionSetId,questionIndex:-1,questions:selectedQuestions,teams:[],submissions:{},discoveries:{},latestCooks:[],events:[],rushEndsAt:null,answerCountdownEndsAt:null,rushNumber:0,incomingThefts:{},incomingStarThefts:{},receipts:{},weights:this.weights};
   this.save(r);this.rooms.set(pin,r);return {pin,hostToken};
  }
  teamToken(r,clientId){return createHmac('sha256',this.secret).update(`team:${r.pin}:${r.createdAt}:${clientId}`).digest('hex');}
@@ -130,9 +143,9 @@ export class GameStore {
   const q=this.currentQuestion(r);const submissions=q?r.submissions[q.id]??{}:{};
   const showAnswer=['reveal','rush','finished'].includes(r.phase);
   const tokenId=id=>createHmac('sha256',this.secret).update(`rebuild:${r.pin}:${r.createdAt}:${q?.id}:${id}`).digest('hex').slice(0,24);
-  const data={pin:r.pin,roomName:r.roomName,phase:r.phase,version:r.version,serverTime:this.now(),expiresAt:r.expiresAt,role:auth.role,teamCount:r.teamCount,questionSetId:r.questionSetId??'set1',questionNumber:r.questionIndex+1,totalQuestions:r.questions.length,question:publicQuestion(q,tokenId),answerReveal:showAnswer&&q?{canonicalAnswer:q.canonicalAnswer,feedback:q.feedback}:null,cookingAvailable:this.cookingAvailable(r),rushEndsAt:null,answerCountdownEndsAt:r.answerCountdownEndsAt??null,rushEnded:false,rushNumber:r.rushNumber??0,teams:r.teams.map(t=>({id:t.id,slot:t.slot,name:t.name,stars:t.stars,inventoryCount:countBag(t.inventory),acceptedCount:Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length,submissionStatus:submissions[t.id]?.status??'waiting',online:(this.lastSeen.get(`${r.pin}:${t.id}`)??0)>this.now()-20000,recipesCount:Object.keys(t.recipes).length,canBeStolenFrom:this.cookingAvailable(r)&&countBag(t.inventory)>0&&!r.incomingThefts[t.id],canLoseStar:this.cookingAvailable(r)&&t.stars>0&&!(r.incomingStarThefts??{})[t.id]})).sort((a,b)=>a.slot-b.slot),latestCooks:r.latestCooks.slice(-100).map(cook=>visibleCook(cook,auth)),events:r.events.slice(-10),takenSlots:r.teams.map(t=>t.slot),winners:['finished','closed'].includes(r.phase)?r.teams.filter(t=>t.stars===Math.max(...r.teams.map(t=>t.stars))).filter(t=>Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length===Math.max(...r.teams.filter(x=>x.stars===Math.max(...r.teams.map(y=>y.stars))).map(x=>Object.values(r.submissions).filter(s=>s[x.id]?.status==='accepted').length))).map(t=>t.id):[]};
-  if(auth.role==='host'){data.answerKey=q?Object.fromEntries(['canonicalAnswer','acceptedVariants','correctOptionId','targetTense','feedback','canonicalTokenOrder','acceptedTokenOrders'].filter(k=>q[k]!==undefined).map(k=>[k,k==='canonicalTokenOrder'?q[k].map(tokenId):k==='acceptedTokenOrders'?q[k].map(order=>order.map(tokenId)):q[k]])):null;data.submissions=r.teams.map(t=>{const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];return{teamId:t.id,teamName:t.name,answer:s?.answer??'',status:s?.status??'waiting',unanswered:Boolean(s?.unanswered),reward:rewards[0]??null,rewards,rewardLocked:rewardLocked(t,s)};});data.settings={cookingMode:'anytime',teamCount:r.teamCount,ingredientWeights:r.weights,theftRecipe:'Sneaky Snack',starTheftRecipe:'Star Snatcher Tart',theftMaxIncomingPerQuestion:1,starTheftMaxIncomingPerQuestion:1};data.joinPath=`/?battle=7&join=${r.pin}`;}
-  if(auth.role==='team'){const t=auth.team;const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];data.me={id:t.id,name:t.name,slot:t.slot,stars:t.stars,inventory:{...t.inventory},recipes:Object.values(t.recipes),powers:t.powers.map(p=>({...p})),submission:s?{answer:s.answer,status:s.status,unanswered:Boolean(s.unanswered),reward:rewards[0]??null,rewards}:null};}
+  const data={pin:r.pin,roomName:r.roomName,phase:r.phase,version:r.version,serverTime:this.now(),expiresAt:r.expiresAt,role:auth.role,teamCount:r.teamCount,openLobby:Boolean(r.openLobby),deferredRewards:Boolean(r.deferredRewards),questionSetId:r.questionSetId??'set1',questionNumber:r.questionIndex+1,totalQuestions:r.questions.length,question:publicQuestion(q,tokenId),answerReveal:showAnswer&&q?{canonicalAnswer:q.canonicalAnswer,feedback:q.feedback}:null,cookingAvailable:this.cookingAvailable(r),rushEndsAt:null,answerCountdownEndsAt:r.answerCountdownEndsAt??null,rushEnded:false,rushNumber:r.rushNumber??0,teams:r.teams.map(t=>({id:t.id,slot:t.slot,name:t.name,stars:t.stars,inventoryCount:countBag(t.inventory),acceptedCount:Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted'&&(!r.deferredRewards||s[t.id]?.finalized)).length,submissionStatus:r.deferredRewards&&r.phase==='question'&&auth.role!=='host'&&submissions[t.id]?'submitted':submissions[t.id]?.status??'waiting',online:(this.lastSeen.get(`${r.pin}:${t.id}`)??0)>this.now()-20000,recipesCount:Object.keys(t.recipes).length,canBeStolenFrom:this.cookingAvailable(r)&&countBag(t.inventory)>0&&!r.incomingThefts[t.id],canLoseStar:this.cookingAvailable(r)&&t.stars>0&&!(r.incomingStarThefts??{})[t.id]})).sort((a,b)=>a.slot-b.slot),latestCooks:r.latestCooks.slice(-100).map(cook=>visibleCook(cook,auth)),events:r.events.slice(-10),takenSlots:r.teams.map(t=>t.slot),winners:['finished','closed'].includes(r.phase)?r.teams.filter(t=>t.stars===Math.max(...r.teams.map(t=>t.stars))).filter(t=>Object.values(r.submissions).filter(s=>s[t.id]?.status==='accepted').length===Math.max(...r.teams.filter(x=>x.stars===Math.max(...r.teams.map(y=>y.stars))).map(x=>Object.values(r.submissions).filter(s=>s[x.id]?.status==='accepted').length))).map(t=>t.id):[]};
+  if(auth.role==='host'){data.answerKey=q?Object.fromEntries(['canonicalAnswer','acceptedVariants','correctOptionId','targetTense','feedback','canonicalTokenOrder','acceptedTokenOrders'].filter(k=>q[k]!==undefined).map(k=>[k,k==='canonicalTokenOrder'?q[k].map(tokenId):k==='acceptedTokenOrders'?q[k].map(order=>order.map(tokenId)):q[k]])):null;data.submissions=r.teams.map(t=>{const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];return{teamId:t.id,teamName:t.name,answer:s?.answer??'',status:s?.status??'waiting',decisionSource:s?.decisionSource??null,unanswered:Boolean(s?.unanswered),reward:rewards[0]??null,rewards,rewardLocked:rewardLocked(t,s)};});data.settings={cookingMode:'anytime',teamCount:r.teamCount,ingredientWeights:r.weights,theftRecipe:'Sneaky Snack',starTheftRecipe:'Star Snatcher Tart',theftMaxIncomingPerQuestion:1,starTheftMaxIncomingPerQuestion:1};data.joinPath=`/?battle=7&join=${r.pin}`;}
+  if(auth.role==='team'){const t=auth.team;const s=submissions[t.id],rewards=s?.status==='accepted'?rewardItems(s):[];data.me={id:t.id,name:t.name,slot:t.slot,stars:t.stars,inventory:{...t.inventory},recipes:Object.values(t.recipes),powers:t.powers.map(p=>({...p})),submission:s?{answer:s.answer,status:r.deferredRewards&&r.phase==='question'?'submitted':s.status,unanswered:Boolean(s.unanswered),reward:rewards[0]??null,rewards}:null};}
   return data;
  }
  event(r,text,type='info'){r.events.push({id:randomBytes(8).toString('hex'),text,type,at:this.now()});r.events=r.events.slice(-100);}
@@ -176,11 +189,12 @@ export class GameStore {
    }
    case 'host:configure':{
     requirePhase('lobby');
+    if(r.openLobby)fail('Teams join freely until you start this room.','OPEN_LOBBY',409);
     if(!Number.isInteger(b.teamCount)||b.teamCount<2||b.teamCount>10)fail('Choose 2–10 teams.');
     if(r.teams.some(t=>t.slot>b.teamCount))fail('A joined team is using a higher station. Keep that station available.','STATION_OCCUPIED',409);
     r.teamCount=b.teamCount;return{teamCount:r.teamCount};
    }
-   case 'host:start': requirePhase('lobby');if(r.teams.length<r.teamCount)fail(`Waiting for all ${r.teamCount} team stations to join.`, 'NEED_TEAMS',409);r.phase='question';r.questionIndex=0;r.answerCountdownEndsAt=null;this.event(r,'The kitchen is open!');return{started:true};
+   case 'host:start': requirePhase('lobby');if(r.teams.length<(r.openLobby?1:r.teamCount))fail(r.openLobby?'Wait for at least one team to join.':`Waiting for all ${r.teamCount} team stations to join.`, 'NEED_TEAMS',409);r.phase='question';r.questionIndex=0;r.answerCountdownEndsAt=null;this.event(r,'The kitchen is open!');return{started:true};
    case 'host:start-countdown':{
     requirePhase('question');if(b.questionId!==q.id)fail('That question is no longer open.','STALE_QUESTION',409);
     if(!r.answerCountdownEndsAt)r.answerCountdownEndsAt=this.now()+10000;
@@ -191,12 +205,17 @@ export class GameStore {
     if(r.answerCountdownEndsAt&&this.now()>=r.answerCountdownEndsAt)fail('Time is up. Your teacher can review the answers now.','ANSWER_TIME_UP',409);
     if(typeof b.answer!=='string'||!b.answer.trim()||b.answer.length>500)fail('Enter an answer of 1–500 characters.');
     const subs=r.submissions[q.id]??={};if(subs[auth.team.id])fail('Your team has already submitted this answer.','ALREADY_SUBMITTED',409);
-    subs[auth.team.id]={answer:b.answer.trim(),status:'submitted',rewards:null,at:this.now()};return{submitted:true};
+    const suggestion=r.deferredRewards?suggestedDecision(q,b.answer):null;
+    subs[auth.team.id]={answer:b.answer.trim(),status:suggestion??'submitted',decisionSource:suggestion?'auto':null,rewards:null,at:this.now()};return{submitted:true};
    }
    case 'host:review':{
     requirePhase('question');if(b.questionId!==q.id)fail('That question is no longer open.','STALE_QUESTION',409);if(!['accepted','rejected'].includes(b.decision))fail('Choose Accept or Reject.');
     const team=r.teams.find(t=>t.id===b.teamId);if(!team)fail('That team is unavailable.','TEAM_NOT_FOUND',404);
     const subs=r.submissions[q.id]??={};let sub=subs[b.teamId];
+    if(r.deferredRewards){
+     if(!sub){if(b.decision!=='rejected')fail('A team that did not answer can only be marked wrong.','NO_SUBMISSION',409);sub={answer:'',status:'rejected',decisionSource:'teacher',rewards:null,at:this.now(),unanswered:true};subs[b.teamId]=sub;return{decision:'rejected',rewards:[],unanswered:true};}
+     sub.status=b.decision;sub.decisionSource='teacher';return{decision:sub.status,reward:null,rewards:[]};
+    }
     if(!sub){
      if(b.decision!=='rejected')fail('A team that did not answer can only be marked wrong.','NO_SUBMISSION',409);
      sub={answer:'',status:'rejected',rewards:null,at:this.now(),unanswered:true};subs[b.teamId]=sub;return{decision:'rejected',reward:null,rewards:[],unanswered:true};
@@ -209,7 +228,11 @@ export class GameStore {
     if(b.decision==='accepted'){if(!rewardItems(sub).length)sub.rewards=[this.ingredient(r),this.ingredient(r)];for(const item of rewardItems(sub))team.inventory[item]++;}
     sub.status=b.decision;const rewards=sub.status==='accepted'?rewardItems(sub):[];return{decision:sub.status,reward:rewards[0]??null,rewards};
    }
-   case 'host:reveal': requirePhase('question');if(Object.values(r.submissions[q.id]??{}).some(s=>s.status==='submitted'))fail('Review every submitted answer before revealing.','REVIEWS_PENDING',409);r.phase='reveal';r.answerCountdownEndsAt=null;return{revealed:true};
+   case 'host:reveal':{
+    requirePhase('question');if(Object.values(r.submissions[q.id]??{}).some(s=>s.status==='submitted'))fail('Review every submitted answer before revealing.','REVIEWS_PENDING',409);
+    if(r.deferredRewards)for(const team of r.teams){const sub=r.submissions[q.id]?.[team.id];if(!sub||sub.finalized)continue;if(sub.status==='accepted'){sub.rewards=[this.ingredient(r),this.ingredient(r)];for(const item of sub.rewards)team.inventory[item]++;}sub.finalized=true;}
+    r.phase='reveal';r.answerCountdownEndsAt=null;return{revealed:true};
+   }
    case 'host:advance':{
     if(!['reveal','rush'].includes(r.phase))fail('Reveal the answer before moving on.','WRONG_PHASE',409);
     r.rushEndsAt=null;r.answerCountdownEndsAt=null;

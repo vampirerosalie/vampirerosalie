@@ -150,6 +150,28 @@ test('Battle 7 entry immediately creates the teacher lobby and restores its capa
  const refreshed=harness({saved,sessionSaved,search:h.location.search,boot:true,fetcher});await until(()=>refreshed.frontend.get().state?.role==='host');assert.equal(creates,1);assert.equal(refreshed.frontend.get().token,host.hostToken);
 });
 
+test('new Battle 7 UI opens a flexible lobby and keeps provisional results off student phones',async()=>{
+ const store=new GameStore({questions});const host=store.create({teamCount:40,openLobby:true});
+ const team=store.join(host.pin,{teamSlot:1,name:'First crew',clientId:randomUUID()});
+ const teacher=harness({fetcher:adapter(store)});teacher.frontend.configure('host',store.state(host.pin,host.hostToken),host.hostToken);
+ assert.match(teacher.frontend.get().html,/1<\/b> team joined/);
+ assert.match(teacher.frontend.get().html,/up to 40 teams/);
+ assert.match(teacher.frontend.get().html,/Start Battle 7/);
+ assert.doesNotMatch(teacher.frontend.get().html,/lobby-team-count/);
+ const join=harness({fetcher:adapter(store)});join.frontend.configure('join',store.state(host.pin),'');
+ assert.match(join.frontend.get().html,/Show more teams/);
+ assert.match(join.frontend.get().html,/data-slot="10"/);
+ action(store,host,'host:start');
+ const q=store.room(host.pin).questions[0];store.action(host.pin,team.teamToken,{type:'pupil:submit',requestId:randomUUID(),questionId:q.id,answer:q.canonicalAnswer});
+ const phone=harness({fetcher:adapter(store)});phone.frontend.configure('join',store.state(host.pin,team.teamToken),team.teamToken);
+ assert.match(phone.frontend.get().html,/Order received!/);
+ assert.doesNotMatch(phone.frontend.get().html,/Two ingredients added to your pantry/);
+ assert.doesNotMatch(phone.frontend.get().html,/PRIVATE ANSWER KEY/);
+ teacher.frontend.applyState(store.state(host.pin,host.hostToken));teacher.frontend.ui.review=true;teacher.frontend.render();
+ assert.match(teacher.frontend.get().html,/Finalize & reveal answer/);
+ assert.match(teacher.frontend.get().html,/Auto suggestion/);
+});
+
 test('QR team stays student through teacher close, refresh, history back, bfcache and reconnect',async()=>{
  const {store,host}=fixture(),a=store.join(host.pin,{teamSlot:1,name:'Persistent team',clientId:randomUUID()});store.join(host.pin,{teamSlot:2,name:'Other',clientId:randomUUID()});
  const saved=new Map([[`crazy-kitchen:team:${host.pin}`,a.teamToken],[`crazy-kitchen:host:${host.pin}`,host.hostToken]]),sessionSaved=new Map(),normal=adapter(store);
