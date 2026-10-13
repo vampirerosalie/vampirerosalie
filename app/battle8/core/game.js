@@ -107,7 +107,7 @@ export class DemolitionGame {
       data.reviewKeys = this.questions.slice(0, room.questionIndex + 1).map(item => ({ questionId: item.id, answerKey: item.correct_answer, explanation: item.explanation }));
       data.reviews = Object.entries(room.submissions).flatMap(([questionId, submissions]) => Object.entries(submissions).map(([teamId, sub]) => ({
         questionId: Number(questionId), teamId, teamName: room.teams.find(t => t.id === teamId)?.name ?? 'Team',
-        answer: sub.answer ?? '', status: sub.status, decisionSource: sub.decisionSource ?? null, rewardIssued: Boolean(sub.rewardIssued), rewardLocked: Boolean(sub.rewardLocked),
+        answer: sub.answer ?? '', status: sub.status, proposedDecision: sub.proposedDecision ?? null, decisionSource: sub.decisionSource ?? null, rewardIssued: Boolean(sub.rewardIssued), rewardLocked: Boolean(sub.rewardLocked),
         answerKey: this.questions[Number(questionId) - 1]?.correct_answer, explanation: this.questions[Number(questionId) - 1]?.explanation,
       }))).sort((a, b) => b.questionId - a.questionId || a.teamName.localeCompare(b.teamName));
       data.pendingReviewCount = data.reviews.filter(row => row.status === 'submitted').length;
@@ -169,12 +169,26 @@ export class DemolitionGame {
         return { closedQuestionId: q.id };
       case 'host:reveal':
         requirePhase('question'); if (body.questionId !== q.id) fail('That question has changed.', 'STALE_QUESTION', 409);
-        if (room.questionOpen) fail('Close answers before revealing the key.', 'ANSWERS_OPEN', 409);
+        // This is the teacher's explicit confirmation boundary. Private suggestions
+        // and overrides do not reveal results or issue rewards before this action.
+        room.questionOpen = false; room.deadlineAt = null;
+        for (const joined of room.teams) {
+          const subs = room.submissions[q.id] ??= {};
+          const sub = subs[joined.id] ??= { answer: '', status: 'missing', at: this.now() };
+          if (sub.status === 'submitted') {
+            sub.status = sub.proposedDecision ?? (sub.answer === q.correct_answer ? 'accepted' : 'rejected');
+            sub.confirmedAt = this.now();
+            if (sub.status === 'accepted' && !sub.rewardIssued) {
+              joined.draws.push({ id: id(), questionId: q.id }); sub.rewardIssued = true;
+            }
+          }
+        }
         if (!room.revealed.includes(q.id)) room.revealed.push(q.id);
         return { revealedQuestionId: q.id };
       case 'host:advance':
         requirePhase('question'); if (body.questionId !== q.id) fail('That question has changed.', 'STALE_QUESTION', 409);
         if (room.questionOpen) fail('Close this question’s answers before advancing.', 'ANSWERS_OPEN', 409);
+        if (Object.values(room.submissions[q.id] ?? {}).some(sub => sub.status === 'submitted')) fail('Confirm results before moving to the next question.', 'RESULTS_PENDING', 409);
         room.deadlineAt = null;
         if (room.questionIndex === 24) { room.phase = 'wrap'; this.event(room, 'Final Tool Yard: use saved cards before the teacher locks results.'); }
         else { room.questionIndex++; room.questionOpen = true; }
@@ -187,6 +201,10 @@ export class DemolitionGame {
         const subs = room.submissions[body.questionId] ??= {}; let sub = subs[judged.id];
         if (!sub) { if (body.decision !== 'rejected') fail('A missing answer cannot be accepted.', 'NO_SUBMISSION', 409); sub = subs[judged.id] = { answer: '', status: 'missing', at: this.now() }; }
         if (!sub.answer) { sub.status = 'missing'; return { decision: 'missing' }; }
+        if (sub.status === 'submitted' && body.questionId === q.id && !room.revealed.includes(q.id)) {
+          sub.proposedDecision = body.decision; sub.decisionSource = 'teacher'; sub.reviewedAt = this.now();
+          return { decision: body.decision, awaitingConfirmation: true, rewardIssued: false };
+        }
         if (sub.status === body.decision) return { decision: sub.status, rewardIssued: Boolean(sub.rewardIssued) };
         if (sub.status === 'accepted' && body.decision === 'rejected') {
           if (sub.rewardLocked) fail('This team has already opened that reward. Its accepted decision cannot be reversed.', 'REWARD_USED', 409);
@@ -216,11 +234,9 @@ export class DemolitionGame {
         if (!['A', 'B', 'C', 'D'].includes(body.answer)) fail('Choose A, B, C or D.');
         const subs = room.submissions[q.id] ??= {};
         if (subs[team.id]) fail('Your team has already answered this question.', 'ALREADY_SUBMITTED', 409);
-        const correct = body.answer === q.correct_answer;
-        subs[team.id] = { answer: body.answer, status: correct ? 'accepted' : 'rejected', decisionSource: 'auto',
-          at: this.now(), rewardIssued: correct, rewardLocked: false };
-        if (correct) team.draws.push({ id: id(), questionId: q.id });
-        return { submitted: true, correct, questionId: q.id, rewardIssued: correct };
+        subs[team.id] = { answer: body.answer, status: 'submitted', proposedDecision: body.answer === q.correct_answer ? 'accepted' : 'rejected', decisionSource: 'auto',
+          at: this.now(), rewardIssued: false, rewardLocked: false };
+        return { submitted: true, questionId: q.id };
       }
       case 'pupil:draw': {
         requireActions();

@@ -54,6 +54,8 @@ test('40 team submissions and overlapping review decisions retain one draw each'
   const receipts = s.teams.map(team => ({ type:'host:review', requestId:randomUUID(), questionId:1, teamId:team.teamId, decision:'accepted' }));
   await Promise.all(receipts.map(body => s.store().action(s.host.pin, s.host.hostToken, body)));
   await Promise.all(receipts.map(body => s.store().action(s.host.pin, s.host.hostToken, body)));
+  assert.equal(s.db.room(s.host.pin).teams.reduce((sum, team) => sum + team.draws.length, 0), 0);
+  await Promise.all([1,2].map(() => s.action(s.host.hostToken, 'host:reveal', { questionId:1 })));
   const room = s.db.room(s.host.pin);
   assert.equal(room.teams.filter(team => team.draws.length === 1).length, 40);
   assert.equal(room.teams.reduce((sum, team) => sum + team.draws.length, 0), 40);
@@ -61,11 +63,15 @@ test('40 team submissions and overlapping review decisions retain one draw each'
   assert.equal((await s.store().state(s.host.pin)).reviews, undefined);
 });
 
-test('40 simultaneous correct submissions auto-award exactly one draw per team', async () => {
+test('40 simultaneous correct submissions wait; concurrent confirmations award one draw per team', async () => {
   const s = await setup(40); await s.action(s.host.hostToken, 'host:start');
   const receipts = s.teams.map(team => ({ team, body:{ type:'pupil:submit', requestId:randomUUID(), questionId:1, answer:'C' } }));
   await Promise.all(receipts.map(({ team, body }) => s.store().action(s.host.pin, team.teamToken, body)));
   await Promise.all(receipts.map(({ team, body }) => s.store().action(s.host.pin, team.teamToken, body)));
+  assert.equal(s.db.room(s.host.pin).teams.reduce((sum, team) => sum + team.draws.length, 0), 0);
+  assert.equal((await s.store().state(s.host.pin, s.host.hostToken)).pendingReviewCount, 40);
+  assert.equal((await s.store().state(s.host.pin, s.teams[0].teamToken)).me.submission.status, 'submitted');
+  await Promise.all([1,2,3].map(() => s.action(s.host.hostToken, 'host:reveal', { questionId:1 })));
   const room = s.db.room(s.host.pin);
   assert.equal(room.teams.length, 40);
   assert.equal(room.teams.reduce((sum, team) => sum + team.draws.length, 0), 40);
@@ -78,16 +84,19 @@ test('lost response after auto-marked submission replays without a second reward
   const body = { type:'pupil:submit', requestId:randomUUID(), questionId:1, answer:'C' };
   s.db.failAfterCommit = true;
   await assert.rejects(s.store().action(s.host.pin, team.teamToken, body), /lost response/);
-  assert.equal(s.db.room(s.host.pin).teams[0].draws.length, 1);
+  assert.equal(s.db.room(s.host.pin).teams[0].draws.length, 0);
   const retry = await s.store().action(s.host.pin, team.teamToken, body);
   assert.equal(retry.replayed, true);
-  assert.equal(s.db.room(s.host.pin).teams[0].draws.length, 1);
+  assert.deepEqual(retry.result, { submitted:true, questionId:1 });
+  assert.equal(retry.state.me.submission.status, 'submitted');
+  assert.equal(s.db.room(s.host.pin).teams[0].draws.length, 0);
 });
 
 test('same draw/card cannot be spent twice by concurrent team clients', async () => {
   const s = await setup(2), [a,b] = s.teams; await s.action(s.host.hostToken, 'host:start');
   await s.action(a.teamToken, 'pupil:submit', { questionId:1, answer:'A' });
   await s.action(s.host.hostToken, 'host:review', { questionId:1, teamId:a.teamId, decision:'accepted' });
+  await s.action(s.host.hostToken, 'host:reveal', { questionId:1 });
   const drawId = (await s.store().state(s.host.pin, a.teamToken)).me.nextDrawId;
   const draws = await Promise.allSettled([1,2].map(() => s.action(a.teamToken, 'pupil:draw', { drawId })));
   assert.equal(draws.filter(result => result.status === 'fulfilled').length, 1);
@@ -105,7 +114,8 @@ test('lost response after D1 commit replays the saved receipt without duplicatin
   const s = await setup(1), team = s.teams[0];
   await s.action(s.host.hostToken, 'host:start');
   await s.action(team.teamToken, 'pupil:submit', { questionId:1, answer:'A' });
-  const body = { type:'host:review', requestId:randomUUID(), teamId:team.teamId, questionId:1, decision:'accepted' };
+  await s.action(s.host.hostToken, 'host:review', { teamId:team.teamId, questionId:1, decision:'accepted' });
+  const body = { type:'host:reveal', requestId:randomUUID(), questionId:1 };
   s.db.failAfterCommit = true;
   await assert.rejects(s.store().action(s.host.pin, s.host.hostToken, body), /lost response/);
   assert.equal(s.db.room(s.host.pin).teams[0].draws.length, 1);
@@ -129,6 +139,7 @@ test('large 40-team room remains actionable past question 20', async () => {
   assert.equal(hostState.reviews.length, 800);
   await Promise.all(s.teams.map(team => s.action(team.teamToken, 'pupil:submit', { questionId:21, answer:'B' })));
   await Promise.all(s.teams.map(team => s.action(s.host.hostToken, 'host:review', { questionId:21, teamId:team.teamId, decision:'accepted' })));
+  await s.action(s.host.hostToken, 'host:reveal', { questionId:21 });
   const after = s.db.room(s.host.pin);
   assert.equal(Object.keys(after.submissions[21]).length, 40);
   assert.equal(after.teams.reduce((sum, team) => sum + team.draws.length, 0), 40);

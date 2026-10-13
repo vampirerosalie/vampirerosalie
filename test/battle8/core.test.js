@@ -17,6 +17,7 @@ const judge = (context, team, decision = 'accepted', q = 1, requestId) => contex
 const draw = (context, team) => context.act(team.teamToken, 'pupil:draw', { drawId:context.game.state(context.pin, team.teamToken).me.nextDrawId });
 const start = context => context.act(context.hostToken, 'host:start');
 const close = (context, q) => context.act(context.hostToken, 'host:close-answer', { questionId:q });
+const confirm = (context, q = 1, requestId) => context.act(context.hostToken, 'host:reveal', { questionId:q }, requestId);
 const advance = (context, q) => context.act(context.hostToken, 'host:advance', { questionId:q });
 function grantCard(context, team, key) {
   const card = { id:`card-${Math.random().toString(36).slice(2)}`, key, questionId:1 };
@@ -38,9 +39,11 @@ test('four teams independently answer; one approval creates one draw and review 
   for (const team of teams) { const view = c.game.state(c.pin, team.teamToken); assert.equal(view.me.original, 12); assert.equal(view.me.walls, 0); assert.equal(view.me.draws, 0); assert.deepEqual(view.me.hand, []); }
   start(c);
   submit(c, teams[0]); judge(c, teams[0]);
-  assert.equal(c.game.state(c.pin, teams[0].teamToken).me.draws, 1);
+  assert.equal(c.game.state(c.pin, teams[0].teamToken).me.draws, 0);
   for (const team of teams.slice(1)) submit(c, team);
   judge(c, teams[1], 'rejected'); judge(c, teams[2], 'accepted');
+  confirm(c);
+  assert.equal(c.game.state(c.pin, teams[0].teamToken).me.draws, 1);
   assert.equal(c.game.state(c.pin, teams[1].teamToken).me.draws, 0);
   assert.equal(c.game.state(c.pin, teams[2].teamToken).me.draws, 1);
   const publicState = c.game.state(c.pin);
@@ -52,25 +55,41 @@ test('four teams independently answer; one approval creates one draw and review 
   assert.equal(c.game.state(c.pin, c.hostToken).reviews.length, 4);
 });
 
-test('MCQs auto-mark against the private key and teacher overrides remain idempotent', () => {
+test('private MCQ suggestions and overrides wait for confirmation; rewards remain idempotent', () => {
   const c = make(), [right, wrong] = [c.join(1), c.join(2)]; start(c);
   const accepted = submit(c, right, 'C'); // Question 1 key.
   const rejected = submit(c, wrong, 'A');
-  assert.equal(accepted.result.correct, true);
-  assert.equal(rejected.result.correct, false);
-  assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 1);
+  assert.deepEqual(accepted.result, { submitted:true, questionId:1 });
+  assert.deepEqual(rejected.result, accepted.result);
+  assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 0);
   assert.equal(c.game.state(c.pin, wrong.teamToken).me.draws, 0);
   assert.deepEqual(c.game.state(c.pin, c.hostToken).reviews.map(row => row.decisionSource), ['auto', 'auto']);
-  assert.equal(c.game.state(c.pin, c.hostToken).pendingReviewCount, 0);
+  assert.equal(c.game.state(c.pin, c.hostToken).pendingReviewCount, 2);
+  assert.deepEqual(c.game.state(c.pin, c.hostToken).reviews.map(row => row.proposedDecision), ['accepted', 'rejected']);
   assert.equal(c.game.state(c.pin, right.teamToken).reviewKeys, undefined);
   assert.equal(c.game.state(c.pin).answerReveal, null);
 
   judge(c, wrong, 'accepted');
   judge(c, wrong, 'accepted');
-  assert.equal(c.game.state(c.pin, wrong.teamToken).me.draws, 1);
+  assert.equal(c.game.state(c.pin, wrong.teamToken).me.draws, 0);
   assert.equal(c.game.state(c.pin, c.hostToken).reviews.find(row => row.teamId === wrong.teamId).decisionSource, 'teacher');
   judge(c, right, 'rejected');
   assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 0);
+  for (const team of [right, wrong]) {
+    const phone = c.game.state(c.pin, team.teamToken);
+    assert.equal(phone.me.submission.status, 'submitted');
+    assert.equal(phone.me.submission.proposedDecision, undefined);
+    assert.ok(phone.teams.every(t => t.verdict === 'submitted'));
+    assert.equal(phone.events.some(e => /accepted|rejected/.test(e.text)), false);
+    assert.throws(() => draw(c, team), error => error.code === 'NO_DRAW');
+  }
+  const receipt = 'confirm-results-receipt-0000';
+  confirm(c, 1, receipt);
+  assert.equal(confirm(c, 1, receipt).replayed, true);
+  confirm(c); // A new receipt/double click also cannot award twice.
+  assert.equal(c.game.state(c.pin, right.teamToken).me.submission.status, 'rejected');
+  assert.equal(c.game.state(c.pin, wrong.teamToken).me.draws, 1);
+  assert.equal(c.game.state(c.pin, c.hostToken).pendingReviewCount, 0);
   judge(c, right, 'accepted');
   assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 1);
   draw(c, right);
@@ -84,18 +103,54 @@ test('approval retries and repeated decisions cannot duplicate rewards', () => {
   const first = judge(c, team, 'accepted', 1, receipt);
   assert.equal(judge(c, team, 'accepted', 1, receipt).replayed, true);
   judge(c, team, 'accepted');
-  assert.equal(first.result.rewardIssued, true);
-  assert.equal(c.game.state(c.pin, team.teamToken).me.draws, 1);
+  assert.equal(first.result.rewardIssued, false);
+  assert.equal(first.result.awaitingConfirmation, true);
   assert.throws(() => submit(c, team), error => error instanceof GameError && error.code === 'ALREADY_SUBMITTED');
+  confirm(c);
+  assert.equal(c.game.state(c.pin, team.teamToken).me.draws, 1);
+});
+
+test('confirmation works before everyone answers, closes late entry, and leaves prior tools usable', () => {
+  const c = make(), [right, wrong, missing] = [c.join(1), c.join(2), c.join(3)]; start(c);
+  submit(c, right, 'C'); submit(c, wrong, 'A');
+  const hammer = grantCard(c, right, 'hammer');
+  c.act(right.teamToken, 'pupil:play', { cardId:hammer.id });
+  assert.equal(c.game.state(c.pin, right.teamToken).me.remaining, 11);
+  assert.equal(c.game.state(c.pin, right.teamToken).me.submission.status, 'submitted');
+  // Rehydrating a persisted room cannot expose or finalize private suggestions.
+  const reconnected = new DemolitionGame({ bank, now:() => 1000000, secret:'unit-secret' });
+  reconnected.rooms.set(c.pin, structuredClone(c.room()));
+  assert.equal(reconnected.state(c.pin, right.teamToken).me.draws, 0);
+  assert.equal(reconnected.state(c.pin, right.teamToken).me.submission.status, 'submitted');
+  assert.equal(JSON.stringify(reconnected.state(c.pin)).includes('proposedDecision'), false);
+  confirm(c);
+  assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 1);
+  assert.equal(c.game.state(c.pin, wrong.teamToken).me.submission.status, 'rejected');
+  assert.equal(c.game.state(c.pin, missing.teamToken).me.submission.status, 'missing');
+  assert.equal(c.game.state(c.pin, missing.teamToken).me.draws, 0);
+  assert.throws(() => submit(c, missing), error => error.code === 'ANSWER_TIME_UP');
+  // Reversal before opening removes the draw; reconfirmation must not restore it.
+  judge(c, right, 'rejected'); confirm(c);
+  assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 0);
+});
+
+test('already-issued rewards in existing live rooms are preserved on confirmation', () => {
+  const c = make(), team = c.join(1); start(c);
+  c.room().submissions[1] = { [team.teamId]: { answer:'C', status:'accepted', decisionSource:'auto', rewardIssued:true } };
+  c.room().teams[0].draws.push({ id:'existing-reward', questionId:1 });
+  confirm(c); confirm(c);
+  assert.equal(c.game.state(c.pin, team.teamToken).me.draws, 1);
+  assert.equal(c.game.state(c.pin, team.teamToken).me.nextDrawId, 'existing-reward');
 });
 
 test('stale draw retry cannot spend a later question’s credit after receipt expiry', () => {
-  const c = make(), team = c.join(1); start(c); submit(c, team); judge(c, team);
+  const c = make(), team = c.join(1); start(c); submit(c, team); judge(c, team); confirm(c);
   const firstDrawId = c.game.state(c.pin, team.teamToken).me.nextDrawId;
   c.act(team.teamToken, 'pupil:draw', { drawId:firstDrawId });
   const offer = c.game.state(c.pin, team.teamToken).me.offer;
   c.act(team.teamToken, 'pupil:choose', { offerId:offer.id, slotId:offer.slots[0].id });
   close(c, 1); advance(c, 1); submit(c, team, 'B', 2); judge(c, team, 'accepted', 2);
+  confirm(c, 2);
   assert.throws(() => c.act(team.teamToken, 'pupil:draw', { drawId:firstDrawId }, 'very-late-draw-retry-000'), error => error.code === 'STALE_DRAW');
   assert.equal(c.game.state(c.pin, team.teamToken).me.draws, 1);
 });
@@ -103,7 +158,7 @@ test('stale draw retry cannot spend a later question’s credit after receipt ex
 test('blind draw has three opaque independent slots and survives reconnect and question change', () => {
   const sequence = [0, 99, 0]; let position = 0;
   const c = make(n => n === 100 ? sequence[position++ % sequence.length] : 0), team = c.join(1);
-  start(c); submit(c, team); judge(c, team);
+  start(c); submit(c, team); judge(c, team); confirm(c);
   draw(c, team);
   const first = c.game.state(c.pin, team.teamToken).me.offer;
   assert.equal(first.slots.length, 3);
@@ -120,7 +175,7 @@ test('blind draw has three opaque independent slots and survives reconnect and q
 
 test('immediate bad card applies once on selection; reconnect does not reroll', () => {
   const c = make(n => n === 100 ? 97 : 0), team = c.join(1);
-  start(c); submit(c, team); judge(c, team); draw(c, team);
+  start(c); submit(c, team); judge(c, team); confirm(c); draw(c, team);
   const offer = c.game.state(c.pin, team.teamToken).me.offer;
   const receipt = 'same-choice-receipt-0000', args = { offerId:offer.id, slotId:offer.slots[0].id };
   c.act(team.teamToken, 'pupil:choose', args, receipt);
@@ -173,7 +228,7 @@ test('teacher-triggered deadline blocks late answers, but not cards or earlier r
   submit(c, a);
   c.act(c.hostToken, 'host:start-countdown', { questionId:1 }); c.advance(10001);
   assert.throws(() => submit(c, b), /time is up/);
-  judge(c, a); draw(c, a);
+  judge(c, a); confirm(c); draw(c, a);
   close(c, 1); advance(c, 1);
   assert.equal(c.game.state(c.pin).deadlineAt, null);
   assert.equal(c.game.state(c.pin).question.id, 2);
@@ -185,12 +240,15 @@ test('teacher-triggered deadline blocks late answers, but not cards or earlier r
 test('all 25 questions require explicit final lock, pending reviews block it, ties share rank', () => {
   const c = make(), [a,b] = [c.join(1), c.join(2)]; start(c);
   submit(c, a);
-  // A room saved before auto-marking may still contain an answer awaiting review.
-  c.room().submissions[1][a.teamId].status = 'submitted';
+  close(c, 1);
+  assert.throws(() => advance(c, 1), error => error.code === 'RESULTS_PENDING');
+  judge(c, a); confirm(c);
   for (let q = 1; q <= 25; q++) { close(c, q); advance(c, q); }
+  // Legacy rooms may already have advanced past an unreviewed answer.
+  c.room().submissions[2] = { [b.teamId]: { answer:'A', status:'submitted' } };
   assert.equal(c.game.state(c.pin).phase, 'wrap');
   assert.throws(() => c.act(c.hostToken, 'host:finish'), /Review submitted answers/);
-  judge(c, a, 'accepted', 1);
+  judge(c, b, 'rejected', 2);
   assert.equal(c.game.state(c.pin, a.teamToken).me.draws, 1);
   const brick = grantCard(c, a, 'brick'); c.act(a.teamToken, 'pupil:play', { cardId:brick.id, targetTeamId:b.teamId });
   assert.equal(c.game.state(c.pin).ranking[0].id, a.teamId);
@@ -225,7 +283,7 @@ test('teacher can end during question 1; student sees final result and all game 
   assert.equal(first.state.phase, 'finished');
   assert.equal(first.state.questionOpen, false);
   assert.equal(first.state.deadlineAt, null);
-  assert.equal(first.state.pendingReviewCount, 1);
+  assert.equal(first.state.pendingReviewCount, 2);
   assert.equal(first.state.ranking.length, 2);
   assert.equal(c.game.state(c.pin, a.teamToken).phase, 'finished');
   assert.equal(c.game.state(c.pin, b.teamToken).phase, 'finished');
