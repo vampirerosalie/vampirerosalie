@@ -1,0 +1,403 @@
+{
+  "title": "Form 3 — Short Reading and Vocabulary Game Bank",
+  "version": "V02",
+  "level": "Form 3",
+  "language": "en",
+  "question_count": 25,
+  "reading_question_count": 10,
+  "vocabulary_question_count": 15,
+  "instructions": "Read each text and choose the best answer: A, B, C or D.",
+  "note": "Original fictional teaching scenarios. The answer key is for teacher/developer use, not for display on student screens.",
+  "questions": [
+    {
+      "id": 1,
+      "type": "reading",
+      "genre": "Diary",
+      "text": "Our design won, but Kai joked that I could do the next project alone. Later, I noticed that almost every final idea was mine. At our next planning meeting, I will speak last.",
+      "question": "What does the writer most likely hope to change?",
+      "options": {
+        "A": "The help others need to complete tasks.",
+        "B": "The amount of detail in the design.",
+        "C": "Other members’ influence on the design.",
+        "D": "The time spent explaining the finished design."
+      },
+      "correct_answer": "C",
+      "explanation": "Speaking last would give teammates more opportunity to shape the design, rather than simply follow the writer’s ideas."
+    },
+    {
+      "id": 2,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "Nadia was reluctant to lead the tour. She knew the route well, but twice asked whether another pupil could take her place.",
+      "question": "What does “reluctant” mean here?",
+      "options": {
+        "A": "Hesitant",
+        "B": "Unprepared",
+        "C": "Embarrassed",
+        "D": "Disappointed"
+      },
+      "correct_answer": "A",
+      "explanation": "Reluctant means unwilling or hesitant to do something; Nadia tries to avoid taking the role.",
+      "target_word": "reluctant"
+    },
+    {
+      "id": 3,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "At club meetings, Imran is rather reserved. He listens closely and joins in occasionally, but rarely starts a conversation himself.",
+      "question": "What does “reserved” mean here?",
+      "options": {
+        "A": "Uncertain",
+        "B": "Unfriendly",
+        "C": "Uninterested",
+        "D": "Quiet"
+      },
+      "correct_answer": "D",
+      "explanation": "Reserved describes someone who does not readily talk or express themselves; it does not necessarily mean unfriendly.",
+      "target_word": "reserved"
+    },
+    {
+      "id": 4,
+      "type": "reading",
+      "genre": "Notice",
+      "text": "Library rooms are booked for forty minutes. If a group is ten minutes late, another group may use the remaining time. At 2.12, the room booked from 2.00 to 2.40 is empty. June’s group needs twenty-five minutes.",
+      "question": "Which plan follows the rule and gives June enough time?",
+      "options": {
+        "A": "Enter now; leave at 2.52.",
+        "B": "Enter now; leave at 2.37.",
+        "C": "Enter at 2.20; leave at 2.40.",
+        "D": "Enter at 2.20; leave at 2.45."
+      },
+      "correct_answer": "B",
+      "explanation": "From 2.12 to 2.37 is twenty-five minutes, and the group leaves before the original 2.40 finishing time."
+    },
+    {
+      "id": 5,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "Mr Lim dismissed our trip proposal because transport was unavailable. After we arranged a minibus, he agreed to reconsider it.",
+      "question": "What does “dismissed” mean here?",
+      "options": {
+        "A": "Postponed",
+        "B": "Rejected",
+        "C": "Misunderstood",
+        "D": "Overlooked"
+      },
+      "correct_answer": "B",
+      "explanation": "He initially rejected the proposal; he did not merely schedule it for later.",
+      "target_word": "dismissed"
+    },
+    {
+      "id": 6,
+      "type": "reading",
+      "genre": "Interview",
+      "text": "Reporter: Why make another bus guide? Your comedy videos get more views.\nLeena: A new pupil used my first guide to get home alone. Yesterday, I filmed the confusing transfer stops, even though the rain spoiled the pictures.",
+      "question": "Which response would Leena probably value most?",
+      "options": {
+        "A": "“Our entire class has shared your video.”",
+        "B": "“Your editing makes the journey entertaining.”",
+        "C": "“I found my stop without asking anyone.”",
+        "D": "“The video deserves a much bigger audience.”"
+      },
+      "correct_answer": "C",
+      "explanation": "Her choices suggest that helping people travel independently matters more to her than popularity or attractive images."
+    },
+    {
+      "id": 7,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "We expected to wait days, but the company sent a prompt reply. Before lunch, we already knew how to reset the device.",
+      "question": "What does “prompt” mean here?",
+      "options": {
+        "A": "Quick",
+        "B": "Detailed",
+        "C": "Helpful",
+        "D": "Regular"
+      },
+      "correct_answer": "A",
+      "explanation": "Prompt refers to speed: the reply arrived without delay.",
+      "target_word": "prompt"
+    },
+    {
+      "id": 8,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "The model was too fragile to carry in a schoolbag. Mei placed it in a padded box and held it on her lap.",
+      "question": "What does “fragile” mean here?",
+      "options": {
+        "A": "Precious",
+        "B": "Complex",
+        "C": "Unusual",
+        "D": "Delicate"
+      },
+      "correct_answer": "D",
+      "explanation": "Fragile means easily damaged or broken, so the model needs protection.",
+      "target_word": "fragile"
+    },
+    {
+      "id": 9,
+      "type": "reading",
+      "genre": "School report",
+      "text": "Class 3 Meranti collected twice as many cans after its poster campaign. Both collections lasted a week, but only the second included a café donation. The class says the posters persuaded pupils to recycle more.",
+      "question": "What would best support the class’s claim?",
+      "options": {
+        "A": "Pupils themselves brought more cans than before.",
+        "B": "Pupils remembered the advice printed on the posters.",
+        "C": "The café donated after reading the pupils’ posters.",
+        "D": "The second collection exceeded the class’s target."
+      },
+      "correct_answer": "A",
+      "explanation": "An increase in cans brought by pupils supports a change in their behaviour; a café donation alone does not."
+    },
+    {
+      "id": 10,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "After finding that the hall seated only sixty people, our club revised its plan for an event with eighty guests.",
+      "question": "What does “revised” mean here?",
+      "options": {
+        "A": "Checked",
+        "B": "Repeated",
+        "C": "Adjusted",
+        "D": "Approved"
+      },
+      "correct_answer": "C",
+      "explanation": "Revised means changed or adjusted, rather than simply checked.",
+      "target_word": "revised"
+    },
+    {
+      "id": 11,
+      "type": "reading",
+      "genre": "Visitor review",
+      "text": "The new labels helped me understand the museum’s clocks. But several video screens played different voices at once, drowning out the ticking I enjoy. Next time, I’ll choose the hour when the videos are switched off.",
+      "question": "Which statement best matches the reviewer’s opinion?",
+      "options": {
+        "A": "Better explanations make the extra noise worthwhile.",
+        "B": "The old displays explained the clocks more clearly.",
+        "C": "The videos make the written labels unnecessary.",
+        "D": "Useful explanations, but an unwelcome change in atmosphere."
+      },
+      "correct_answer": "D",
+      "explanation": "The reviewer appreciates the labels but dislikes the noise: the opinion is mixed, not wholly positive or negative."
+    },
+    {
+      "id": 12,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "Although we checked every name on the poster, we overlooked the wrong date. We discovered the error only after printing.",
+      "question": "What does “overlooked” mean here?",
+      "options": {
+        "A": "Ignored",
+        "B": "Missed",
+        "C": "Replaced",
+        "D": "Misread"
+      },
+      "correct_answer": "B",
+      "explanation": "Overlooked means failed to notice. Ignored would suggest knowing about the problem and choosing not to act.",
+      "target_word": "overlooked"
+    },
+    {
+      "id": 13,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "During the school holidays, empty seats on the island ferry were scarce. We checked three departures before finding enough places for our family.",
+      "question": "What does “scarce” mean here?",
+      "options": {
+        "A": "Unavailable",
+        "B": "Reserved",
+        "C": "Limited",
+        "D": "Expensive"
+      },
+      "correct_answer": "C",
+      "explanation": "Scarce means few or limited in number, not completely unavailable.",
+      "target_word": "scarce"
+    },
+    {
+      "id": 14,
+      "type": "reading",
+      "genre": "Group chat",
+      "text": "Alia: Our film is three minutes, without the ten-second credits.\nRavi: Everything must fit into one three-minute video. The final joke explains the missing bag. The opening shows twenty seconds of pupils walking into class.",
+      "question": "Which edit meets the rules without losing an important detail?",
+      "options": {
+        "A": "Remove the final joke; add the credits.",
+        "B": "Keep the film; send the credits separately.",
+        "C": "Move the final joke after the credits.",
+        "D": "Shorten the entrance; add the credits."
+      },
+      "correct_answer": "D",
+      "explanation": "Shortening the entrance makes room for credits while preserving the joke that explains the story."
+    },
+    {
+      "id": 15,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "The club announced a tentative date for the trip. The bus was available, but the guide had not yet confirmed the booking.",
+      "question": "What does “tentative” mean here?",
+      "options": {
+        "A": "Unconfirmed",
+        "B": "Delayed",
+        "C": "Agreed",
+        "D": "Revised"
+      },
+      "correct_answer": "A",
+      "explanation": "Tentative means not final or fully confirmed; the club is still waiting for the guide.",
+      "target_word": "tentative"
+    },
+    {
+      "id": 16,
+      "type": "reading",
+      "genre": "Experiment log",
+      "text": "The bean plants beside our sunny classroom window grew taller than those in the shaded corridor. Only the classroom plants heard music each day. Both groups received equal water. We concluded that music caused the difference in growth.",
+      "question": "Which change would make a repeat test more useful?",
+      "options": {
+        "A": "Use more plants, keeping the original two locations.",
+        "B": "Keep light similar, playing music to just one group.",
+        "C": "Measure more often, keeping the original growing conditions.",
+        "D": "Keep the two locations, playing music to both groups."
+      },
+      "correct_answer": "B",
+      "explanation": "Light differed as well as music. Similar light would remove an alternative explanation for the growth difference."
+    },
+    {
+      "id": 17,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "When shown the video, the captain acknowledged that the ball had touched his hand before the goal, although he had denied it earlier.",
+      "question": "What does “acknowledged” mean here?",
+      "options": {
+        "A": "Explained",
+        "B": "Suspected",
+        "C": "Discovered",
+        "D": "Admitted"
+      },
+      "correct_answer": "D",
+      "explanation": "Acknowledged means accepted or admitted that something was true.",
+      "target_word": "acknowledged"
+    },
+    {
+      "id": 18,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "Even after two witnesses disagreed with him, Ben maintained that he had locked the gate before leaving the school.",
+      "question": "What does “maintained” mean here?",
+      "options": {
+        "A": "Remembered",
+        "B": "Insisted",
+        "C": "Assumed",
+        "D": "Explained"
+      },
+      "correct_answer": "B",
+      "explanation": "Maintained here means continued to insist that a statement was true, not kept something in good condition.",
+      "target_word": "maintained"
+    },
+    {
+      "id": 19,
+      "type": "reading",
+      "genre": "Product reviews",
+      "text": "Review 1: These headphones are comfortable for long study sessions, but nearby conversations remain clear.\nReview 2: Music sounds excellent. On calls, however, the microphone makes my voice sound distant.\nJia needs headphones for online discussions in a noisy home.",
+      "question": "Which problem is Jia most likely to face?",
+      "options": {
+        "A": "Her voice may sound clear, but the headphones could become uncomfortable.",
+        "B": "She may hear background voices, although others should hear her clearly.",
+        "C": "She may hear background voices and sound unclear herself.",
+        "D": "They may reduce nearby conversations but make her own voice faint."
+      },
+      "correct_answer": "C",
+      "explanation": "The first review identifies poor blocking of nearby conversations; the second identifies weak microphone pickup."
+    },
+    {
+      "id": 20,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "When the microphone stand broke, our resourceful presenter fixed the microphone to a spare pole and continued the show without waiting for new equipment.",
+      "question": "What does “resourceful” mean here?",
+      "options": {
+        "A": "Inventive",
+        "B": "Patient",
+        "C": "Confident",
+        "D": "Reliable"
+      },
+      "correct_answer": "A",
+      "explanation": "Resourceful means good at finding ways to solve difficulties using what is available.",
+      "target_word": "resourceful"
+    },
+    {
+      "id": 21,
+      "type": "reading",
+      "genre": "Letter to the editor",
+      "text": "The council blames market litter on careless visitors. I think overflowing bins are the real problem. Before closing the market, why not try more bins and more frequent collections? Vendors already struggle to dispose of their waste.",
+      "question": "Which finding most strongly challenges the writer’s explanation?",
+      "options": {
+        "A": "Extra bins would cost more than replacing old signs.",
+        "B": "Extra bins and collections did not reduce litter.",
+        "C": "Several vendors still found it difficult to sort recycling.",
+        "D": "Visitors complained more about litter than about crowding."
+      },
+      "correct_answer": "B",
+      "explanation": "If more bins and collections do not reduce litter, overflowing bins are less convincing as the main explanation."
+    },
+    {
+      "id": 22,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "Our stall made a modest profit. After paying for materials, we had enough money for a few new library books, but not a full set.",
+      "question": "What does “modest” mean here?",
+      "options": {
+        "A": "Unexpected",
+        "B": "Regular",
+        "C": "Shared",
+        "D": "Small"
+      },
+      "correct_answer": "D",
+      "explanation": "Modest here describes a small amount, not a person’s humble behaviour.",
+      "target_word": "modest"
+    },
+    {
+      "id": 23,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "By Wednesday, we had exhausted our printing budget. Any extra posters would have to be handwritten unless we could raise more money.",
+      "question": "What does “exhausted” mean here?",
+      "options": {
+        "A": "Used up",
+        "B": "Set aside",
+        "C": "Worked out",
+        "D": "Paid back"
+      },
+      "correct_answer": "A",
+      "explanation": "Exhausted here means used all of the available money, not felt very tired.",
+      "target_word": "exhausted"
+    },
+    {
+      "id": 24,
+      "type": "reading",
+      "genre": "Event update",
+      "text": "Our repair event fixed many toys, but most owners left them with volunteers and returned later. Next month, we want visitors to take part and learn repair skills. We will have the same volunteers and the same two-hour session.",
+      "question": "Which change best supports the new aim?",
+      "options": {
+        "A": "Give visitors repair notes when they collect their toys.",
+        "B": "Give visitors videos showing how volunteers repaired their toys.",
+        "C": "Book sessions where visitors repair toys with volunteer guidance.",
+        "D": "Ask visitors to explain faults before leaving toys with volunteers."
+      },
+      "correct_answer": "C",
+      "explanation": "Guided repair sessions let visitors participate and practise skills, rather than only receive information or a finished repair."
+    },
+    {
+      "id": 25,
+      "type": "vocabulary",
+      "genre": "Short context",
+      "text": "After receiving a fake delivery message last month, Siti was wary of a new payment link and checked with the shop before opening it.",
+      "question": "What does “wary” mean here?",
+      "options": {
+        "A": "Cautious",
+        "B": "Curious",
+        "C": "Confused",
+        "D": "Annoyed"
+      },
+      "correct_answer": "A",
+      "explanation": "Wary means cautious about possible danger or problems; Siti checks before trusting the link.",
+      "target_word": "wary"
+    }
+  ]
+}
