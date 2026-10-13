@@ -204,6 +204,11 @@ export class DemolitionGame {
         room.phase = 'finished'; room.questionOpen = false; room.deadlineAt = null;
         this.event(room, 'Results locked. Fewest remaining pieces wins!');
         return { ranking: this.ranking(room) };
+      case 'host:end-early':
+        requirePhase('lobby', 'question', 'wrap');
+        room.phase = 'finished'; room.questionOpen = false; room.deadlineAt = null;
+        this.event(room, 'The teacher ended this game. Final results are locked.');
+        return { endedEarly: true, ranking: this.ranking(room) };
       case 'pupil:submit': {
         requirePhase('question');
         if (body.questionId !== q.id) fail('That question has changed.', 'STALE_QUESTION', 409);

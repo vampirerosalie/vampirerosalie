@@ -173,6 +173,46 @@ test('all 25 questions require explicit final lock, pending reviews block it, ti
   assert.throws(() => c.act(a.teamToken, 'pupil:draw'), /locked/);
 });
 
+test('teacher can end a lobby and open a fresh room without advancing questions', () => {
+  const c = make();
+  const receipt = 'end-empty-room-receipt-000';
+  const ended = c.act(c.hostToken, 'host:end-early', {}, receipt);
+  assert.equal(ended.state.phase, 'finished');
+  assert.equal(ended.result.endedEarly, true);
+  assert.deepEqual(ended.state.ranking, []);
+  assert.equal(c.act(c.hostToken, 'host:end-early', {}, receipt).replayed, true);
+  const fresh = make(() => 1);
+  assert.notEqual(fresh.pin, c.pin);
+  assert.equal(fresh.game.state(fresh.pin, fresh.hostToken).phase, 'lobby');
+});
+
+test('teacher can end during question 1; student sees final result and all game actions lock', () => {
+  const c = make(), [a,b] = [c.join(1), c.join(2)]; start(c);
+  submit(c, a);
+  judge(c, a, 'accepted');
+  submit(c, b, 'B'); // Deliberately leave a review pending.
+  c.act(c.hostToken, 'host:start-countdown', { questionId:1 });
+  const first = c.act(c.hostToken, 'host:end-early', {}, 'early-end-receipt-0000');
+  assert.equal(first.state.phase, 'finished');
+  assert.equal(first.state.questionOpen, false);
+  assert.equal(first.state.deadlineAt, null);
+  assert.equal(first.state.pendingReviewCount, 1);
+  assert.equal(first.state.ranking.length, 2);
+  assert.equal(c.game.state(c.pin, a.teamToken).phase, 'finished');
+  assert.equal(c.game.state(c.pin, b.teamToken).phase, 'finished');
+  assert.equal(c.act(c.hostToken, 'host:end-early', {}, 'early-end-receipt-0000').replayed, true);
+  assert.throws(() => c.act(c.hostToken, 'host:end-early'), error => error.code === 'GAME_LOCKED');
+  assert.throws(() => c.act(c.hostToken, 'host:advance', { questionId:1 }), error => error.code === 'GAME_LOCKED');
+  assert.throws(() => draw(c, a), error => error.code === 'GAME_LOCKED');
+  assert.throws(() => submit(c, b), error => error.code === 'GAME_LOCKED');
+});
+
+test('student cannot end the game early', () => {
+  const c = make(), team = c.join(1); start(c);
+  assert.throws(() => c.act(team.teamToken, 'host:end-early'), error => error.code === 'FORBIDDEN');
+  assert.equal(c.game.state(c.pin).phase, 'question');
+});
+
 test('team cannot act as host or for another team', () => {
   const c = make(), [a,b] = [c.join(1), c.join(2)]; start(c);
   assert.throws(() => c.act(a.teamToken, 'host:review', { teamId:b.teamId, questionId:1, decision:'accepted' }), /another role/);
