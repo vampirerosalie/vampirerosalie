@@ -138,9 +138,44 @@ test('already-issued rewards in existing live rooms are preserved on confirmatio
   const c = make(), team = c.join(1); start(c);
   c.room().submissions[1] = { [team.teamId]: { answer:'C', status:'accepted', decisionSource:'auto', rewardIssued:true } };
   c.room().teams[0].draws.push({ id:'existing-reward', questionId:1 });
+  assert.equal(c.game.state(c.pin, team.teamToken).me.submission.status, 'submitted');
+  assert.equal(c.game.state(c.pin, team.teamToken).me.draws, 0);
+  assert.throws(() => draw(c, team), error => error.code === 'NO_DRAW');
   confirm(c); confirm(c);
   assert.equal(c.game.state(c.pin, team.teamToken).me.draws, 1);
   assert.equal(c.game.state(c.pin, team.teamToken).me.nextDrawId, 'existing-reward');
+});
+
+test('legacy wrong answers, correct credits and receipt retries stay private until confirmation', () => {
+  const c = make(), [right, wrong] = [c.join(1), c.join(2)]; start(c);
+  const receipt = 'legacy-submit-receipt-000';
+  c.act(wrong.teamToken, 'pupil:submit', {questionId:1,answer:'A'}, receipt);
+  c.room().submissions[1][wrong.teamId] = {answer:'A',status:'rejected',decisionSource:'auto',rewardIssued:false};
+  c.room().receipts[`${wrong.teamId}:${receipt}`].result = {submitted:true,questionId:1,correct:false,rewardIssued:false};
+  c.room().submissions[1][right.teamId] = {answer:'C',status:'accepted',decisionSource:'auto',rewardIssued:true};
+  c.room().teams[0].draws.push({id:'legacy-credit',questionId:1});
+  assert.equal(c.game.state(c.pin, wrong.teamToken).me.submission.status,'submitted');
+  const replay = c.act(wrong.teamToken,'pupil:submit',{questionId:1,answer:'A'},receipt);
+  assert.deepEqual(replay.result,{submitted:true,questionId:1});
+  assert.ok(replay.state.teams.every(team=>team.verdict==='submitted'));
+  assert.equal(c.game.state(c.pin,c.hostToken).pendingReviewCount,2);
+  judge(c,right,'rejected'); judge(c,wrong,'accepted');
+  assert.equal(c.game.state(c.pin,right.teamToken).me.draws,0);
+  assert.equal(c.game.state(c.pin,wrong.teamToken).me.draws,0);
+  confirm(c); confirm(c);
+  assert.equal(c.game.state(c.pin,right.teamToken).me.draws,0);
+  assert.equal(c.game.state(c.pin,wrong.teamToken).me.draws,1);
+});
+
+test('already-opened legacy rewards are not taken away', () => {
+  const c = make(), team = c.join(1); start(c);
+  c.room().submissions[1] = {[team.teamId]:{answer:'C',status:'accepted',decisionSource:'auto',rewardIssued:true,rewardLocked:true}};
+  const card = grantCard(c,team,'shield');
+  assert.equal(c.game.state(c.pin,team.teamToken).me.hand[0].id,card.id);
+  assert.throws(()=>judge(c,team,'rejected'),error=>error.code==='REWARD_USED');
+  confirm(c);
+  assert.equal(c.game.state(c.pin,team.teamToken).me.hand[0].id,card.id);
+  assert.equal(c.game.state(c.pin,team.teamToken).me.draws,0);
 });
 
 test('stale draw retry cannot spend a later question’s credit after receipt expiry', () => {

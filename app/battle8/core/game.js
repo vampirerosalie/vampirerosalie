@@ -94,6 +94,17 @@ export class DemolitionGame {
     let previous = -1, rank = 0;
     return sorted.map((team, index) => { if (team.remaining !== previous) rank = index + 1; previous = team.remaining; return { ...team, rank }; });
   }
+  awaitingConfirmation(room, questionId, sub) {
+    if (!sub) return false;
+    if (sub.status === 'submitted') return true;
+    // Older live rooms already stored an automatic verdict/reward. Hold the
+    // current unconfirmed result and unopened credit without losing earned tools.
+    return Number(questionId) === this.question(room)?.id && !room.revealed.includes(Number(questionId))
+      && sub.decisionSource === 'auto' && !sub.rewardLocked;
+  }
+  availableDraws(room, team) {
+    return team.draws.filter(draw => !this.awaitingConfirmation(room, draw.questionId, room.submissions[draw.questionId]?.[team.id]));
+  }
   view(room, auth) {
     const q = this.question(room), rows = q ? room.submissions[q.id] ?? {} : {};
     const data = { pin: room.pin, roomName: room.name, role: auth.role, phase: room.phase, version: room.version, serverTime: this.now(), teamCount: room.teamCount,
@@ -101,24 +112,26 @@ export class DemolitionGame {
       question: publicQuestion(q), answerReveal: q && room.revealed.includes(q.id) ? { questionId: q.id, letter: q.correct_answer, explanation: q.explanation } : null,
       teams: room.teams.map(team => ({ id: team.id, slot: team.slot, name: team.name, original: team.original, walls: team.walls, shields: team.shields,
         remaining: total(team), handCount: team.hand.length, online: (this.lastSeen.get(`${room.pin}:${team.id}`) ?? 0) > this.now() - 20000,
-        submitted: Boolean(rows[team.id]?.answer), verdict: rows[team.id]?.status ?? 'waiting' })).sort((a, b) => a.slot - b.slot),
+        submitted: Boolean(rows[team.id]?.answer), verdict: this.awaitingConfirmation(room, q?.id, rows[team.id]) ? 'submitted' : rows[team.id]?.status ?? 'waiting' })).sort((a, b) => a.slot - b.slot),
       takenSlots: room.teams.map(team => team.slot), ranking: this.ranking(room), events: room.events.slice(-12) };
     if (auth.role === 'host') {
       data.reviewKeys = this.questions.slice(0, room.questionIndex + 1).map(item => ({ questionId: item.id, answerKey: item.correct_answer, explanation: item.explanation }));
       data.reviews = Object.entries(room.submissions).flatMap(([questionId, submissions]) => Object.entries(submissions).map(([teamId, sub]) => ({
         questionId: Number(questionId), teamId, teamName: room.teams.find(t => t.id === teamId)?.name ?? 'Team',
-        answer: sub.answer ?? '', status: sub.status, proposedDecision: sub.proposedDecision ?? null, decisionSource: sub.decisionSource ?? null, rewardIssued: Boolean(sub.rewardIssued), rewardLocked: Boolean(sub.rewardLocked),
+        answer: sub.answer ?? '', status: this.awaitingConfirmation(room, questionId, sub) ? 'submitted' : sub.status,
+        proposedDecision: sub.proposedDecision ?? (this.awaitingConfirmation(room, questionId, sub) && sub.status !== 'submitted' ? sub.status : null),
+        decisionSource: sub.decisionSource ?? null, rewardIssued: Boolean(sub.rewardIssued) && !this.awaitingConfirmation(room, questionId, sub), rewardLocked: Boolean(sub.rewardLocked),
         answerKey: this.questions[Number(questionId) - 1]?.correct_answer, explanation: this.questions[Number(questionId) - 1]?.explanation,
       }))).sort((a, b) => b.questionId - a.questionId || a.teamName.localeCompare(b.teamName));
       data.pendingReviewCount = data.reviews.filter(row => row.status === 'submitted').length;
     }
     if (auth.role === 'team') {
-      const team = auth.team;
+      const team = auth.team, draws = this.availableDraws(room, team);
       data.me = { id: team.id, slot: team.slot, name: team.name, original: team.original, walls: team.walls, remaining: total(team), shields: team.shields,
-        draws: team.draws.length, nextDrawId: team.draws[0]?.id ?? null,
+        draws: draws.length, nextDrawId: draws[0]?.id ?? null,
         offer: team.offer ? { id: team.offer.id, slots: team.offer.slots.map(slot => ({ id: slot.id })) } : null,
         hand: team.hand.map(card => ({ id: card.id, key: card.key, ...CARDS[card.key] })), lastReveal: team.lastReveal,
-        submission: rows[team.id] ? { status: rows[team.id].status, answer: rows[team.id].answer ?? '', questionId: q.id } : null };
+        submission: rows[team.id] ? { status: this.awaitingConfirmation(room, q.id, rows[team.id]) ? 'submitted' : rows[team.id].status, answer: rows[team.id].answer ?? '', questionId: q.id } : null };
     }
     return data;
   }
@@ -134,7 +147,8 @@ export class DemolitionGame {
     const receiptKey = `${actor.role === 'host' ? 'host' : actor.team.id}:${requestId}`;
     const signature = hash(JSON.stringify({ ...body, requestId: undefined }));
     const receipt = room.receipts[receiptKey];
-    if (receipt) { if (receipt.signature !== signature) fail('That receipt was used for another action.', 'RECEIPT_CONFLICT', 409); return { ok: true, replayed: true, result: receipt.result, state: this.view(room, actor) }; }
+    if (receipt) { if (receipt.signature !== signature) fail('That receipt was used for another action.', 'RECEIPT_CONFLICT', 409); return { ok: true, replayed: true,
+      result: type === 'pupil:submit' ? { submitted:true, questionId:receipt.result.questionId } : receipt.result, state: this.view(room, actor) }; }
     if (['finished', 'closed'].includes(room.phase)) fail('The results are locked. No more game actions are allowed.', 'GAME_LOCKED', 409);
     const backup = structuredClone(room);
     let result;
@@ -175,8 +189,8 @@ export class DemolitionGame {
         for (const joined of room.teams) {
           const subs = room.submissions[q.id] ??= {};
           const sub = subs[joined.id] ??= { answer: '', status: 'missing', at: this.now() };
-          if (sub.status === 'submitted') {
-            sub.status = sub.proposedDecision ?? (sub.answer === q.correct_answer ? 'accepted' : 'rejected');
+          if (this.awaitingConfirmation(room, q.id, sub)) {
+            sub.status = sub.proposedDecision ?? (sub.status !== 'submitted' ? sub.status : sub.answer === q.correct_answer ? 'accepted' : 'rejected');
             sub.confirmedAt = this.now();
             if (sub.status === 'accepted' && !sub.rewardIssued) {
               joined.draws.push({ id: id(), questionId: q.id }); sub.rewardIssued = true;
@@ -188,7 +202,7 @@ export class DemolitionGame {
       case 'host:advance':
         requirePhase('question'); if (body.questionId !== q.id) fail('That question has changed.', 'STALE_QUESTION', 409);
         if (room.questionOpen) fail('Close this question’s answers before advancing.', 'ANSWERS_OPEN', 409);
-        if (Object.values(room.submissions[q.id] ?? {}).some(sub => sub.status === 'submitted')) fail('Confirm results before moving to the next question.', 'RESULTS_PENDING', 409);
+        if (Object.values(room.submissions[q.id] ?? {}).some(sub => this.awaitingConfirmation(room, q.id, sub))) fail('Confirm results before moving to the next question.', 'RESULTS_PENDING', 409);
         room.deadlineAt = null;
         if (room.questionIndex === 24) { room.phase = 'wrap'; this.event(room, 'Final Tool Yard: use saved cards before the teacher locks results.'); }
         else { room.questionIndex++; room.questionOpen = true; }
@@ -201,7 +215,9 @@ export class DemolitionGame {
         const subs = room.submissions[body.questionId] ??= {}; let sub = subs[judged.id];
         if (!sub) { if (body.decision !== 'rejected') fail('A missing answer cannot be accepted.', 'NO_SUBMISSION', 409); sub = subs[judged.id] = { answer: '', status: 'missing', at: this.now() }; }
         if (!sub.answer) { sub.status = 'missing'; return { decision: 'missing' }; }
-        if (sub.status === 'submitted' && body.questionId === q.id && !room.revealed.includes(q.id)) {
+        if (this.awaitingConfirmation(room, body.questionId, sub) && body.questionId === q.id && !room.revealed.includes(q.id)) {
+          judged.draws = judged.draws.filter(draw => draw.questionId !== body.questionId);
+          sub.status = 'submitted'; sub.rewardIssued = false;
           sub.proposedDecision = body.decision; sub.decisionSource = 'teacher'; sub.reviewedAt = this.now();
           return { decision: body.decision, awaitingConfirmation: true, rewardIssued: false };
         }
@@ -218,7 +234,7 @@ export class DemolitionGame {
       }
       case 'host:finish':
         requirePhase('wrap');
-        if (Object.values(room.submissions).some(subs => Object.values(subs).some(sub => sub.status === 'submitted'))) fail('Review submitted answers before locking results.', 'REVIEWS_PENDING', 409);
+        if (Object.entries(room.submissions).some(([questionId, subs]) => Object.values(subs).some(sub => this.awaitingConfirmation(room, questionId, sub)))) fail('Review submitted answers before locking results.', 'REVIEWS_PENDING', 409);
         room.phase = 'finished'; room.questionOpen = false; room.deadlineAt = null;
         this.event(room, 'Results locked. Fewest remaining pieces wins!');
         return { ranking: this.ranking(room) };
@@ -241,9 +257,9 @@ export class DemolitionGame {
       case 'pupil:draw': {
         requireActions();
         if (team.offer) fail('Finish your open mystery choice first.', 'OFFER_OPEN', 409);
-        const credit = team.draws[0]; if (!credit) fail('No mystery draw is available yet.', 'NO_DRAW', 409);
+        const credit = this.availableDraws(room, team)[0]; if (!credit) fail('No mystery draw is available yet.', 'NO_DRAW', 409);
         if (body.drawId !== credit.id) fail('That mystery draw was already opened or has changed.', 'STALE_DRAW', 409);
-        team.draws.shift();
+        team.draws = team.draws.filter(draw => draw.id !== credit.id);
         const sub = room.submissions[credit.questionId]?.[team.id]; if (sub) sub.rewardLocked = true;
         team.offer = { id: id(), questionId: credit.questionId, slots: Array.from({ length: 3 }, () => ({ id: id(), key: this.sampleCard() })) };
         return { offerId: team.offer.id };
