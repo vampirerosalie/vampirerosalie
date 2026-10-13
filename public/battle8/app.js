@@ -53,6 +53,10 @@ function applyState(next, force = false) {
   if (state && next.version < state.version) return;
   const previousQuestion = state?.question?.id;
   state = next; if (next.serverTime) clockOffset = next.serverTime - Date.now();
+  if (mode === 'host' && next.role === 'host' && window.parent !== window) {
+    window.parent.postMessage({ type:'demolition-dash:status', pin, phase:next.phase,
+      onlineCount:next.teams.filter(team => team.online).length }, location.origin);
+  }
   if (mode === 'host' && next.role === 'host') storage.set('demolition-dash:last-host', pin);
   if (previousQuestion !== next.question?.id) { ui.selectedAnswer = ''; ui.questionId = next.question?.id ?? null; ui.reviewOpen = false; ui.reviewQuestionId = next.question?.id ?? null; }
   const signature = JSON.stringify({ ...next, serverTime:0 });
@@ -141,7 +145,7 @@ async function deliverAction() {
 
 function header(role) {
   const label = role === 'host' ? 'TEACHER DESK' : role === 'screen' ? 'CLASSROOM SCREEN' : role === 'join' ? 'YOUR TEAM' : 'BATTLE 8';
-  return `<header class="topbar"><a class="brand" href="${role === 'join' ? './index.html?student=1' : '/'}"><span class="brand-mark">🏚️</span><span><strong>Demolition Dash</strong><small>OLD HOUSE · ${label}</small></span></a><div class="top-meta"><span class="chip ${ui.online ? 'live' : 'offline'}">${ui.online ? 'Connected' : 'Reconnecting…'}</span>${pin ? `<span class="chip">PIN ${esc(pin)}</span>` : ''}${role === 'host' ? btn('⛶ Full screen','fullscreen','button ghost small') : ''}</div></header>`;
+  return `<header class="topbar"><a class="brand" href="${role === 'join' ? './index.html?student=1' : '/'}" ${role === 'host' || role === 'screen' ? 'target="_top"' : ''}><span class="brand-mark">🏚️</span><span><strong>Demolition Dash</strong><small>OLD HOUSE · ${label}</small></span></a><div class="top-meta"><span class="chip ${ui.online ? 'live' : 'offline'}">${ui.online ? 'Connected' : 'Reconnecting…'}</span>${pin ? `<span class="chip">PIN ${esc(pin)}</span>` : ''}${role === 'host' ? btn('⛶ Full screen','fullscreen','button ghost small') : ''}</div></header>`;
 }
 function house(team, small = false) {
   const original = Math.max(0, Math.min(12, Number(team?.original ?? 12))), walls = Math.max(0, Number(team?.walls ?? 0));
@@ -322,7 +326,7 @@ app.addEventListener('click', event => {
     void navigator.clipboard.writeText(`${location.origin}/battle8/index.html?join=${pin}`).then(() => notice('Student join link copied.')).catch(() => { ui.error = 'Could not copy automatically; use the QR code or PIN.'; render(); });
   }
   else if (action === 'open-projector') window.open(`${location.origin}/battle8/index.html?screen=${pin}`, '_blank', 'noopener');
-  else if (action === 'all-battles') location.href = '/?teacher=1';
+  else if (action === 'all-battles') window.top.location.href = '/?teacher=1';
   else if (action === 'scroll-question') document.getElementById('question-area')?.scrollIntoView({ behavior:'smooth' });
   else if (action === 'scroll-tools') document.getElementById('tool-yard')?.scrollIntoView({ behavior:'smooth' });
 });

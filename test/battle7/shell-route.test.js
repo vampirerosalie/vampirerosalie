@@ -65,6 +65,12 @@ test('original teacher entry and all original student links are preserved', () =
   assert.equal(resolveShellRoute('?battle=7&room=12345').role, 'student');
 });
 
+test('Battle 8 teacher selection stays in the main shell while student intent stays protected', () => {
+  assert.deepEqual(resolveShellRoute('?battle=8&teacher=1'), { mode:'demolition', role:'teacher' });
+  assert.deepEqual(resolveShellRoute('?battle=8'), { mode:'demolition', role:'teacher' });
+  assert.equal(resolveShellRoute('?battle=8&teacher=1', saved, hostKey).role, 'student');
+});
+
 test('iframe student transitions accept only exact join or student PIN entry', () => {
   assert.equal(acceptKitchenNavigation('?join=54321', pupil).search, '?battle=7&join=54321');
   assert.equal(acceptKitchenNavigation('?battle=7&student=1', pupil).search, '?battle=7&student=1');

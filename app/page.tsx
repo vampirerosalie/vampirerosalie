@@ -144,7 +144,7 @@ function FinalPodium({ leaders }: { leaders: Leader[] }) {
   return <div className="podium">{place(second, 2)}{place(first, 1)}{place(third, 3)}</div>;
 }
 
-function TeacherGame({ qrReady, initialBattle }: { qrReady: boolean; initialBattle: BattleId | null }) {
+function TeacherGame({ qrReady, initialBattle, onSelectBattle8 }: { qrReady: boolean; initialBattle: BattleId | null; onSelectBattle8: () => void }) {
   const [roomCode, setRoomCode] = useState('');
   const [teacherToken, setTeacherToken] = useState('');
   const [roomReady, setRoomReady] = useState(false);
@@ -499,7 +499,7 @@ function TeacherGame({ qrReady, initialBattle }: { qrReady: boolean; initialBatt
       </header>
       {state.phase === 'lobby' ? <><section className="battle-selector" aria-label="Choose grammar battle">
         <div><span>CHOOSE QUESTION SET</span><strong>Battle {state.battle} is ready</strong></div>
-        <div className="battle-tabs" role="tablist"><button type="button" role="tab" aria-selected={state.battle === 1} className={state.battle === 1 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(1)}><b>1</b><span>BATTLE 1<small>Original questions</small></span></button><button type="button" role="tab" aria-selected={state.battle === 2} className={state.battle === 2 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(2)}><b>2</b><span>BATTLE 2<small>Grammar challenge</small></span></button><button type="button" role="tab" aria-selected={state.battle === 3} className={state.battle === 3 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(3)}><b>3</b><span>BATTLE 3<small>English board game</small></span></button><button type="button" role="tab" aria-selected={state.battle === 4} className={state.battle === 4 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(4)}><b>4</b><span>BATTLE 4<small>BM board game</small></span></button><button type="button" onClick={() => { window.location.href = '/grammar-room/battle5.html'; }}><b>5</b><span>BATTLE 5<small>The Grammar Room</small></span></button><button type="button" role="tab" aria-selected={state.battle === 6} className={state.battle === 6 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(6)}><b>6</b><span>BATTLE 6<small>Witch’s Potion</small></span></button><button type="button" onClick={() => { window.location.href = "/?battle=7&teacher=1"; }}><b>7</b><span>BATTLE 7<small>Crazy Kitchen</small></span></button><button type="button" onClick={() => { window.location.href = '/battle8/index.html?teacher=1'; }}><b>8</b><span>BATTLE 8<small>Demolition Dash</small></span></button></div>
+        <div className="battle-tabs" role="tablist"><button type="button" role="tab" aria-selected={state.battle === 1} className={state.battle === 1 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(1)}><b>1</b><span>BATTLE 1<small>Original questions</small></span></button><button type="button" role="tab" aria-selected={state.battle === 2} className={state.battle === 2 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(2)}><b>2</b><span>BATTLE 2<small>Grammar challenge</small></span></button><button type="button" role="tab" aria-selected={state.battle === 3} className={state.battle === 3 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(3)}><b>3</b><span>BATTLE 3<small>English board game</small></span></button><button type="button" role="tab" aria-selected={state.battle === 4} className={state.battle === 4 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(4)}><b>4</b><span>BATTLE 4<small>BM board game</small></span></button><button type="button" onClick={() => { window.location.href = '/grammar-room/battle5.html'; }}><b>5</b><span>BATTLE 5<small>The Grammar Room</small></span></button><button type="button" role="tab" aria-selected={state.battle === 6} className={state.battle === 6 ? 'active' : ''} disabled={transitionBusy} onClick={() => void selectBattle(6)}><b>6</b><span>BATTLE 6<small>Witch’s Potion</small></span></button><button type="button" onClick={() => { window.location.href = "/?battle=7&teacher=1"; }}><b>7</b><span>BATTLE 7<small>Crazy Kitchen</small></span></button><button type="button" role="tab" aria-selected={false} disabled={transitionBusy} onClick={onSelectBattle8}><b>8</b><span>BATTLE 8<small>Demolition Dash</small></span></button></div>
       </section><section className="host-lobby-layout">
         <article className="scan-panel"><p className="panel-kicker">SCAN TO JOIN</p><p>Students join at</p><div className="qr-box" ref={qrRef}>{!qrReady && 'Loading QR…'}</div><span className="or-rule">OR</span><div className="lobby-pin">{roomCode || '•••••'}</div><button type="button" className="copy-link" onClick={copyJoinLink}>Copy join link</button></article>
         <article className="roster-panel"><div className="panel-heading"><div><p className="panel-kicker">BATTLE {state.battle} · LIVE JOINING</p><h2>{players.length} players ready</h2></div><span className="roster-live"><i /> LIVE</span></div>{isBoardBattle(state.battle) && state.board && <><div className="b3-lobby-config"><div><strong>Choose team players</strong><small>One player per colour. Changing this resets team choices.</small></div><select aria-label={`Number of Battle ${state.battle} team players`} value={state.board.teamCount} disabled={transitionBusy} onChange={(event) => void boardCommand('configureTeams',{teamCount:Number(event.target.value)})}>{[2,3,4,5,6].map((count) => <option key={count} value={count}>{count} players / teams</option>)}</select></div><div className="b3-lobby-teams">{state.board.teams.map((team,index) => { const status = state.boardTeamStatuses?.[index]; return <div key={team.name} className={status?.occupied ? 'taken' : ''} style={{borderColor:team.color}}><span style={{background:team.color}}>{team.emoji}</span><b>{team.name}</b><small>{status?.occupied ? `${status.memberName ?? 'Player'} · ${status.memberCount ? 'online' : 'saved'}` : 'Available'}</small></div>; })}</div></>}{isPotionBattle(state.battle) && state.potion && <><div className="b3-lobby-config p6-lobby-config"><div><strong>Choose potion teams</strong><small>One player per colour. Supports up to ten teams.</small></div><select aria-label="Number of Battle 6 team players" value={state.potion.teamCount} disabled={transitionBusy} onChange={(event) => void potionCommand('configureTeams',{teamCount:Number(event.target.value)})}>{[2,3,4,5,6,7,8,9,10].map((count) => <option key={count} value={count}>{count} players / teams</option>)}</select></div><div className="b3-lobby-teams p6-lobby-teams">{state.potion.teams.map((team,index) => { const status = state.potionTeamStatuses?.[index]; return <div key={team.name} className={status?.occupied ? 'taken' : ''} style={{borderColor:team.color}}><span style={{background:team.color}}>{team.emoji}</span><b>{team.name}</b><small>{status?.occupied ? `${status.memberName ?? 'Player'} · ${status.memberCount ? 'online' : 'saved'}` : 'Available'}</small></div>; })}</div></>}<div className="roster-list">{players.length === 0 ? <div className="waiting-roster"><span>✦</span><strong>Waiting for players…</strong><p>Names will appear here as students join.</p></div> : players.map((player, index) => <div className="roster-row" key={player.clientId}><span className={`avatar hue-${index % 5}`}>{player.name.slice(0, 1).toUpperCase()}</span><strong>{player.name}</strong><em>{player.online ? 'Just now' : 'Reconnecting'}</em><i className={player.online ? 'online-dot' : 'offline-dot'} /></div>)}</div><div className="lobby-footer"><span>{isBoardBattle(state.battle) ? `🎨 ${occupiedBoardTeams}/${state.board?.teamCount ?? 0} team places chosen` : isPotionBattle(state.battle) ? `🧪 ${occupiedPotionTeams}/${state.potion?.teamCount ?? 0} potion teams chosen` : `🎉 ${state.onlineCount} online`}</span><button type="button" className="game-button start-button" disabled={!roomReady || transitionBusy || !teamGameReady} onClick={() => isBoardBattle(state.battle) || isPotionBattle(state.battle) ? void startBoard() : beginQuestion(0)}>{transitionBusy ? 'STARTING…' : (isBoardBattle(state.battle) || isPotionBattle(state.battle)) && !teamGameReady ? 'WAITING FOR TEAMS…' : `START BATTLE ${state.battle}`} <b>➜</b></button></div></article>
@@ -839,6 +839,7 @@ export default function Home() {
   const [qrReady, setQrReady] = useState(false);
   const [kitchenSearch, setKitchenSearch] = useState('');
   const [kitchenStatus, setKitchenStatus] = useState({ phase: 'lobby', onlineCount: 0 });
+  const [demolitionStatus, setDemolitionStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState('');
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -864,6 +865,17 @@ export default function Home() {
       window.history.replaceState(historyState, '', '/' + next.search);
     };
     const readRoute = () => {
+      // A pupil who joined Battle 8 must stay on the phone route even if they
+      // open the main site's address in this tab. The marker is tab-scoped;
+      // a separate teacher tab remains unaffected.
+      let battle8Student: string | null = null;
+      try { battle8Student = window.sessionStorage.getItem('demolition-dash:student-route'); } catch { /* Keep normal routing if storage is unavailable. */ }
+      if (battle8Student !== null) {
+        let room = '';
+        try { const saved = JSON.parse(battle8Student); if (typeof saved?.room === 'string' && /^\d{5}$/.test(saved.room)) room = saved.room; } catch { /* A damaged marker still stays student-only. */ }
+        window.location.replace(`/battle8/index.html?${room ? `join=${room}` : 'student=1'}`);
+        return;
+      }
       const next = resolveShellRoute(window.location.search, savedStudent(), hasKitchenHostCredential);
       routeRef.current = next;
       if (next.mode === 'kitchen') {
@@ -897,16 +909,25 @@ export default function Home() {
       // Do not update iframe src here: it already navigated. Reloading would
       // interrupt an in-flight join, answer retry, or keyboard input.
     };
+    const syncDemolition = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || routeRef.current?.mode !== 'demolition' || !event.data || typeof event.data !== 'object') return;
+      if (event.data.type !== 'demolition-dash:status') return;
+      const { pin, phase, onlineCount } = event.data;
+      if (typeof pin !== 'string' || !/^\d{5}$/.test(pin) || !['lobby', 'question', 'wrap', 'finished'].includes(phase) || !Number.isInteger(onlineCount) || onlineCount < 0 || onlineCount > 40) return;
+      setDemolitionStatus((current) => current.pin === pin && current.phase === phase && current.onlineCount === onlineCount ? current : { pin, phase, onlineCount });
+    };
     // The initial render is deliberately neutral, so no teacher component mounts
     // before the tab's student intent has been checked.
     readRoute();
     window.addEventListener('popstate', readRoute);
     window.addEventListener('pageshow', readRoute);
     window.addEventListener('message', syncKitchen);
+    window.addEventListener('message', syncDemolition);
     return () => {
       window.removeEventListener('popstate', readRoute);
       window.removeEventListener('pageshow', readRoute);
       window.removeEventListener('message', syncKitchen);
+      window.removeEventListener('message', syncDemolition);
     };
   }, []);
 
@@ -939,10 +960,32 @@ export default function Home() {
     } catch { setFullscreenError('Use your browser’s full-screen control.'); }
   };
 
+  const selectDemolition = () => {
+    const next = resolveShellRoute('?battle=8&teacher=1');
+    window.history.pushState(window.history.state, '', '/?battle=8&teacher=1');
+    routeRef.current = next;
+    setDemolitionStatus({ pin: '', phase: 'lobby', onlineCount: 0 });
+    setRoute(next);
+  };
+
   if (!route) return <main className="loading-screen">Opening grammartest…</main>;
   if (route.mode === 'student-link-error') return <main className="student-shell login-shell"><section className="join-card"><h1>Check your room link</h1><p>Scan the QR code on your teacher’s screen to rejoin your game.</p></section></main>;
   if (route.mode === 'student') return <StudentGame key={route.room} roomCode={route.room} requestedBattle={route.battle as BattleId} />;
-  if (route.mode === 'teacher') return <TeacherGame qrReady={qrReady} initialBattle={route.battle as BattleId | null} />;
+  if (route.mode === 'teacher') return <TeacherGame qrReady={qrReady} initialBattle={route.battle as BattleId | null} onSelectBattle8={selectDemolition} />;
+
+  if (route.mode === 'demolition') return <main className="game-shell host-shell" style={{ display: 'flex', flexDirection: 'column' }}>
+    <header className="host-topbar" style={{ flexShrink: 0 }}>
+      <div className="game-logo"><span>★</span><strong>GRAMMAR</strong><em>BATTLE!</em></div>
+      <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{demolitionStatus.pin || '•••••'}</strong></div><div className="online-pill"><span />{demolitionStatus.onlineCount} teams online</div><div className="connection-pill connected">BATTLE 8 · DEMOLITION DASH</div></div>
+      <button type="button" className="fullscreen-button" aria-pressed={isFullscreen} onClick={() => void toggleFullscreen()}><span aria-hidden="true">{isFullscreen ? '↙' : '⛶'}</span>{isFullscreen ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
+    </header>
+    {fullscreenError && <p role="status">{fullscreenError}</p>}
+    {['lobby', 'finished'].includes(demolitionStatus.phase) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
+      <div><span>CHOOSE QUESTION SET</span><strong>Battle 8 is ready</strong></div>
+      <div className="battle-tabs" role="tablist">{BATTLE_CHOICES.map(([battle, description]) => <button type="button" key={battle} role="tab" aria-selected={battle === 8} className={battle === 8 ? 'active' : ''} onClick={() => { if (battle !== 8) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }}><b>{battle}</b><span>BATTLE {battle}<small>{description}</small></span></button>)}</div>
+    </section>}
+    <iframe ref={frameRef} className="battle7-frame" title="Battle Eight: Demolition Dash teacher game" src="/battle8/index.html?teacher=1" allow="fullscreen" style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />
+  </main>;
 
   const teacher = route.role === 'teacher';
   const frame = <iframe ref={frameRef} className="battle7-frame" title="Battle Seven: Crazy Kitchen" src={'/battle7/index.html' + kitchenSearch} allow="fullscreen" style={teacher ? { position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 } : undefined} />;
@@ -957,7 +1000,7 @@ export default function Home() {
     {fullscreenError && <p role="status">{fullscreenError}</p>}
     {['lobby', 'finished', 'closed'].includes(kitchenStatus.phase) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
       <div><span>CHOOSE QUESTION SET</span><strong>Battle 7 is ready</strong></div>
-      <div className="battle-tabs" role="tablist">{BATTLE_CHOICES.map(([battle, description]) => <button type="button" key={battle} role="tab" aria-selected={battle === 7} className={battle === 7 ? 'active' : ''} onClick={() => { if (battle !== 7) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : battle === 8 ? '/battle8/index.html?teacher=1' : `/?battle=${battle}&teacher=1`; }}><b>{battle}</b><span>BATTLE {battle}<small>{description}</small></span></button>)}</div>
+      <div className="battle-tabs" role="tablist">{BATTLE_CHOICES.map(([battle, description]) => <button type="button" key={battle} role="tab" aria-selected={battle === 7} className={battle === 7 ? 'active' : ''} onClick={() => { if (battle === 8) selectDemolition(); else if (battle !== 7) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }}><b>{battle}</b><span>BATTLE {battle}<small>{description}</small></span></button>)}</div>
     </section>}
     {frame}
   </main>;

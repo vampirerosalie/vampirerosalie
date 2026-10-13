@@ -10,13 +10,13 @@ const source = readFileSync(new URL('../../app/page.tsx', import.meta.url), 'utf
 const shell = source.slice(source.indexOf('const BATTLE_CHOICES'));
 const compiled = ts.transpileModule(shell, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 function harness({ search = '', session = new Map(), local = new Map() } = {}) {
-  const events = new Map(), hooks = [], pending = [], redirects = [];
+  const events = new Map(), hooks = [], pending = [], redirects = [], topRedirects = [];
   let index = 0, dirty = true, tree;
   const iframe = { contentWindow: { location: { replace: path => redirects.push(path) } } };
-  const location = { origin: 'https://school.test', search };
+  const location = { origin: 'https://school.test', search, replace: path => topRedirects.push(path) };
   const history = { state: {}, replaceState(state, _title, path) { this.state = state; location.search = path.slice(path.indexOf('?')); } };
   const storage = map => ({ getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, value) });
-  const window = { location, history, sessionStorage: storage(session), localStorage: storage(local), QRCode() {}, addEventListener: (event, fn) => events.set(event, fn), removeEventListener: event => events.delete(event) };
+  const window = { location, history, sessionStorage: storage(session), localStorage: storage(local), QRCode() {}, addEventListener: (event, fn) => events.set(event, [...(events.get(event) || []), fn]), removeEventListener: (event, fn) => events.set(event, (events.get(event) || []).filter(listener => listener !== fn)) };
   const document = { addEventListener() {}, removeEventListener() {}, fullscreenElement: null, documentElement: {} };
   const jsx = (type, props) => ({ type, props });
   function useState(initial) { const key = index++; if (!(key in hooks)) hooks[key] = typeof initial === 'function' ? initial() : initial; return [hooks[key], value => { const next = typeof value === 'function' ? value(hooks[key]) : value; if (next !== hooks[key]) { hooks[key] = next; dirty = true; } }]; }
@@ -26,11 +26,11 @@ function harness({ search = '', session = new Map(), local = new Map() } = {}) {
   vm.runInContext(compiled, context);
   function visit(node, callback) { if (!node || typeof node !== 'object') return; if (Array.isArray(node)) { node.forEach(child => visit(child, callback)); return; } callback(node); visit(node.props?.children, callback); }
   function render() { for (let cycles = 0; dirty && cycles < 20; cycles++) { dirty = false; index = 0; tree = context.exports.default(); visit(tree, node => { if (node.type === 'iframe' && node.props.ref) node.props.ref.current = iframe; }); while (pending.length) pending.shift()(); } assert.equal(dirty, false, 'Shell should settle without a render loop'); return tree; }
-  function message(data, { origin = location.origin, source = iframe.contentWindow } = {}) { events.get('message')?.({ origin, source, data }); return render(); }
-  function go(search, event = 'popstate') { location.search = search; events.get(event)?.({ persisted: true }); return render(); }
+  function message(data, { origin = location.origin, source = iframe.contentWindow } = {}) { for (const listener of events.get('message') || []) listener({ origin, source, data }); return render(); }
+  function go(search, event = 'popstate') { location.search = search; for (const listener of events.get(event) || []) listener({ persisted: true }); return render(); }
   function frame() { let result; visit(tree, node => { if (node.type === 'iframe') result = node; }); return result; }
   render();
-  return { render, message, go, frame, session, location, history, redirects, get tree() { return tree; } };
+  return { render, message, go, frame, session, location, history, redirects, topRedirects, get tree() { return tree; } };
 }
 
 test('shell mounts only the student iframe on join, root/back/pageshow and a fresh reload', () => {
@@ -106,4 +106,27 @@ test('teacher status and history updates do not reset the iframe source', () => 
     assert.equal(h.tree.type, 'main');
   }
   assert.equal(h.redirects.length, 0);
+});
+
+test('Battle 8 stays in the main teacher shell and only its own frame can report its PIN', () => {
+  const h = harness({ search: '?battle=8&teacher=1' });
+  assert.equal(h.tree.type, 'main');
+  assert.equal(h.frame().props.src, '/battle8/index.html?teacher=1');
+  const status = { type:'demolition-dash:status', pin:'54321', phase:'lobby', onlineCount:12 };
+  h.message(status, { origin:'https://attacker.test' });
+  h.message(status, { source:{} });
+  h.message({ ...status, onlineCount:41 });
+  assert.doesNotMatch(JSON.stringify(h.tree), /54321/);
+  h.message(status);
+  assert.match(JSON.stringify(h.tree), /54321/);
+  assert.match(JSON.stringify(h.tree), /12," teams online"/);
+  assert.equal(h.frame().props.src, '/battle8/index.html?teacher=1');
+});
+
+test('Battle 8 student marker never opens the teacher shell in the same tab', () => {
+  const student = harness({ search:'?battle=8&teacher=1', session:new Map([['demolition-dash:student-route', JSON.stringify({ room:'54321' })]]) });
+  assert.deepEqual(student.topRedirects, ['/battle8/index.html?join=54321']);
+  assert.equal(student.frame(), undefined);
+  const damaged = harness({ session:new Map([['demolition-dash:student-route', 'broken']]) });
+  assert.deepEqual(damaged.topRedirects, ['/battle8/index.html?student=1']);
 });
