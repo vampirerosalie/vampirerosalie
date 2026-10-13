@@ -99,7 +99,7 @@ export class DemolitionGame {
     const data = { pin: room.pin, roomName: room.name, role: auth.role, phase: room.phase, version: room.version, serverTime: this.now(), teamCount: room.teamCount,
       questionNumber: room.questionIndex + 1, totalQuestions: 25, questionOpen: room.questionOpen, deadlineAt: room.deadlineAt,
       question: publicQuestion(q), answerReveal: q && room.revealed.includes(q.id) ? { questionId: q.id, letter: q.correct_answer, explanation: q.explanation } : null,
-      teams: room.teams.map(team => ({ id: team.id, slot: team.slot, name: team.name, original: team.original, walls: team.walls,
+      teams: room.teams.map(team => ({ id: team.id, slot: team.slot, name: team.name, original: team.original, walls: team.walls, shields: team.shields,
         remaining: total(team), handCount: team.hand.length, online: (this.lastSeen.get(`${room.pin}:${team.id}`) ?? 0) > this.now() - 20000,
         submitted: Boolean(rows[team.id]?.answer), verdict: rows[team.id]?.status ?? 'waiting' })).sort((a, b) => a.slot - b.slot),
       takenSlots: room.teams.map(team => team.slot), ranking: this.ranking(room), events: room.events.slice(-12) };
@@ -107,7 +107,7 @@ export class DemolitionGame {
       data.reviewKeys = this.questions.slice(0, room.questionIndex + 1).map(item => ({ questionId: item.id, answerKey: item.correct_answer, explanation: item.explanation }));
       data.reviews = Object.entries(room.submissions).flatMap(([questionId, submissions]) => Object.entries(submissions).map(([teamId, sub]) => ({
         questionId: Number(questionId), teamId, teamName: room.teams.find(t => t.id === teamId)?.name ?? 'Team',
-        answer: sub.answer ?? '', status: sub.status, rewardIssued: Boolean(sub.rewardIssued),
+        answer: sub.answer ?? '', status: sub.status, decisionSource: sub.decisionSource ?? null, rewardIssued: Boolean(sub.rewardIssued), rewardLocked: Boolean(sub.rewardLocked),
         answerKey: this.questions[Number(questionId) - 1]?.correct_answer, explanation: this.questions[Number(questionId) - 1]?.explanation,
       }))).sort((a, b) => b.questionId - a.questionId || a.teamName.localeCompare(b.teamName));
       data.pendingReviewCount = data.reviews.filter(row => row.status === 'submitted').length;
@@ -194,7 +194,7 @@ export class DemolitionGame {
           sub.rewardIssued = false;
         }
         if (body.decision === 'accepted' && !sub.rewardIssued) { judged.draws.push({ id: id(), questionId: body.questionId }); sub.rewardIssued = true; }
-        sub.status = body.decision; sub.reviewedAt = this.now();
+        sub.status = body.decision; sub.decisionSource = 'teacher'; sub.reviewedAt = this.now();
         this.event(room, `${judged.name}’s Question ${body.questionId} answer was ${body.decision}.`);
         return { decision: sub.status, rewardIssued: Boolean(sub.rewardIssued) };
       }
@@ -216,8 +216,11 @@ export class DemolitionGame {
         if (!['A', 'B', 'C', 'D'].includes(body.answer)) fail('Choose A, B, C or D.');
         const subs = room.submissions[q.id] ??= {};
         if (subs[team.id]) fail('Your team has already answered this question.', 'ALREADY_SUBMITTED', 409);
-        subs[team.id] = { answer: body.answer, status: 'submitted', at: this.now(), rewardIssued: false, rewardLocked: false };
-        return { submitted: true, questionId: q.id };
+        const correct = body.answer === q.correct_answer;
+        subs[team.id] = { answer: body.answer, status: correct ? 'accepted' : 'rejected', decisionSource: 'auto',
+          at: this.now(), rewardIssued: correct, rewardLocked: false };
+        if (correct) team.draws.push({ id: id(), questionId: q.id });
+        return { submitted: true, correct, questionId: q.id, rewardIssued: correct };
       }
       case 'pupil:draw': {
         requireActions();

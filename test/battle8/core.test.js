@@ -52,6 +52,32 @@ test('four teams independently answer; one approval creates one draw and review 
   assert.equal(c.game.state(c.pin, c.hostToken).reviews.length, 4);
 });
 
+test('MCQs auto-mark against the private key and teacher overrides remain idempotent', () => {
+  const c = make(), [right, wrong] = [c.join(1), c.join(2)]; start(c);
+  const accepted = submit(c, right, 'C'); // Question 1 key.
+  const rejected = submit(c, wrong, 'A');
+  assert.equal(accepted.result.correct, true);
+  assert.equal(rejected.result.correct, false);
+  assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 1);
+  assert.equal(c.game.state(c.pin, wrong.teamToken).me.draws, 0);
+  assert.deepEqual(c.game.state(c.pin, c.hostToken).reviews.map(row => row.decisionSource), ['auto', 'auto']);
+  assert.equal(c.game.state(c.pin, c.hostToken).pendingReviewCount, 0);
+  assert.equal(c.game.state(c.pin, right.teamToken).reviewKeys, undefined);
+  assert.equal(c.game.state(c.pin).answerReveal, null);
+
+  judge(c, wrong, 'accepted');
+  judge(c, wrong, 'accepted');
+  assert.equal(c.game.state(c.pin, wrong.teamToken).me.draws, 1);
+  assert.equal(c.game.state(c.pin, c.hostToken).reviews.find(row => row.teamId === wrong.teamId).decisionSource, 'teacher');
+  judge(c, right, 'rejected');
+  assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 0);
+  judge(c, right, 'accepted');
+  assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 1);
+  draw(c, right);
+  assert.throws(() => judge(c, right, 'rejected'), error => error.code === 'REWARD_USED');
+  assert.equal(c.game.state(c.pin, right.teamToken).me.draws, 0);
+});
+
 test('approval retries and repeated decisions cannot duplicate rewards', () => {
   const c = make(), team = c.join(1); start(c); submit(c, team);
   const receipt = 'same-approval-receipt-000';
@@ -159,6 +185,8 @@ test('teacher-triggered deadline blocks late answers, but not cards or earlier r
 test('all 25 questions require explicit final lock, pending reviews block it, ties share rank', () => {
   const c = make(), [a,b] = [c.join(1), c.join(2)]; start(c);
   submit(c, a);
+  // A room saved before auto-marking may still contain an answer awaiting review.
+  c.room().submissions[1][a.teamId].status = 'submitted';
   for (let q = 1; q <= 25; q++) { close(c, q); advance(c, q); }
   assert.equal(c.game.state(c.pin).phase, 'wrap');
   assert.throws(() => c.act(c.hostToken, 'host:finish'), /Review submitted answers/);
@@ -190,7 +218,8 @@ test('teacher can end during question 1; student sees final result and all game 
   const c = make(), [a,b] = [c.join(1), c.join(2)]; start(c);
   submit(c, a);
   judge(c, a, 'accepted');
-  submit(c, b, 'B'); // Deliberately leave a review pending.
+  submit(c, b, 'B');
+  c.room().submissions[1][b.teamId].status = 'submitted'; // Older room pending review.
   c.act(c.hostToken, 'host:start-countdown', { questionId:1 });
   const first = c.act(c.hostToken, 'host:end-early', {}, 'early-end-receipt-0000');
   assert.equal(first.state.phase, 'finished');

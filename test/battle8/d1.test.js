@@ -61,6 +61,29 @@ test('40 team submissions and overlapping review decisions retain one draw each'
   assert.equal((await s.store().state(s.host.pin)).reviews, undefined);
 });
 
+test('40 simultaneous correct submissions auto-award exactly one draw per team', async () => {
+  const s = await setup(40); await s.action(s.host.hostToken, 'host:start');
+  const receipts = s.teams.map(team => ({ team, body:{ type:'pupil:submit', requestId:randomUUID(), questionId:1, answer:'C' } }));
+  await Promise.all(receipts.map(({ team, body }) => s.store().action(s.host.pin, team.teamToken, body)));
+  await Promise.all(receipts.map(({ team, body }) => s.store().action(s.host.pin, team.teamToken, body)));
+  const room = s.db.room(s.host.pin);
+  assert.equal(room.teams.length, 40);
+  assert.equal(room.teams.reduce((sum, team) => sum + team.draws.length, 0), 40);
+  assert.equal(Object.values(room.submissions[1]).filter(sub => sub.status === 'accepted' && sub.rewardIssued).length, 40);
+  assert.equal((await s.store().state(s.host.pin, s.host.hostToken)).pendingReviewCount, 0);
+});
+
+test('lost response after auto-marked submission replays without a second reward', async () => {
+  const s = await setup(1), team = s.teams[0]; await s.action(s.host.hostToken, 'host:start');
+  const body = { type:'pupil:submit', requestId:randomUUID(), questionId:1, answer:'C' };
+  s.db.failAfterCommit = true;
+  await assert.rejects(s.store().action(s.host.pin, team.teamToken, body), /lost response/);
+  assert.equal(s.db.room(s.host.pin).teams[0].draws.length, 1);
+  const retry = await s.store().action(s.host.pin, team.teamToken, body);
+  assert.equal(retry.replayed, true);
+  assert.equal(s.db.room(s.host.pin).teams[0].draws.length, 1);
+});
+
 test('same draw/card cannot be spent twice by concurrent team clients', async () => {
   const s = await setup(2), [a,b] = s.teams; await s.action(s.host.hostToken, 'host:start');
   await s.action(a.teamToken, 'pupil:submit', { questionId:1, answer:'A' });
