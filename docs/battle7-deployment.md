@@ -37,7 +37,7 @@ No push, remote migration, or production deployment is performed by the test/bui
 
 - Each HTTP request constructs a fresh `KitchenD1Store` and game core from D1. No live room object or lock is shared between requests or Worker isolates.
 - A room has a monotonically increasing integer version. Joins/actions save with an atomic `UPDATE ... WHERE version = ? AND expires_at > ?`.
-- A losing compare-and-swap discards all local changes and reloads the latest state. Inventory, target protection, phase, and the global discovery bonus are revalidated. Up to 20 attempts are made with short jittered pauses; exhausted contention returns `503 CONCURRENT_UPDATE` and `Retry-After: 1`.
+- A losing compare-and-swap discards all local changes and reloads the latest state. Inventory, ingredient-theft protection, available stars, phase, and the global discovery bonus are revalidated. Up to 20 attempts are made with short jittered pauses; exhausted contention returns `503 CONCURRENT_UPDATE` and `Retry-After: 1`.
 - Every action requires a stable `requestId`. Its actor-scoped signature and result are stored in the same JSON write as the gameplay mutation. A repeated ID returns the original result, and a different payload with the same ID returns `409 RECEIPT_CONFLICT`.
 - Round-sensitive reveal, advance, cook and steal commands capture `questionId` and `expectedPhase` when first created. Cooking/stealing may cross question-to-reveal for the same question, but never act on a later question. These stay fixed on retry. A never-committed late command returns `409 STALE_CONTEXT`; an already-committed receipt is replayed before checking the current phase.
 - Clients must retain and retry the same pending action/requestId after network failure, timeout, `429`, or `5xx`. A DB write can commit even if its response is lost. A new ID is not an appropriate retry after an uncertain response.
@@ -67,7 +67,7 @@ A finite 20-question game stores up to 100 recent cooks so the projector can cat
 
 - The original core rules and teacher-controlled answer visibility, with filesystem persistence replaced by JSON restore.
 - Real SQLite SQL through an asynchronous D1-shaped adapter that deliberately overlaps requests and checks that CAS failures occur.
-- Ten-team join/submit/review races, same-station claims, identical receipt retries, no double-spending, one discovery bonus, theft protection, dropped responses after commit, and retry exhaustion.
+- Ten-team join/submit/review races, same-station claims, identical receipt retries, no double-spending, one discovery bonus, ingredient-theft protection, repeat star theft with conserved totals, dropped responses after commit, and retry exhaustion.
 - Shared/throttled presence, expiry/cascade cleanup, preservation of a legacy room table, concurrent room capacity, and migration/bootstrap interoperability.
 - HTTP route contract, local QR SVG, same-origin links, byte limits, role checks, answer/credential hiding, and retriable error responses.
 
@@ -85,3 +85,10 @@ SQLite adapter tests validate SQL and algorithm behavior locally. They do not re
 - No new database migration or credential grant is required. Recipes stay hidden until discovered. Every ordinary valid three-ingredient cook now earns at least one star: uncatalogued combinations make a one-star basic dish, without a first-discovery bonus or a recipe-book unlock. Fixed named recipes keep their existing values and first-discovery bonuses. Sneaky Snack still gives a useful steal power instead of stars.
 - Revision checks: 87 automated tests (HTTP, real SQLite D1 adapter, frontend DOM contracts and shell lifecycle), TypeScript, focused lint and build pass. Aggregate lint still reports the pre-existing vendor `public/grammar-room/qrcode.min.js` `no-this-alias` error.
 - Real browser UI verification of this revision remains pending: the local executor could not launch Chromium because of a socket restriction, and the cloud browser could not reach the isolated local preview. The included browser QA script must run on a supported local preview before deployment. No production test or deployment was performed by this revision.
+
+## Star Snatcher Tart target rule
+
+- A rival may lose multiple stars in the same question, including to multiple teams or multiple saved cards from one team. Each successful action transfers exactly one star and consumes exactly one Steal 1 Star card. Nine teams can take one star each from a ten-star rival, leaving one star.
+- A target with zero or negative stars cannot be stolen from; failed attempts keep the card. Self-targeting, closed-game restrictions, round context, and receipt replay rules are unchanged.
+- Existing saved `incomingStarThefts` flags are ignored. The host setting `starTheftMaxIncomingPerQuestion: null` denotes no per-question incoming limit. Sneaky Snack still has its separate one-ingredient-per-target-per-question limit.
+- D1 compare-and-swap retries revalidate the latest star balance, so overlapping requests cannot overdraw a target or duplicate a card transfer. Automated tests cover nine concurrent attackers with ten available stars and a race for one remaining star.

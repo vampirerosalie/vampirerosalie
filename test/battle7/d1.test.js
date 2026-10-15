@@ -153,7 +153,7 @@ test('concurrent thieves cannot bypass protection or steal unavailable inventory
   assert.equal(room.teams.reduce((n, team) => n + team.inventory.Egg, 0), 1);
 });
 
-test('D1 commits each Steal 1 Star power once and serializes simultaneous attackers behind per-question protection', async () => {
+test('D1 commits each Steal 1 Star power once and serializes simultaneous attackers without overdrawing stars', async () => {
   const s = await setup();
   await s.cooking();
   s.db.seed(s.host.pin, (room) => {
@@ -164,16 +164,81 @@ test('D1 commits each Steal 1 Star power once and serializes simultaneous attack
   const body = { type: 'pupil:steal-star', requestId: randomUUID(), questionId, expectedPhase: room.phase, powerId: 'retry-star-power', targetTeamId: s.teams[1].teamId };
   const retries = await Promise.all(Array.from({ length: 10 }, () => s.store().action(s.host.pin, s.teams[0].teamToken, body)));
   assert.equal(retries.filter((result) => result.replayed).length, 9);
-  let saved = s.db.room(s.host.pin);assert.equal(saved.teams[0].stars, 1);assert.equal(saved.teams[1].stars, 1);assert.equal(saved.teams[0].powers.length, 0);assert.equal(saved.incomingStarThefts[s.teams[1].teamId], true);
+  let saved = s.db.room(s.host.pin);assert.equal(saved.teams[0].stars, 1);assert.equal(saved.teams[1].stars, 1);assert.equal(saved.teams[0].powers.length, 0);
   s.db.seed(s.host.pin, (next) => {
     next.teams[1].powers.push({ id: 'star-power-b', type: 'steal-star' });
     next.teams[2].powers.push({ id: 'star-power-c', type: 'steal-star' });
   });
   const attempts = await Promise.allSettled([1, 2].map((i) => s.action(s.teams[i].teamToken, 'pupil:steal-star', { powerId: `star-power-${i === 1 ? 'b' : 'c'}`, targetTeamId: s.teams[0].teamId })));
   assert.equal(attempts.filter((result) => result.status === 'fulfilled').length, 1);
-  assert.equal(attempts.find((result) => result.status === 'rejected').reason.code, 'STAR_TARGET_PROTECTED');
+  assert.equal(attempts.find((result) => result.status === 'rejected').reason.code, 'NO_STARS');
   saved = s.db.room(s.host.pin);assert.equal(saved.teams[0].stars, 0);assert.equal(saved.teams.reduce((sum, team) => sum + team.stars, 0), 2);assert.equal(saved.teams.slice(1).reduce((sum, team) => sum + team.powers.filter((power) => power.type === 'steal-star').length, 0), 1);
   const reconnected = await s.store().state(s.host.pin, s.teams[0].teamToken);assert.equal(reconnected.me.stars, 0);assert.equal(reconnected.me.powers.length, 0);
+});
+
+test('nine concurrent star thieves can target one rival in the same question, consuming one card each', async () => {
+  const s = await setup(10);
+  await s.start();
+  const victim = s.teams[9], attackers = s.teams.slice(0, 9);
+  s.db.seed(s.host.pin, (room) => {
+    room.teams.find(team => team.id === victim.teamId).stars = 10;
+    room.incomingStarThefts = { [victim.teamId]: true }; // Legacy saved room.
+    for (const attacker of attackers) room.teams.find(team => team.id === attacker.teamId).powers.push({ id: `star-${attacker.teamId}`, type: 'steal-star' });
+  });
+  const conflictsBefore = s.db.conflicts;
+  const results = await Promise.all(attackers.map(team => s.action(team.teamToken, 'pupil:steal-star', { powerId: `star-${team.teamId}`, targetTeamId: victim.teamId })));
+  assert.ok(s.db.conflicts > conflictsBefore, 'the star actions must exercise CAS retries');
+  assert.equal(results.length, 9);
+  assert.ok(results.every(result => result.result.stars === 1 && result.result.targetTeamId === victim.teamId));
+  const saved = s.db.room(s.host.pin);
+  assert.equal(saved.questionIndex, 0);
+  assert.equal(saved.teams.find(team => team.id === victim.teamId).stars, 1);
+  for (const attacker of attackers) {
+    const team = saved.teams.find(team => team.id === attacker.teamId);
+    assert.equal(team.stars, 1);assert.equal(team.powers.length, 0);
+  }
+  assert.equal(saved.teams.reduce((sum, team) => sum + team.stars, 0), 10);
+  assert.equal((await s.store().state(s.host.pin, attackers[0].teamToken)).teams.find(team => team.id === victim.teamId).canLoseStar, true);
+});
+
+test('nine concurrent thieves racing for one star preserve every losing card and conserve the total', async () => {
+  const s = await setup(10);
+  await s.start();
+  const victim = s.teams[9], attackers = s.teams.slice(0, 9);
+  s.db.seed(s.host.pin, (room) => {
+    room.teams.find(team => team.id === victim.teamId).stars = 1;
+    for (const attacker of attackers) room.teams.find(team => team.id === attacker.teamId).powers.push({ id: `star-${attacker.teamId}`, type: 'steal-star' });
+  });
+  const conflictsBefore = s.db.conflicts;
+  const results = await Promise.allSettled(attackers.map(team => s.action(team.teamToken, 'pupil:steal-star', { powerId: `star-${team.teamId}`, targetTeamId: victim.teamId })));
+  assert.ok(s.db.conflicts > conflictsBefore);
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  assert.equal(results.filter(result => result.status === 'rejected' && result.reason.code === 'NO_STARS').length, 8);
+  const saved = s.db.room(s.host.pin);
+  assert.equal(saved.teams.find(team => team.id === victim.teamId).stars, 0);
+  assert.ok(saved.teams.every(team => team.stars >= 0));
+  assert.equal(saved.teams.reduce((sum, team) => sum + team.stars, 0), 1);
+  results.forEach((result, index) => {
+    const team = saved.teams.find(team => team.id === attackers[index].teamId);
+    assert.equal(team.powers.length, result.status === 'fulfilled' ? 0 : 1);
+    assert.equal(team.stars, result.status === 'fulfilled' ? 1 : 0);
+  });
+  assert.equal((await s.store().state(s.host.pin, attackers[0].teamToken)).teams.find(team => team.id === victim.teamId).canLoseStar, false);
+});
+
+test('concurrent requests with different IDs cannot spend the same star card twice', async () => {
+  const s = await setup();await s.start();
+  s.db.seed(s.host.pin, room => {
+    room.teams[0].powers.push({ id: 'single-card', type: 'steal-star' });
+    room.teams[1].stars = 10;
+  });
+  const conflictsBefore = s.db.conflicts;
+  const results = await Promise.allSettled(Array.from({ length: 9 }, () => s.action(s.teams[0].teamToken, 'pupil:steal-star', { powerId: 'single-card', targetTeamId: s.teams[1].teamId })));
+  assert.ok(s.db.conflicts > conflictsBefore);
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  assert.equal(results.filter(result => result.status === 'rejected' && result.reason.code === 'NO_STAR_POWER').length, 8);
+  const saved = s.db.room(s.host.pin);
+  assert.equal(saved.teams[0].stars, 1);assert.equal(saved.teams[1].stars, 9);assert.equal(saved.teams[0].powers.length, 0);
 });
 
 test('ambiguous connection drop after D1 commit recovers safely from persisted receipt', async () => {
