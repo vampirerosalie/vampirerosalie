@@ -82,10 +82,27 @@ test('frontend captures round-sensitive question and phase once and preserves th
 test('student Steal 1 Star control explains unavailable rivals and cancellation keeps the saved power',async()=>{
  const h=harness(),base=snapshot(),inventory=Object.fromEntries(['Bread','Egg','Cheese','Tomato','Chicken','Mushroom','Milk','Chocolate','Fruit','Rice'].map(item=>[item,0]));
  const me={id:'self',slot:1,name:'Stars',stars:2,inventory,recipes:[{name:'Star Snatcher Tart',emoji:'🥧',type:'steal-star',stars:0,ingredients:['Bread','Cheese','Chocolate']}],powers:[{id:'star-power',type:'steal-star'}],submission:null};
- const teams=[{id:'self',slot:1,name:'Stars',stars:2,inventoryCount:0,canLoseStar:true},{id:'empty',slot:2,name:'Zero',stars:0,inventoryCount:0,canLoseStar:false},{id:'protected',slot:3,name:'Protected',stars:3,inventoryCount:0,canLoseStar:false},{id:'ready',slot:4,name:'Ready',stars:2,inventoryCount:0,canLoseStar:true}];
+ const teams=[{id:'self',slot:1,name:'Stars',stars:2,inventoryCount:0,canLoseStar:true},{id:'empty',slot:2,name:'Zero',stars:0,inventoryCount:0,canLoseStar:false},{id:'repeat',slot:3,name:'Previously targeted',stars:3,inventoryCount:0,canLoseStar:true},{id:'ready',slot:4,name:'Ready',stars:2,inventoryCount:0,canLoseStar:true}];
  h.frontend.configure('join',{...base,role:'team',cookingAvailable:true,teams,me});h.frontend.ui.tab='cook';h.frontend.render();assert.match(h.frontend.get().html,/Steal 1 Star/);assert.match(h.frontend.get().html,/Star Snatcher Tart/i);
- await h.click('choose-star-rival');assert.match(h.frontend.get().html,/No stars to steal/);assert.match(h.frontend.get().html,/Already lost a star this question/);assert.match(h.frontend.get().html,/Cancel — save power/);
+ await h.click('choose-star-rival');assert.match(h.frontend.get().html,/No stars to steal/);assert.doesNotMatch(h.frontend.get().html,/Already lost a star this question|only one star.*per question/);assert.match(h.frontend.get().html,/same rival repeatedly/);assert.match(h.frontend.get().html,/data-team="repeat"(?! disabled)/);assert.match(h.frontend.get().html,/data-team="empty" disabled/);assert.match(h.frontend.get().html,/Cancel — save power/);
  await h.click('close-modal');assert.equal(h.frontend.ui.modal,null);assert.equal(h.frontend.get().state.me.powers.length,1);assert.equal(h.frontend.get().pending,null);
+});
+
+test('phone can spend successive star cards on the same rival until zero, then keeps its remaining card',async()=>{
+ const {store,host}=fixture();
+ const attacker=store.join(host.pin,{teamSlot:1,name:'Attacker',clientId:randomUUID()}),victim=store.join(host.pin,{teamSlot:2,name:'Rival',clientId:randomUUID()});
+ action(store,host,'host:start');const room=store.room(host.pin);
+ room.teams[0].powers.push(...['card-one','card-two','card-saved'].map(id=>({id,type:'steal-star'})));room.teams[1].stars=2;
+ const h=harness({fetcher:adapter(store)});h.frontend.configure('join',store.state(host.pin,attacker.teamToken),attacker.teamToken);h.frontend.ui.tab='cook';
+ for(const remaining of [1,0]){
+  await h.click('choose-star-rival');assert.match(h.frontend.get().html,new RegExp(`data-team="${victim.teamId}"(?! disabled)`));
+  await h.click('steal-star',{team:victim.teamId});
+  assert.equal(h.frontend.get().state.teams.find(team=>team.id===victim.teamId).stars,remaining);
+  assert.equal(h.frontend.get().state.me.powers.length,remaining+1);
+ }
+ await h.click('choose-star-rival');assert.match(h.frontend.get().html,new RegExp(`data-team="${victim.teamId}" disabled`));assert.match(h.frontend.get().html,/No stars to steal/);
+ await h.click('close-modal');assert.equal(h.frontend.ui.modal,null);assert.equal(h.frontend.get().state.me.powers[0].id,'card-saved');assert.equal(h.frontend.get().state.me.stars,2);
+ assert.equal(h.calls.filter(call=>call.body?.type==='pupil:steal-star').length,2);
 });
 
 test('teacher and projector show each new star theft as one non-blocking event',()=>{

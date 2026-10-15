@@ -245,7 +245,7 @@ test('when all scores are negative, the highest still wins the final game',()=>{
 });
 test('two simultaneous cook attempts cannot overspend the same inventory',async()=>{const s=setup();cookPhase(s);Object.assign(s.room().teams[0].inventory,{Bread:1,Cheese:1,Tomato:1});const outcomes=await Promise.allSettled([1,2].map(()=>Promise.resolve().then(()=>s.act(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Cheese','Tomato']}))));assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);assert.equal(count(s.room().teams[0]),0);});
 test('Sneaky Snack has no stars/bonus, stores power on invalid target, steals one once and protects rival for round',()=>{const s=setup();cookPhase(s);const a=s.room().teams[0];Object.assign(a.inventory,{Bread:2,Mushroom:2,Fruit:2});for(let i=0;i<2;i++)s.act(s.teams[0].teamToken,'pupil:cook',{ingredients:['Bread','Mushroom','Fruit']});assert.equal(a.stars,0);assert.equal(a.powers.length,2);const power=a.powers[0].id;assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:steal',{powerId:power,targetTeamId:s.teams[1].teamId}),/no ingredients/);assert.equal(s.room().teams[0].powers.length,2);s.room().teams[1].inventory.Egg=2;const request={type:'pupil:steal',requestId:randomUUID(),questionId:s.store.currentQuestion(s.room()).id,expectedPhase:s.room().phase,powerId:power,targetTeamId:s.teams[1].teamId};s.store.action(s.host.pin,s.teams[0].teamToken,request);s.store.action(s.host.pin,s.teams[0].teamToken,request);assert.equal(s.room().teams[1].inventory.Egg,1);assert.equal(s.room().teams[0].inventory.Egg,1);assert.throws(()=>s.act(s.teams[0].teamToken,'pupil:steal',{powerId:s.room().teams[0].powers[0].id,targetTeamId:s.teams[1].teamId}),/already lost/);assert.equal(s.room().teams[0].powers.length,1);});
-test('Star Snatcher Tart stores a zero-star power, transfers one star once, and resets separate target protection only on the next question',()=>{
+test('Star Snatcher Tart stores a zero-star power and lets multiple cards target the same rival in one question',()=>{
  const waiting=setup();waiting.room().teams[0].powers.push({id:'waiting-star-power',type:'steal-star'});waiting.room().teams[1].stars=1;
  assert.throws(()=>waiting.act(waiting.teams[0].teamToken,'pupil:steal-star',{powerId:'waiting-star-power',targetTeamId:waiting.teams[1].teamId}),e=>e.code==='WRONG_PHASE');
  const s=setup();start(s);const [attackerId,rivalId,otherId]=s.room().teams.map(team=>team.id);Object.assign(s.room().teams[0].inventory,{Bread:1,Cheese:1,Chocolate:1});const before=s.room().teams[0].stars;
@@ -257,10 +257,29 @@ test('Star Snatcher Tart stores a zero-star power, transfers one star once, and 
  s.room().teams[1].stars=2;const request={type:'pupil:steal-star',requestId:randomUUID(),questionId:s.store.currentQuestion(s.room()).id,expectedPhase:s.room().phase,powerId:power,targetTeamId:rivalId};
  const first=s.store.action(s.host.pin,s.teams[0].teamToken,request);const replay=s.store.action(s.host.pin,s.teams[0].teamToken,request);assert.equal(replay.replayed,true);assert.equal(first.result.stars,1);assert.equal(s.room().teams[0].stars,before+1);assert.equal(s.room().teams[1].stars,1);assert.equal(s.room().teams[0].powers.length,0);assert.equal(s.room().events.at(-1).type,'star-theft');
  s.room().teams[0].powers.push({id:'separate-protection',type:'steal-star'});s.room().teams[2].stars=2;s.room().incomingThefts[otherId]=true;s.act(s.teams[0].teamToken,'pupil:steal-star',{powerId:'separate-protection',targetTeamId:otherId});assert.equal(s.room().teams[2].stars,1);
- s.room().teams[1].powers.push({id:'blocked-power',type:'steal-star'});assert.throws(()=>s.act(s.teams[1].teamToken,'pupil:steal-star',{powerId:'blocked-power',targetTeamId:otherId}),e=>e.code==='STAR_TARGET_PROTECTED');assert.ok(s.room().teams[1].powers.some(p=>p.id==='blocked-power'));
- s.act(s.host.hostToken,'host:reveal');assert.throws(()=>s.act(s.teams[1].teamToken,'pupil:steal-star',{powerId:'blocked-power',targetTeamId:otherId}),e=>e.code==='STAR_TARGET_PROTECTED');s.act(s.host.hostToken,'host:advance');
- s.act(s.teams[1].teamToken,'pupil:steal-star',{powerId:'blocked-power',targetTeamId:otherId});assert.equal(s.room().teams[2].stars,0);assert.equal(s.room().teams[1].stars,2);assert.equal(s.room().teams[1].powers.length,0);
+ s.room().teams[1].powers.push({id:'repeat-target-power',type:'steal-star'});
+ assert.equal(s.store.state(s.host.pin,s.teams[1].teamToken).teams.find(t=>t.id===otherId).canLoseStar,true);
+ s.act(s.host.hostToken,'host:reveal');
+ s.act(s.teams[1].teamToken,'pupil:steal-star',{powerId:'repeat-target-power',targetTeamId:otherId});assert.equal(s.room().teams[2].stars,0);assert.equal(s.room().teams[1].stars,2);assert.equal(s.room().teams[1].powers.length,0);
+ assert.equal(s.store.state(s.host.pin,s.teams[1].teamToken).teams.find(t=>t.id===otherId).canLoseStar,false);
+ assert.equal(s.room().incomingThefts[otherId],true);
+ assert.equal(s.store.state(s.host.pin,s.host.hostToken).settings.starTheftMaxIncomingPerQuestion,null);
  s.act(s.host.hostToken,'host:close');s.room().teams[1].powers.push({id:'ended-power',type:'steal-star'});assert.throws(()=>s.act(s.teams[1].teamToken,'pupil:steal-star',{powerId:'ended-power',targetTeamId:attackerId}),e=>e.code==='ROOM_CLOSED');
+});
+test('legacy star-theft flags do not block repeated cards, but zero and negative targets keep the card',()=>{
+ const s=setup();start(s);const [attacker,victim]=s.room().teams;
+ victim.stars=2;s.room().incomingStarThefts={[victim.id]:true};
+ attacker.powers.push(...['first','second','saved'].map(id=>({id,type:'steal-star'})));
+ const restored=new GameStore({questions,secret:s.store.secret,now:()=>1770000001000});
+ restored.rooms.set(s.host.pin,JSON.parse(JSON.stringify(s.room())));
+ const steal=powerId=>restored.action(s.host.pin,s.teams[0].teamToken,{type:'pupil:steal-star',requestId:randomUUID(),questionId:restored.currentQuestion(restored.room(s.host.pin)).id,expectedPhase:'question',powerId,targetTeamId:victim.id});
+ assert.equal(restored.state(s.host.pin,s.teams[0].teamToken).teams.find(t=>t.id===victim.id).canLoseStar,true);
+ for(const powerId of ['first','second'])assert.equal(steal(powerId).result.stars,1);
+ const saved=restored.room(s.host.pin);assert.equal(saved.teams[0].stars,2);assert.equal(saved.teams[1].stars,0);
+ assert.throws(()=>steal('saved'),error=>error.code==='NO_STARS');
+ restored.room(s.host.pin).teams[1].stars=-1;assert.throws(()=>steal('saved'),error=>error.code==='NO_STARS');
+ const current=restored.room(s.host.pin);assert.deepEqual(current.teams[0].powers,[{id:'saved',type:'steal-star'}]);
+ assert.equal(current.teams[1].stars,-1);assert.equal(current.teams[0].stars,2);
 });
 test('finished cooking, stale question, role escalation and reused receipt payload are rejected',()=>{
  const s=setup();const q=start(s);
