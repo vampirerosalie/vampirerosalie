@@ -1,0 +1,6 @@
+.market-music{display:flex;align-items:center;flex-wrap:wrap;gap:12px 18px;margin:0 0 14px;padding:10px 18px;border:1px solid #87649b;border-radius:14px;background:#241334ee;color:#ffdc96}
+.music-title{font-weight:700;font-size:14px}.music-title small{display:block;font-size:11px;font-weight:400}
+.market-music label{display:flex;align-items:center;gap:10px;font-size:13px;margin:0;color:#ecdaf7}
+.market-music input[type=range]{width:125px;min-height:32px;padding:0;accent-color:#f3c568;background:transparent;border:0;cursor:pointer}
+.music-status{font-size:12px;color:#cdb8da}.market-music .button{min-width:110px}
+@media(max-width:600px){.market-music{gap:8px 12px;padding:10px}.music-status{width:100%}}
