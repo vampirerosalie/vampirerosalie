@@ -15,7 +15,8 @@
     "deploy:cloudflare": "wrangler deploy --config dist/server/wrangler.json",
     "deploy": "pnpm run build:cloudflare && pnpm run deploy:cloudflare",
     "test:battle7": "node --test test/battle7/*.test.js",
-    "test:battle8": "node --test test/battle8/*.test.js"
+    "test:battle8": "node --test test/battle8/*.test.js",
+    "test:battle9": "node --test test/battle9/*.test.js"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

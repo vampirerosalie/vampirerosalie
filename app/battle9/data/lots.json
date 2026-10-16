@@ -1,0 +1,186 @@
+[
+  {
+    "name": "Bronze Treasure Chest",
+    "emoji": "💎",
+    "kind": "visible",
+    "desc": "Gain +6 Treasure Points",
+    "start": 20,
+    "reward": {
+      "type": "tp",
+      "n": 6
+    }
+  },
+  {
+    "name": "Mystery Parcel",
+    "emoji": "🎁",
+    "kind": "mystery",
+    "desc": "An unopened reward — what could be inside?",
+    "start": 30,
+    "pool": [
+      {
+        "type": "tp",
+        "n": 7
+      },
+      {
+        "type": "stealMoney",
+        "n": 60
+      },
+      {
+        "type": "loseTP",
+        "n": 2
+      }
+    ]
+  },
+  {
+    "name": "Pickpocket Gloves",
+    "emoji": "🧤",
+    "kind": "visible",
+    "desc": "Steal up to $80 from another team",
+    "start": 30,
+    "reward": {
+      "type": "stealMoney",
+      "n": 80
+    }
+  },
+  {
+    "name": "Sapphire Chest",
+    "emoji": "💎",
+    "kind": "visible",
+    "desc": "Gain +8 Treasure Points",
+    "start": 45,
+    "reward": {
+      "type": "tp",
+      "n": 8
+    }
+  },
+  {
+    "name": "Forbidden Box",
+    "emoji": "✨",
+    "kind": "mystery",
+    "desc": "A beautifully sealed, completely unknown reward",
+    "start": 35,
+    "pool": [
+      {
+        "type": "tp",
+        "n": 8
+      },
+      {
+        "type": "stealTP",
+        "n": 4
+      },
+      {
+        "type": "loseTP",
+        "n": 3
+      }
+    ]
+  },
+  {
+    "name": "Treasure Shield",
+    "emoji": "🛡️",
+    "kind": "visible",
+    "desc": "Gain +3 TP and block the next TP theft",
+    "start": 40,
+    "reward": {
+      "type": "shield",
+      "n": 3
+    }
+  },
+  {
+    "name": "Shadow Thief",
+    "emoji": "🕵️",
+    "kind": "visible",
+    "desc": "Steal up to 5 TP from another team",
+    "start": 55,
+    "reward": {
+      "type": "stealTP",
+      "n": 5
+    }
+  },
+  {
+    "name": "Smuggler’s Trunk",
+    "emoji": "🧳",
+    "kind": "mystery",
+    "desc": "A sealed trunk with an unknown surprise",
+    "start": 55,
+    "pool": [
+      {
+        "type": "tp",
+        "n": 10
+      },
+      {
+        "type": "stealTP",
+        "n": 5
+      },
+      {
+        "type": "cashTP",
+        "n": 100,
+        "tp": 2
+      }
+    ]
+  },
+  {
+    "name": "Ruby Treasure Chest",
+    "emoji": "💎",
+    "kind": "visible",
+    "desc": "Gain +10 Treasure Points",
+    "start": 70,
+    "reward": {
+      "type": "tp",
+      "n": 10
+    }
+  },
+  {
+    "name": "Royal Treasure Chest",
+    "emoji": "👑",
+    "kind": "visible",
+    "desc": "Gain +12 Treasure Points",
+    "start": 90,
+    "reward": {
+      "type": "tp",
+      "n": 12
+    }
+  },
+  {
+    "name": "Crown of Chaos",
+    "emoji": "✨",
+    "kind": "mystery",
+    "desc": "A high-stakes mystery with no visual clues",
+    "start": 60,
+    "pool": [
+      {
+        "type": "tp",
+        "n": 14
+      },
+      {
+        "type": "stealTP",
+        "n": 6
+      },
+      {
+        "type": "loseTP",
+        "n": 4
+      }
+    ]
+  },
+  {
+    "name": "The Last Heist",
+    "emoji": "🗝️",
+    "kind": "visible",
+    "desc": "Steal up to 6 TP from another team",
+    "start": 75,
+    "reward": {
+      "type": "stealTP",
+      "n": 6
+    }
+  },
+  {
+    "name": "The Final Vault",
+    "emoji": "🏆",
+    "kind": "visible",
+    "desc": "Gain +13 Treasure Points",
+    "start": 100,
+    "reward": {
+      "type": "tp",
+      "n": 13
+    }
+  }
+]

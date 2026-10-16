@@ -1,0 +1,293 @@
+[
+  {
+    "cat": "Present Simple",
+    "type": "mcq",
+    "text": "Every morning, Daniel _____ his bicycle to school.",
+    "choices": [
+      "ride",
+      "rides",
+      "rode",
+      "riding"
+    ],
+    "correct": "B"
+  },
+  {
+    "cat": "Past Simple",
+    "type": "mcq",
+    "text": "We _____ a new café near our school yesterday.",
+    "choices": [
+      "find",
+      "finds",
+      "found",
+      "finding"
+    ],
+    "correct": "C"
+  },
+  {
+    "cat": "Will · Decision Now",
+    "type": "mcq",
+    "text": "The phone is ringing. You decide at that moment to answer it.\n“I _____ get it!”",
+    "choices": [
+      "am going to",
+      "will",
+      "did",
+      "have"
+    ],
+    "correct": "B"
+  },
+  {
+    "cat": "Present Simple",
+    "type": "mcq",
+    "text": "Does your brother _____ football after school?",
+    "choices": [
+      "plays",
+      "played",
+      "playing",
+      "play"
+    ],
+    "correct": "D"
+  },
+  {
+    "cat": "Preposition",
+    "type": "mcq",
+    "text": "The meeting starts _____ 2:15 p.m.",
+    "choices": [
+      "in",
+      "on",
+      "at",
+      "for"
+    ],
+    "correct": "C"
+  },
+  {
+    "cat": "Past Simple",
+    "type": "mcq",
+    "text": "The bus _____ before we reached the stop yesterday.",
+    "choices": [
+      "leaves",
+      "left",
+      "leave",
+      "leaving"
+    ],
+    "correct": "B"
+  },
+  {
+    "cat": "Sentence Rearrangement",
+    "type": "order",
+    "text": "Rearrange the words to form a correct sentence.",
+    "words": [
+      "usually",
+      "before dinner",
+      "washes",
+      "the dishes",
+      "Farah"
+    ],
+    "correct": "Farah usually washes the dishes before dinner."
+  },
+  {
+    "cat": "Vocabulary · Spelling",
+    "type": "type",
+    "text": "A place where people pay to eat meals prepared for them.\nWhat is the word? (10 letters)",
+    "correct": "restaurant"
+  },
+  {
+    "cat": "Present Simple",
+    "type": "mcq",
+    "text": "My parents _____ coffee after dinner because they prefer tea.",
+    "choices": [
+      "doesn't drink",
+      "didn't drink",
+      "don't drink",
+      "aren't drink"
+    ],
+    "correct": "C"
+  },
+  {
+    "cat": "Be Going To · Earlier Plan",
+    "type": "mcq",
+    "text": "I have already bought the train tickets for Saturday. Which form best emphasises my earlier plan?\nWe _____ visit my aunt.",
+    "choices": [
+      "will",
+      "are going to",
+      "were going to",
+      "have"
+    ],
+    "correct": "B"
+  },
+  {
+    "cat": "Past Simple",
+    "type": "mcq",
+    "text": "Did Lily _____ the classroom window this morning?",
+    "choices": [
+      "cleans",
+      "cleaned",
+      "cleaning",
+      "clean"
+    ],
+    "correct": "D"
+  },
+  {
+    "cat": "Present Simple",
+    "type": "mcq",
+    "text": "The science club _____ every Thursday.",
+    "choices": [
+      "meet",
+      "met",
+      "meets",
+      "meeting"
+    ],
+    "correct": "C"
+  },
+  {
+    "cat": "Conjunction",
+    "type": "mcq",
+    "text": "The floor was wet, _____ we walked carefully.\nChoose the conjunction that shows the result.",
+    "choices": [
+      "but",
+      "because",
+      "and",
+      "so"
+    ],
+    "correct": "D"
+  },
+  {
+    "cat": "Be Going To · Evidence",
+    "type": "mcq",
+    "text": "Look at those dark clouds! It _____ rain soon.\nWhich form best emphasises a prediction based on present evidence?",
+    "choices": [
+      "will",
+      "is going to",
+      "was going to",
+      "is"
+    ],
+    "correct": "B"
+  },
+  {
+    "cat": "Present Simple",
+    "type": "mcq",
+    "text": "Which sentence is grammatically correct?",
+    "choices": [
+      "She don't like spicy food.",
+      "She doesn't likes spicy food.",
+      "She doesn't like spicy food.",
+      "She isn't like spicy food."
+    ],
+    "correct": "C"
+  },
+  {
+    "cat": "Past Simple",
+    "type": "mcq",
+    "text": "Last night, the children _____ their homework and _____ television.",
+    "choices": [
+      "finish / watch",
+      "finishes / watches",
+      "finished / watched",
+      "finished / watch"
+    ],
+    "correct": "C"
+  },
+  {
+    "cat": "Will · Promise",
+    "type": "mcq",
+    "text": "I promise I _____ return your pen tomorrow.",
+    "choices": [
+      "did",
+      "will",
+      "am",
+      "have"
+    ],
+    "correct": "B"
+  },
+  {
+    "cat": "Preposition",
+    "type": "mcq",
+    "text": "The poster is hanging _____ the classroom wall.",
+    "choices": [
+      "at",
+      "in",
+      "between",
+      "on"
+    ],
+    "correct": "D"
+  },
+  {
+    "cat": "Past Simple",
+    "type": "mcq",
+    "text": "Where _____ you go during the school holidays last month?",
+    "choices": [
+      "did",
+      "do",
+      "does",
+      "are"
+    ],
+    "correct": "A"
+  },
+  {
+    "cat": "Present Simple",
+    "type": "mcq",
+    "text": "The shop _____ at 10 a.m. on Sundays.",
+    "choices": [
+      "open",
+      "opened",
+      "opens",
+      "opening"
+    ],
+    "correct": "C"
+  },
+  {
+    "cat": "Sentence Rearrangement",
+    "type": "order",
+    "text": "Rearrange the words to form a correct question.",
+    "words": [
+      "did",
+      "why",
+      "leave",
+      "early",
+      "you",
+      "?"
+    ],
+    "correct": "Why did you leave early?"
+  },
+  {
+    "cat": "Will · Immediate Offer",
+    "type": "mcq",
+    "text": "Your friend says, “I can’t carry these boxes!”\nYou decide immediately to help. Which reply is most natural?",
+    "choices": [
+      "I helped you yesterday.",
+      "I usually help you.",
+      "I'll help you!",
+      "I was helping you."
+    ],
+    "correct": "C"
+  },
+  {
+    "cat": "Vocabulary · Spelling",
+    "type": "type",
+    "text": "A place where people can borrow books to read.\nWhat is the word? (7 letters)",
+    "correct": "library"
+  },
+  {
+    "cat": "Present Simple",
+    "type": "mcq",
+    "text": "My little brother _____ his teeth twice a day.",
+    "choices": [
+      "brush",
+      "brushes",
+      "brushed",
+      "brushing"
+    ],
+    "correct": "B"
+  },
+  {
+    "cat": "Present Simple",
+    "type": "mcq",
+    "text": "When _____ the school bus usually arrive?",
+    "choices": [
+      "do",
+      "did",
+      "is",
+      "does"
+    ],
+    "correct": "D"
+  }
+]

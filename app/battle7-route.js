@@ -5,7 +5,7 @@ const OLD_BATTLES = new Set([1, 2, 3, 4, 6]);
 
 /** @typedef {{battle: 7, room: string}} StudentRoute */
 /** @typedef {{mode: 'kitchen', role: 'student' | 'teacher' | 'screen', search: string, room: string, studentRoute: StudentRoute | null}} KitchenRoute */
-/** @typedef {KitchenRoute | {mode: 'demolition', role: 'teacher'} | {mode: 'teacher', battle: number | null} | {mode: 'student', battle: number, room: string} | {mode: 'student-link-error'}} ShellRoute */
+/** @typedef {KitchenRoute | {mode: 'demolition', role: 'teacher'} | {mode: 'market', role: 'teacher'} | {mode: 'teacher', battle: number | null} | {mode: 'student', battle: number, room: string} | {mode: 'student-link-error'}} ShellRoute */
 
 /** @param {unknown} value @returns {StudentRoute | null} */
 export function readStudentRoute(value) {
@@ -55,6 +55,7 @@ export function resolveShellRoute(search, savedStudent = null, hasHostCredential
   // The PIN form explicitly leaves the last room but keeps this tab in student mode.
   if (params.has('student')) return student('');
   if (savedStudent) return student(savedStudent.room);
+  if (battle === '9' && !params.has('host') && !params.has('screen')) return { mode: 'market', role: 'teacher' };
   // Battle 8 keeps the teacher inside the main shell. Its QR code links pupils
   // straight to the separate, student-only /battle8/ phone route.
   if (battle === '8' && !params.has('host') && !params.has('screen')) return { mode: 'demolition', role: 'teacher' };
