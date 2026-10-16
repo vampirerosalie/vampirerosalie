@@ -26,10 +26,25 @@ export class MarketGame {
     if (!/^\d{5}$/.test(String(pin))) fail('Enter a five-digit room PIN.','INVALID_PIN',400);
     const room = this.rooms.get(String(pin));
     if (!room || room.expiresAt <= this.now()) fail('This room has expired. Ask your teacher for the current QR code.','ROOM_NOT_FOUND',404);
+    // Upgrade existing lobbies and unconfirmed answers without changing manual
+    // teacher decisions, previously confirmed results or issuing any rewards.
+    let upgraded = false;
+    if (room.phase === 'lobby' && room.teamCount !== 40) { room.teamCount = 40; upgraded = true; }
+    const question = this.question(room);
+    if (question && !room.confirmed.includes(question.id)) {
+      for (const submission of Object.values(room.submissions[question.id] || {})) {
+        if (submission.answer && !submission.decision) {
+          submission.decision = submission.suggestion = normalized(submission.answer) === normalized(question.correct) ? 'accepted' : 'rejected';
+          submission.markedBy = 'auto'; upgraded = true;
+        }
+      }
+    }
+    if (upgraded) { room.version++; this.save(room); }
     return room;
   }
   create({ teamCount = 40, roomName = 'English Black Market' } = {}) {
     if (!Number.isInteger(teamCount) || teamCount < 2 || teamCount > 40) fail('Choose 2–40 team places.');
+    teamCount = 40;
     let pin; do { pin = String(10000 + this.random(90000)); } while (this.rooms.has(pin));
     const hostToken = randomBytes(32).toString('hex');
     const room = { pin, name:clean(roomName), hostHash:hash(hostToken), createdAt:this.now(), expiresAt:this.now()+this.retentionMs,
@@ -88,7 +103,7 @@ export class MarketGame {
         online:(this.lastSeen.get(`${room.pin}:${t.id}`)??0)>this.now()-20000,submitted:Boolean(rows[t.id]?.answer),verdict:confirmed ? rows[t.id]?.decision??'missing' : rows[t.id]?'submitted':'waiting'}))};
     if (actor.role==='host') {
       data.answerKey=q?.correct ?? null;
-      data.reviews=room.teams.map(t=>({teamId:t.id,teamName:t.name,answer:rows[t.id]?.answer??'',decision:rows[t.id]?.decision??null,suggestion:rows[t.id]?.suggestion??null}));
+      data.reviews=room.teams.map(t=>({teamId:t.id,teamName:t.name,answer:rows[t.id]?.answer??'',decision:rows[t.id]?.decision??null,suggestion:rows[t.id]?.suggestion??null,markedBy:rows[t.id]?.markedBy??'teacher'}));
       data.pendingReviewCount=data.reviews.filter(r=>r.answer && !r.decision).length;
     }
     if (actor.role==='team') {
@@ -144,7 +159,7 @@ export class MarketGame {
     const question=()=>{if(b.questionId!==q?.id)fail('The question changed.','STALE_QUESTION');};
     const auction=()=>{if(b.auctionId!==room.auction?.id)fail('The auction changed.','STALE_AUCTION');};
     switch(b.type) {
-      case 'host:settings': phase('lobby');if(!Number.isInteger(b.teamCount)||b.teamCount<2||b.teamCount>40||room.teams.some(t=>t.slot>b.teamCount))fail('Choose 2–40 places, keeping every joined team.');room.teamCount=b.teamCount;return{teamCount:room.teamCount};
+      case 'host:settings': phase('lobby');room.teamCount=40;return{teamCount:40}; // Older cached clients cannot reduce the open lobby.
       case 'host:start':phase('lobby');if(!room.teams.length)fail('Wait for a team to join.');room.phase='question';room.questionIndex=0;room.questionOpen=true;this.event(room,'The market is open! Answer, earn, bid and collect Treasure Points.');return{started:true};
       case 'host:start-countdown':phase('question');question();if(!room.questionOpen||room.confirmed.includes(q.id))fail('Answers are already closed.');room.deadlineAt??=this.now()+10000;return{deadlineAt:room.deadlineAt};
       case 'pupil:submit': {
@@ -154,7 +169,8 @@ export class MarketGame {
         if(q.type==='mcq'){if(!['A','B','C','D'].includes(b.answer))fail('Choose an answer.');answer=b.answer;}
         else if(q.type==='order') {if(!Array.isArray(b.order)||b.order.length!==q.words.length||new Set(b.order).size!==q.words.length||b.order.some(i=>!Number.isInteger(i)||i<0||i>=q.words.length))fail('Use each word once.');answer=b.order.map(i=>q.words[i]).join(' ');}
         else {if(typeof b.answer!=='string'||!b.answer.trim()||b.answer.length>160)fail('Enter a short answer.');answer=b.answer.trim();}
-        rows[team.id]={answer,decision:null,suggestion:normalized(answer)===normalized(q.correct)?'accepted':'rejected'};return{submitted:true};
+        const suggestion=normalized(answer)===normalized(q.correct)?'accepted':'rejected';
+        rows[team.id]={answer,decision:suggestion,suggestion,markedBy:'auto'};return{submitted:true};
       }
       case 'host:review': {
         phase('question');question();if(room.confirmed.includes(q.id))fail('Results are confirmed. Review before confirming.','RESULTS_LOCKED');
@@ -162,7 +178,7 @@ export class MarketGame {
         const target=room.teams.find(t=>t.id===b.teamId);if(!target)fail('Team unavailable.');
         const rows=room.submissions[q.id]??={},sub=rows[target.id];
         if(!sub?.answer){if(b.decision==='accepted')fail('An unanswered question earns no reward.');rows[target.id]={answer:'',decision:'rejected',suggestion:null};}
-        else sub.decision=b.decision;
+        else {sub.decision=b.decision;sub.markedBy='teacher';}
         return{decision:b.decision,private:true};
       }
       case 'host:confirm': {
