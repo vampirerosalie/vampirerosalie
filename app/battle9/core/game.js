@@ -10,6 +10,19 @@ const id = () => randomBytes(12).toString('hex');
 const clean = value => String(value ?? '').normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,28);
 const normalized = value => String(value).normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'").replace(/[.?!]/g,'').replace(/\s+/g,' ').trim();
 export const AUCTION_QUESTIONS = Object.freeze([2,4,6,8,10,12,14,16,18,20,22,24,25]);
+const OPENING_LOTS = new Set(['Bronze Treasure Chest','Mystery Parcel','Pickpocket Gloves','Sapphire Chest','Forbidden Box','Treasure Shield','Shadow Thief','The Last Heist']);
+export function createAuctionOrder(lots, random = randomInt) {
+  const remaining = lots.map((_, index) => index);
+  const eligible = remaining.filter(index => OPENING_LOTS.has(lots[index].name));
+  if (eligible.length !== 8) throw new Error('Exactly eight opening auction items are required.');
+  const opening = Array.from({length:2}, () => eligible.splice(random(eligible.length), 1)[0]);
+  const rest = remaining.filter(index => !opening.includes(index));
+  for (let i = rest.length - 1; i > 0; i--) {
+    const j = random(i + 1);
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  return [...opening, ...rest];
+}
 export function rewardText(reward) {
   return reward.type === 'tp' ? `Gain ${reward.n} TP` : reward.type === 'loseTP' ? `Lose up to ${reward.n} TP` : reward.type === 'cashTP' ? `Gain $${reward.n} and ${reward.tp} TP` : reward.type === 'shield' ? `Gain ${reward.n} TP + one shield against money or TP theft` : reward.type === 'stealMoney' ? `Saved card: steal up to $${reward.n}` : `Saved card: steal up to ${reward.n} TP`;
 }
@@ -49,7 +62,7 @@ export class MarketGame {
     const hostToken = randomBytes(32).toString('hex');
     const room = { pin, name:clean(roomName), hostHash:hash(hostToken), createdAt:this.now(), expiresAt:this.now()+this.retentionMs,
       version:1, phase:'lobby', teamCount, questionIndex:-1, questionOpen:false, deadlineAt:null, confirmed:[], teams:[], submissions:{},
-      auction:null, auctions:[], events:[], receipts:{} };
+      auctionOrder:createAuctionOrder(this.lots,this.random), auction:null, auctions:[], events:[], receipts:{} };
     this.rooms.set(pin,room); this.save(room); return { pin,hostToken };
   }
   teamToken(room, clientId) { return createHmac('sha256',this.secret).update(`team:${room.pin}:${room.createdAt}:${clientId}`).digest('hex'); }
@@ -84,8 +97,8 @@ export class MarketGame {
   }
   publicAuction(auction) {
     if (!auction) return null;
-    const lot = this.lots[auction.index];
-    return {id:auction.id,index:auction.index,number:auction.index+1,name:lot.name,kind:lot.kind,start:lot.start,
+    const lotIndex = auction.lotIndex ?? auction.index, lot = this.lots[lotIndex];
+    return {id:auction.id,index:auction.index,lotIndex,number:auction.index+1,name:lot.name,kind:lot.kind,start:lot.start,
       description:lot.kind === 'mystery' ? 'A sealed surprise. Its contents stay secret until SOLD!' : rewardText(lot.reward),
       status:auction.status,bid:auction.bid,bidder:auction.bidder,bidderName:auction.bidderName,deadlineAt:auction.deadlineAt,
       bids:auction.bids, ...(auction.status === 'sold' ? {outcome:rewardText(auction.outcome)} : {})};
@@ -120,8 +133,9 @@ export class MarketGame {
   }
   sell(room) {
     const a=room.auction; if (!a || a.status!=='open') return;
+    const lotIndex=a.lotIndex??a.index,lot=this.lots[lotIndex];
     a.deadlineAt=null;
-    if (!a.bidder) { a.status='unsold'; this.event(room,`${this.lots[a.index].name} — UNSOLD. No money spent.`,'sold'); }
+    if (!a.bidder) { a.status='unsold'; this.event(room,`${lot.name} — UNSOLD. No money spent.`,'sold'); }
     else {
       const team=room.teams.find(t=>t.id===a.bidder);
       if (!team || team.money<a.bid) throw new Error('Reserved winning bid invariant failed.');
@@ -131,8 +145,8 @@ export class MarketGame {
       else if(r.type==='loseTP') team.tp=Math.max(0,team.tp-r.n);
       else if(r.type==='cashTP') {team.money+=r.n;team.tp+=r.tp;}
       else if(r.type==='shield') {team.tp+=r.n;team.shields++;}
-      else team.cards.push({id:id(),type:r.type,n:r.n,name:this.lots[a.index].name,art:a.index,description:rewardText(r)});
-      this.event(room,`SOLD! ${team.name} paid $${a.bid} for ${this.lots[a.index].name}. ${rewardText(r)}.`,'sold');
+      else team.cards.push({id:id(),type:r.type,n:r.n,name:lot.name,art:lotIndex,description:rewardText(r)});
+      this.event(room,`SOLD! ${team.name} paid $${a.bid} for ${lot.name}. ${rewardText(r)}.`,'sold');
     }
     room.auctions.push(structuredClone(a)); room.phase='auction-result';
   }
@@ -198,13 +212,16 @@ export class MarketGame {
       case 'host:open-auction': {
         phase('question');question();if(!room.confirmed.includes(q.id))fail('Confirm the question before opening its auction.');
         const index=room.auctions.length;if(AUCTION_QUESTIONS[index]!==q.id)fail('There is no auction after this question.','NOT_AUCTION_TIME');
-        const lot=this.lots[index];room.auction={id:id(),index,status:'open',bid:0,bidder:null,bidderName:null,deadlineAt:null,bids:[],outcome:structuredClone(lot.kind==='mystery'?lot.pool[this.random(lot.pool.length)]:lot.reward)};
+        // Older rooms have no order: preserve their original sequence, including
+        // any open/history lots, instead of reshuffling a game already in progress.
+        const lotIndex=room.auctionOrder?.[index]??index;
+        const lot=this.lots[lotIndex];room.auction={id:id(),index,lotIndex,status:'open',bid:0,bidder:null,bidderName:null,deadlineAt:null,bids:[],outcome:structuredClone(lot.kind==='mystery'?lot.pool[this.random(lot.pool.length)]:lot.reward)};
         room.phase='auction';this.event(room,`Auction ${index+1}: ${lot.name} is now open.`,'auction');return{auctionId:room.auction.id};
       }
       case 'host:auction-countdown':phase('auction');auction();room.auction.deadlineAt??=this.now()+10000;return{deadlineAt:room.auction.deadlineAt};
       case 'host:sold':auction();if(room.auction.status!=='open')return{closed:true};phase('auction');this.sell(room);return{closed:true};
       case 'pupil:bid': {
-        phase('auction');auction();const a=room.auction,min=a.bidder?a.bid+5:this.lots[a.index].start;
+        phase('auction');auction();const a=room.auction,min=a.bidder?a.bid+5:this.lots[a.lotIndex??a.index].start;
         if(!Number.isSafeInteger(b.amount)||b.amount<min)fail(`Bid at least $${min}.`,'BID_TOO_LOW');
         if(b.amount>team.money)fail('That bid is higher than your balance.','INSUFFICIENT_FUNDS');
         a.bid=b.amount;a.bidder=team.id;a.bidderName=team.name;a.bids.push({teamName:team.name,amount:b.amount});a.bids=a.bids.slice(-8);return{bid:b.amount};

@@ -7,6 +7,9 @@ export const bank=JSON.parse(readFileSync(new URL('../../app/battle9/data/questi
 export const lots=JSON.parse(readFileSync(new URL('../../app/battle9/data/lots.json',import.meta.url),'utf8'));
 export function setup(n=3){
  let now=1000000;const game=new MarketGame({bank,lots,now:()=>now,random:()=>0}),host=game.create();
+ // Fixed fixture for existing item-specific mechanics tests. Randomization has
+ // separate tests using real creation without overriding the saved order.
+ game.room(host.pin).auctionOrder=lots.map((_,i)=>i);
  const clients=Array.from({length:n},(_,i)=>({clientId:randomUUID(),teamSlot:i+1,name:'Team '+(i+1)}));
  const teams=clients.map(c=>game.join(host.pin,c)),act=(token,type,more={},requestId=randomUUID())=>game.action(host.pin,token,{type,requestId,...more});
  return{game,host,teams,clients,act,tick:ms=>{now+=ms;},room:()=>game.room(host.pin),view:token=>game.state(host.pin,token)};
