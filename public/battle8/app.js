@@ -68,7 +68,16 @@ async function loadState() {
   try { const data = await api(`${apiBase}/${pin}/state`, undefined, mode === 'screen' ? '' : token); if (generation !== routeGeneration) return;
     const reconnected = !ui.online; ui.online = true; ui.error = ''; applyState(data.state || data, reconnected); if (reconnected) notice('Reconnected to your room.'); }
   catch (error) { if (generation !== routeGeneration) return;
-    if (error.status === 404) { state = null; ui.online = false; ui.error = 'This room PIN is not active. Ask your teacher for the current QR code.'; render(); }
+    if (error.status === 404 && error.code === 'ROOM_NOT_FOUND' && mode === 'host') {
+      // A saved teacher PIN expires with its room. Start a fresh room so the
+      // teacher gets a working QR code instead of retrying that PIN forever.
+      const expiredPin = pin;
+      storage.remove(hostKey(expiredPin));
+      if (storage.get('demolition-dash:last-host') === expiredPin) storage.remove('demolition-dash:last-host');
+      routeGeneration++; mode = 'home'; pin = ''; token = ''; state = null; pending = null;
+      void createRoom(true);
+    }
+    else if (error.status === 404) { state = null; ui.online = false; ui.error = 'This room PIN is not active. Ask your teacher for the current QR code.'; render(); }
     else if (error.status === 401) { state = null; ui.error = 'Your saved device key could not be verified. Ask your teacher for help.'; render(); }
     else if (!error.status) { if (ui.online) { ui.online = false; render(); } if (!state) { ui.error = 'Connection interrupted. Your team place is saved; retrying automatically.'; render(); } }
     else if (!state) { ui.error = error.message; render(); }

@@ -37,3 +37,25 @@ test('unconfirmed answer and Tool Yard show no verdict or new reward; confirmed 
   assert.match(run("state.me.submission.status = 'accepted'; questionCard(true)"), /Correct!/);
   assert.match(run("state.me.submission.status = 'rejected'; questionCard(true)"), /Not correct/);
 });
+
+test('expired teacher room opens a fresh QR room while expired student room stays student-only', async () => {
+  const saved = new Map([['demolition-dash:host:73638','teacher-key'],['demolition-dash:last-host','73638']]);
+  const context = vm.createContext({
+    document:{getElementById:()=>({addEventListener(){}}),addEventListener(){}},
+    navigator:{onLine:true},crypto:{randomUUID:()=> 'test'},window:{addEventListener(){}},setInterval(){},
+    localStorage:{getItem:key=>saved.get(key)??null,setItem:(key,value)=>saved.set(key,value),removeItem:key=>saved.delete(key)},
+  });
+  vm.runInContext(source.replace(/initialRoute\(\);\s*$/,''),context);
+  vm.runInContext(`render=()=>{};api=async()=>{throw Object.assign(new Error('Expired'),{status:404,code:'ROOM_NOT_FOUND'})};
+    mode='host';pin='73638';token='teacher-key';createRoom=async fresh=>{globalThis.created=fresh};`,context);
+  await vm.runInContext('loadState()',context);
+  assert.equal(vm.runInContext('mode',context),'home');
+  assert.equal(vm.runInContext('pin',context),'');
+  assert.equal(vm.runInContext('globalThis.created',context),true);
+  assert.equal(saved.has('demolition-dash:last-host'),false);
+  assert.equal(saved.has('demolition-dash:host:73638'),false);
+  vm.runInContext(`globalThis.created=false;mode='join';pin='73638';token='student-key';`,context);
+  await vm.runInContext('loadState()',context);
+  assert.equal(vm.runInContext('mode',context),'join');
+  assert.equal(vm.runInContext('globalThis.created',context),false);
+});
