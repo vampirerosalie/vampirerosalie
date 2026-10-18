@@ -167,7 +167,7 @@ async function deliverAction() {
 }
 
 function header() {
-  return `<header class="topbar"><div class="brand"><span class="brand-mark">✧</span><span>The Lantern Keeper’s Secret<small>BATTLE 10 · READING ADVENTURE</small></span></div><div class="top-actions"><span class="chip ${ui.online ? 'good' : 'bad'}">${ui.online ? 'Connected' : 'Reconnecting…'}</span>${pin ? `<span class="chip">PIN <b>${pin}</b></span>` : ''}${mode === 'host' && state?.role === 'host' ? `${btn('Show Passage', 'show-passage', 'button ghost tiny')}${btn('Final QR cards', 'seals', 'button ghost tiny')}${btn('⛶ Full screen', 'fullscreen', 'button ghost tiny')}` : ''}</div></header>`;
+  return `<header class="topbar"><div class="brand"><span class="brand-mark">✧</span><span>The Lantern Keeper’s Secret<small>BATTLE 10 · READING ADVENTURE</small></span></div><div class="top-actions"><span class="chip ${ui.online ? 'good' : 'bad'}">${ui.online ? 'Connected' : 'Reconnecting…'}</span>${pin ? `<span class="chip">PIN <b>${pin}</b></span>` : ''}${mode === 'host' && state?.role === 'host' ? `${btn('Show Passage', 'show-passage', 'button ghost tiny')}${btn('Final QR cards', 'seals', 'button ghost tiny')}${btn('⛶ Full screen', 'fullscreen', 'button ghost tiny')}` : ''}</div></header>${mode === 'host' && state?.role === 'host' && state.phase !== 'ended' ? '<div id="teacher-music-slot"></div>' : ''}`;
 }
 function hostLobby() {
   const students = state.students || [];
@@ -229,6 +229,7 @@ function render() {
   else content = joinView();
   app.innerHTML = `<main class="shell ${mode === 'join' || mode === 'student' ? 'phone' : ''}">${content}${ui.error ? `<div class="toast error" role="alert">${esc(ui.error)}</div>` : ''}${ui.notice ? `<div class="toast" role="status">${esc(ui.notice)}</div>` : ''}${state?.role === 'student' || state?.role === 'host' ? modal() : ''}</main>`;
   attachVideo();
+  try { window.LanternMusic?.update({ teacher: mode === 'host' && state?.role === 'host', phase: state?.phase, pin, slot: document.getElementById('teacher-music-slot') }); } catch {}
 }
 
 async function openCamera() {
