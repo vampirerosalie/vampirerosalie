@@ -24,12 +24,12 @@ function frontend() {
   vm.runInContext(source.slice(0, source.lastIndexOf('initialRoute();')) + `
     globalThis.frontend = {
       ui, render, openCamera,
-      setStage(stage) {
+      setStage(stage, dialogue) {
         mode = 'join'; pin = '12345'; token = 'student-token';
         state = { pin, role: 'student', phase: 'active', scene: 2,
           me: { name: 'Reader', q: stage === 'hunt' || stage === 'star' ? 10 : 2, stage, completed: 2, discoveries: [] },
           discovery: { name: 'Damp cloth', action: 'Inspect the damp surface' },
-          journal: [], dialogueHistory: [] };
+          journal: [], dialogueHistory: [], dialogue };
         render();
       },
       setHost(phase = 'active') {
@@ -73,6 +73,15 @@ test('finished student scene shows Lina and Rafi without Mara', () => {
   assert.match(h.app.innerHTML, /character rafi/);
   assert.doesNotMatch(h.app.innerHTML, /character mara/);
 });
+test('both ending dialogue lines show Lina and Rafi without Mara', () => {
+  const h = frontend();
+  for (const dialogue of [['Lina', 'We found it!'], ['Rafi', 'Let’s bring the light back!']]) {
+    h.control.setStage('ending', dialogue);
+    assert.match(h.app.innerHTML, /character lina/);
+    assert.match(h.app.innerHTML, /character rafi/);
+    assert.doesNotMatch(h.app.innerHTML, /character mara/);
+  }
+});
 test('all nine clean clue images and the wide teacher finale image are included', () => {
   for (let number = 1; number <= 9; number++) {
     const image = readFileSync(new URL(`../../public/battle10/assets/evidence-${number}.png`, import.meta.url));
@@ -95,7 +104,8 @@ test('the final hunt retains camera scanning and shows the decoy as an in-camera
   h.control.render();
   assert.match(h.app.innerHTML, /decoy-card/);
   assert.match(h.app.innerHTML, /decoy-object/);
-  assert.match(h.app.innerHTML, /Ha ha! You found the decoy!/);
+  assert.match(h.app.innerHTML, /Ha ha, this is not the real one\. Go find again\./);
+  assert.doesNotMatch(h.app.innerHTML, /You found the decoy|A decoy is harmless/);
   assert.doesNotMatch(h.app.innerHTML, /scan-frame|decoy-modal|modal-backdrop/);
   h.control.ui.decoy = false;
   h.control.setStage('star');
