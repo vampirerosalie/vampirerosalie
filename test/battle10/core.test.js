@@ -12,7 +12,10 @@ function setup(n = 2) {
   const view = token => game.state(host.pin, token);
   return { game, host, students, act, view, room: () => game.room(host.pin), tick: ms => { now += ms; } };
 }
-function dialogue(s, token) { while (['dialogue', 'hunt-dialogue', 'ending'].includes(s.view(token).me.stage)) s.act(token, 'student:dialogue-next'); }
+function dialogue(s, token) {
+  while (['dialogue', 'hunt-dialogue', 'ending'].includes(s.view(token).me.stage)) s.act(token, 'student:dialogue-next');
+  if (s.view(token).me.stage === 'reading') s.act(token, 'student:begin-questions');
+}
 function progress(s, token, q, answer = QUESTIONS[q - 1].answers[0]) {
   dialogue(s, token);
   assert.equal(s.view(token).me.q, q);
@@ -27,6 +30,21 @@ test('passage is complete and question order, vocabulary and dialogue remain ser
   assert.equal(QUESTIONS[0].answers[0], 'fishing boats'); assert.equal(QUESTIONS[9].answers[0], 'the moon cupboard');
   assert.equal(QUESTIONS[7].answers[0], 'reluctant'); assert.equal(QUESTIONS[8].answers[0], 'faint');
   assert.equal(DIALOGUE[1].length, 3);
+});
+test('opening dialogue pauses at the six-page reading stage until the student begins questions', () => {
+  const s = setup(1), token = s.students[0].playerToken;
+  s.act(s.host.hostToken, 'host:start');
+  for (let i = 0; i < DIALOGUE[1].length; i++) s.act(token, 'student:dialogue-next');
+  const reading = s.view(token);
+  assert.equal(reading.me.stage, 'reading'); assert.deepEqual(reading.passage, PASSAGE);
+  assert.equal(s.view(s.host.hostToken).students[0].status, 'Reading passage');
+  assert.throws(() => s.act(token, 'student:submit', { questionNumber: 1, answer: 'boats' }), /no longer open/);
+  const receipt = randomUUID(); s.act(token, 'student:begin-questions', {}, receipt);
+  assert.equal(s.act(token, 'student:begin-questions', {}, receipt).replayed, true);
+  assert.equal(s.view(token).me.stage, 'question');
+  assert.equal(s.view(token).me.completed, 0);
+  assert.deepEqual(s.view(s.host.hostToken).passage, PASSAGE);
+  assert.throws(() => s.act(token, 'student:begin-questions'), /Finish the opening passage/);
 });
 test('two students progress independently through every question, nine objects and the final hunt', () => {
   const s = setup(), a = s.students[0].playerToken, b = s.students[1].playerToken;

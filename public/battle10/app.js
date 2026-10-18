@@ -25,7 +25,7 @@ let mode = 'home', pin = '', token = '', state = null, pending = null, pendingJo
 let generation = 0, pollInFlight = false, actionInFlight = false, joinInFlight = false, lastPoll = 0, lastAction = 0, lastJoin = 0;
 let media = null, scanFrame = 0, lastDecode = 0;
 const ui = { online: navigator.onLine, busy: false, error: '', notice: '', modal: '', seals: null, name: '', entryPin: '', answer: '',
-  feedback: '', cameraError: '', decoy: false, lastScan: '', signature: '', replay: 0 };
+  feedback: '', cameraError: '', decoy: false, lastScan: '', sealAbsentSince: 0, readerPage: 1, signature: '', replay: 0 };
 
 async function api(path, body, auth = token) {
   const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 12000);
@@ -59,6 +59,7 @@ function applyState(next, force = false) {
   if (state && next.version < state.version) return;
   const wasStage = state?.me?.stage;
   state = next;
+  if (next.me?.stage === 'reading' && wasStage !== 'reading') { ui.readerPage = 1; requestAnimationFrame(() => window.scrollTo(0, 0)); }
   if (mode === 'host' && next.role === 'host') {
     storage.set('lantern-keeper:last-host', pin);
     if (window.parent !== window) window.parent.postMessage({ type: 'lantern-keeper:status', pin, phase: next.phase, onlineCount: next.onlineCount }, location.origin);
@@ -66,6 +67,7 @@ function applyState(next, force = false) {
   if (next.phase === 'ended' || (wasStage !== next.me?.stage && !['camera', 'hunt', 'star'].includes(next.me?.stage))) stopCamera();
   const nextSignature = signature(next);
   if (force || nextSignature !== ui.signature) { ui.signature = nextSignature; render(); }
+  if (next.me?.stage === 'hunt' && media && !scanFrame) scanLoop();
 }
 async function loadState() {
   if (!/^\d{5}$/.test(pin) || pollInFlight || mode === 'home' || mode === 'student') return;
@@ -100,7 +102,7 @@ function navigate(nextMode, nextPin = '') {
   if ((nextMode === 'host' || nextMode === 'home') && session.get(studentMarker) !== null) { nextMode = rememberedStudent() ? 'join' : 'student'; nextPin = rememberedStudent(); }
   stopCamera(); generation++; mode = nextMode; pin = nextPin;
   token = nextMode === 'host' ? storage.get(hostKey(pin)) || '' : nextMode === 'join' ? storage.get(playerKey(pin)) || '' : '';
-  state = null; ui.signature = ''; ui.error = ''; ui.feedback = ''; ui.answer = ''; ui.decoy = false; ui.lastScan = ''; ui.modal = ''; ui.busy = false;
+  state = null; ui.signature = ''; ui.error = ''; ui.feedback = ''; ui.answer = ''; ui.decoy = false; ui.lastScan = ''; ui.readerPage = 1; ui.modal = ''; ui.busy = false;
   pending = pin ? saved(pendingKey(pin)) : null; pendingJoin = nextMode === 'join' && !token ? saved(joinKey(pin)) : null;
   if (nextMode === 'host') changeUrl(`?host=${pin}`);
   else if (nextMode === 'join') changeUrl(`?join=${pin}`);
@@ -151,7 +153,7 @@ async function deliverAction() {
       if (data.result.correct) ui.answer = '';
     }
     if (action.type === 'student:scan') {
-      if (data.result.decoy && data.result.first) ui.decoy = true;
+      if (data.result.decoy) ui.decoy = true;
       if (data.result.genuine) { ui.decoy = false; ui.lastScan = ''; notice('You found the genuine keeper’s seal! Tap the glass star.'); }
     }
     if (action.type === 'student:collect') { ui.feedback = ''; ui.cameraError = ''; }
@@ -165,25 +167,26 @@ async function deliverAction() {
 }
 
 function header() {
-  return `<header class="topbar"><div class="brand"><span class="brand-mark">✧</span><span>The Lantern Keeper’s Secret<small>BATTLE 10 · READING ADVENTURE</small></span></div><div class="top-actions"><span class="chip ${ui.online ? 'good' : 'bad'}">${ui.online ? 'Connected' : 'Reconnecting…'}</span>${pin ? `<span class="chip">PIN <b>${pin}</b></span>` : ''}${mode === 'host' ? btn('⛶ Full screen', 'fullscreen', 'button ghost tiny') : ''}</div></header>`;
+  return `<header class="topbar"><div class="brand"><span class="brand-mark">✧</span><span>The Lantern Keeper’s Secret<small>BATTLE 10 · READING ADVENTURE</small></span></div><div class="top-actions"><span class="chip ${ui.online ? 'good' : 'bad'}">${ui.online ? 'Connected' : 'Reconnecting…'}</span>${pin ? `<span class="chip">PIN <b>${pin}</b></span>` : ''}${mode === 'host' && state?.role === 'host' ? `${btn('Show Passage', 'show-passage', 'button ghost tiny')}${btn('Final QR cards', 'seals', 'button ghost tiny')}${btn('⛶ Full screen', 'fullscreen', 'button ghost tiny')}` : ''}</div></header>`;
 }
 function hostLobby() {
   const students = state.students || [];
-  return `${header()}<div class="lobby-grid"><section class="panel scan"><span class="eyebrow">STUDENT ENTRANCE</span><h2>Scan to join</h2><img src="${apiBase}/${pin}/qr.svg" alt="QR code for students to join Battle 10"><p class="muted">Or enter the room PIN</p><div class="pin">${pin}</div>${btn('Copy student link', 'copy-link', 'button ghost wide')}</section><section class="panel"><div class="scene scene-0 lobby-art"><div class="parchment scene-content"><span class="eyebrow">A COASTAL MYSTERY AWAITS</span><h1>The Lantern Keeper’s Secret</h1><p>When the beacon goes dark, every reader begins their own investigation.</p></div></div><span class="eyebrow">LANTERN HOUSE · LIVE LOBBY</span><h2>${students.length} / 40 investigators joined</h2><p class="muted">Each student plays at their own pace. A sleeping phone can reconnect to its saved place.</p>${btn('View and print final hunt QR cards', 'seals', 'button ghost wide')}<p class="muted">Teacher-only: keep the genuine/decoy key off the classroom projector.</p><div class="roster">${students.length ? students.map(s => `<div class="roster-row"><span><i class="dot ${s.online ? '' : 'off'}"></i>${esc(s.name)}</span><small>${s.online ? 'online' : 'place saved'}</small></div>`).join('') : '<p>Waiting for students to scan the QR code…</p>'}</div>${btn('Begin the adventure →', 'start', 'button gold wide', ui.busy || !students.length ? 'disabled' : '')}</section></div>`;
+  return `${header()}<div class="lobby-grid"><section class="panel scan"><span class="eyebrow">STUDENT ENTRANCE</span><h2>Scan to join</h2><img src="${apiBase}/${pin}/qr.svg" alt="QR code for students to join Battle 10"><p class="muted">Or enter the room PIN</p><div class="pin">${pin}</div>${btn('Copy student link', 'copy-link', 'button ghost wide')}</section><section class="panel"><div class="scene scene-0 lobby-art" role="img" aria-label="Lantern House overlooking the harbour"></div><div class="lobby-title"><span class="eyebrow">A COASTAL MYSTERY AWAITS</span><h1>The Lantern Keeper’s Secret</h1><p>When the beacon goes dark, every reader begins their own investigation.</p></div><span class="eyebrow">LANTERN HOUSE · LIVE LOBBY</span><h2>${students.length} / 40 investigators joined</h2><p class="muted">Each student plays at their own pace. A sleeping phone can reconnect to its saved place.</p><div class="roster">${students.length ? students.map(s => `<div class="roster-row"><span><i class="dot ${s.online ? '' : 'off'}"></i>${esc(s.name)}</span><small>${s.online ? 'online' : 'place saved'}</small></div>`).join('') : '<p>Waiting for students to scan the QR code…</p>'}</div>${btn('Begin the adventure →', 'start', 'button gold wide', ui.busy || !students.length ? 'disabled' : '')}</section></div>`;
 }
 function hostDashboard() {
   const students = state.students || [], finished = students.filter(s => s.finished).length;
-  return `${header()}<div class="dashboard-head"><div><span class="eyebrow">TEACHER’S DESK · ROOM ${pin}</span><h1>${state.phase === 'ended' ? 'Adventure ended' : 'The investigation is underway'}</h1><p class="muted">Everyone moves independently. Answers and future clues stay off this screen.</p></div><div class="host-tools">${btn('Print the two hunt seals', 'seals', 'button ghost tiny')}${state.phase !== 'ended' ? btn('End adventure', 'end', 'button red tiny') : btn('Start a new adventure', 'new-room', 'button gold tiny')}</div></div><div class="scene scene-${state.phase === 'ended' ? '4' : '0'} dashboard-hero"><div class="scene-content"><h2>Keep the light alive</h2><p>Check each investigator’s progress while the class follows the story. One finished student never ends the game for the others.</p></div></div><div class="stats"><div class="stat"><b>${students.length}</b><span>joined students</span></div><div class="stat"><b>${state.onlineCount}</b><span>online now</span></div><div class="stat"><b>${finished}</b><span>adventures complete</span></div></div><div class="student-grid">${students.map(s => `<article class="student-row ${s.finished ? 'finished' : ''}"><strong>${esc(s.name)}</strong><small>Q${Math.min(10, s.q)} · ${esc(s.status)} · ${s.online ? 'online' : '<span class="offline">reconnecting</span>'}</small><div class="meter"><i style="width:${Math.min(100, s.completed * 10)}%"></i></div><small>${s.completed}/10 answers · ${s.discoveries}/10 discoveries${s.finalSearch ? ' · final search unlocked' : ''}</small></article>`).join('') || '<p>Waiting for students…</p>'}</div>`;
+  return `${header()}<div class="dashboard-head"><div><span class="eyebrow">TEACHER’S DESK · ROOM ${pin}</span><h1>${state.phase === 'ended' ? 'Adventure ended' : 'The investigation is underway'}</h1><p class="muted">Everyone moves independently. Answers and future clues stay off this screen.</p></div><div class="host-tools">${state.phase !== 'ended' ? btn('End adventure', 'end', 'button red tiny') : btn('Start a new adventure', 'new-room', 'button gold tiny')}</div></div><div class="scene scene-${state.phase === 'ended' ? '4' : '0'} dashboard-hero"><div class="scene-content"><h2>Keep the light alive</h2><p>Check each investigator’s progress while the class follows the story. One finished student never ends the game for the others.</p></div></div><div class="stats"><div class="stat"><b>${students.length}</b><span>joined students</span></div><div class="stat"><b>${state.onlineCount}</b><span>online now</span></div><div class="stat"><b>${finished}</b><span>adventures complete</span></div></div><div class="student-grid">${students.map(s => `<article class="student-row ${s.finished ? 'finished' : ''}"><strong>${esc(s.name)}</strong><small>Q${Math.min(10, s.q)} · ${esc(s.status)} · ${s.online ? 'online' : '<span class="offline">reconnecting</span>'}</small><div class="meter"><i style="width:${Math.min(100, s.completed * 10)}%"></i></div><small>${s.completed}/10 answers · ${s.discoveries}/10 discoveries${s.finalSearch ? ' · final search unlocked' : ''}</small></article>`).join('') || '<p>Waiting for students…</p>'}</div>`;
 }
 function joinView() {
   if (!token) return `${header()}<div class="entry"><div class="scene scene-0"></div><section class="parchment"><span class="eyebrow">YOUR STORY BEGINS HERE</span><h1>Join the adventure</h1><p>Look at your teacher’s screen, then follow the clues on your own phone.</p><label for="student-name">Your name</label><input id="student-name" maxlength="28" autocomplete="name" placeholder="Type your name" value="${esc(ui.name)}">${btn(pendingJoin ? 'Confirming your place…' : 'Enter Lantern House →', 'join', 'button gold wide', ui.busy || pendingJoin ? 'disabled' : '')}</section></div>`;
   if (!state || state.role !== 'student') return `${header()}<div class="entry"><div class="scene scene-0"></div><section class="parchment"><h2>Finding your adventure…</h2><p>Your place is saved on this device. We’re reconnecting it now.</p>${btn('Retry now', 'retry', 'button wide')}</section></div>`;
   if (state.phase === 'lobby') return `${header()}<div class="entry"><div class="scene scene-0"></div><section class="parchment"><span class="eyebrow">INVESTIGATOR READY</span><h1>Welcome, ${esc(state.me.name)}!</h1><p>The teacher will start the adventure. Keep this tab open; your place is saved if your screen sleeps.</p></section></div>`;
-  if (state.phase === 'ended') return `${header()}<div class="entry"><div class="scene scene-${state.me.stage === 'complete' ? 4 : state.scene}"></div><section class="parchment"><span class="eyebrow">TEACHER ENDED THIS ROOM</span><h1>${state.me.stage === 'complete' ? 'Adventure complete' : 'Your progress is saved'}</h1><p>You completed ${state.me.completed} of 10 reading questions and collected ${state.me.discoveries.length} discoveries.</p>${btn('Read Story', 'story', 'button ghost')}${btn('Journal', 'journal', 'button ghost')}</section></div>`;
-  return `${header()}<div class="progress-strip">${esc(state.me.name)} · Question ${Math.min(10, state.me.q)} of 10 · ${state.me.completed} answers · ${state.me.discoveries.length} discoveries</div>${studentStage()}<div class="phone-tools">${btn('▣ Read Story', 'story', 'button ghost')}${btn('▤ Journal', 'journal', 'button ghost')}</div>`;
+  if (state.phase === 'ended') return `${header()}<div class="entry"><div class="scene scene-${state.me.stage === 'complete' ? 4 : state.scene}"></div><section class="parchment"><span class="eyebrow">TEACHER ENDED THIS ROOM</span><h1>${state.me.stage === 'complete' ? 'Adventure complete' : 'Your progress is saved'}</h1><p>You completed ${state.me.completed} of 10 reading questions and collected ${state.me.discoveries.length} discoveries.</p>${btn('Read Passage', 'story', 'button ghost')}${btn('Journal', 'journal', 'button ghost')}</section></div>`;
+  return `${header()}<div class="progress-strip">${esc(state.me.name)} · Question ${Math.min(10, state.me.q)} of 10 · ${state.me.completed} answers · ${state.me.discoveries.length} discoveries</div>${studentStage()}${state.me.stage !== 'reading' ? `<div class="phone-tools">${btn('▣ Read Passage', 'story', 'button ghost')}${btn('▤ Journal', 'journal', 'button ghost')}</div>` : ''}`;
 }
 function studentStage() {
   const me = state.me, stage = me.stage;
+  if (stage === 'reading') return `<div class="initial-reader"><div class="reader-intro"><span class="eyebrow">OPENING STORYBOOK</span><h2>Read the passage before Question 1</h2><p>Turn each page at your own pace. The questions begin after paragraph 6.</p></div>${readerPage(false, true)}</div>`;
   if (stage === 'dialogue' || stage === 'hunt-dialogue' || stage === 'ending') {
     const line = state.dialogue || ['Lina', 'The adventure continues.'], speaker = line[0].toLowerCase();
     const pictureScene = stage === 'ending' ? 4 : stage === 'hunt-dialogue' ? 3 : state.scene;
@@ -199,9 +202,15 @@ function cameraStage() {
   const stage = state.me.stage, isHunt = stage === 'hunt';
   return `<div class="camera-view"><video id="camera-video" autoplay playsinline muted aria-label="Live camera view"></video>${isHunt ? '<div class="scan-frame"></div>' : ''}<div class="camera-head"><span class="eyebrow">${stage === 'camera' ? `DISCOVERY ${state.me.q} / 9` : stage === 'star' ? 'THE GENUINE SEAL' : 'FINAL CLASSROOM HUNT'}</span><h2>${stage === 'camera' ? esc(state.discovery.name) : stage === 'star' ? 'The moon cupboard opens!' : 'Find the keeper’s hidden seal'}</h2></div>${stage === 'camera' ? `<button type="button" class="camera-object" data-action="collect" aria-label="${esc(state.discovery.action)}">${evidence(state.me.q)}<span>${esc(state.discovery.action)}</span></button>` : stage === 'star' ? `<button type="button" class="star-card" data-action="star" aria-label="Tap to collect the glass star"><span class="glass-star"></span><b>Tap to collect the glass star</b></button>` : ''}<div class="camera-foot"><div class="camera-hint">${stage === 'camera' ? 'Point your camera anywhere safe, then tap the illustrated clue. If your camera is unavailable, you can still collect it.' : stage === 'star' ? 'Tap the glowing star to restore the beacon.' : 'Scan either printed keeper seal here. A decoy is harmless; keep searching until you find the real one.'}</div>${ui.cameraError ? `<div class="feedback">${esc(ui.cameraError)}</div>` : ''}<div class="camera-controls">${!media ? btn('Open rear camera', 'open-camera', 'button gold tiny') : btn('Close camera', 'close-camera', 'button ghost tiny')}${isHunt ? btn('Enter seal code instead', 'manual-seal', 'button ghost tiny') : ''}</div></div></div>`;
 }
+function readerPage(projector = false, initial = false) {
+  const page = Math.max(1, Math.min(6, ui.readerPage)), paragraph = state.passage?.[page - 1] || '';
+  const numbers = !initial ? `<nav class="reader-jumps" aria-label="Jump to paragraph">${Array.from({ length: 6 }, (_, index) => btn(`${index + 1}`, `reader-${index + 1}`, `reader-jump ${page === index + 1 ? 'selected' : ''}`, `aria-label="Paragraph ${index + 1}" ${page === index + 1 ? 'aria-current="page"' : ''}`)).join('')}</nav>` : '';
+  const end = initial ? btn(ui.busy ? 'Opening question…' : 'Begin Questions →', 'begin-questions', 'button gold wide', ui.busy ? 'disabled' : '') : projector ? btn('Close Passage', 'close-modal', 'button gold wide') : btn(`Back to Question ${Math.min(10, state.me?.q || 1)}`, 'close-modal', 'button gold wide');
+  return `<article class="reader-page ${projector ? 'projector-reader' : ''}"><div class="reader-heading"><span class="eyebrow">THE LANTERN KEEPER’S SECRET</span><h2>Paragraph ${page} of 6</h2><div class="reader-progress" aria-label="Paragraph ${page} of 6"><span style="width:${page * 100 / 6}%"></span></div></div><img class="reader-illustration" src="./assets/reader-${page}.webp" alt="Illustration for paragraph ${page} of the Lantern House story"><div class="reader-text parchment"><p><b>[${page}]</b> ${esc(paragraph)}</p></div>${numbers}<div class="reader-controls">${btn('← Previous Paragraph', 'reader-prev', 'button ghost', page === 1 ? 'disabled' : '')}${page < 6 ? btn('Next Paragraph →', 'reader-next', 'button gold') : end}</div>${!initial && page < 6 ? `<div class="reader-return">${end}</div>` : ''}</article>`;
+}
 function modal() {
-  if (ui.decoy) return `<div class="modal-backdrop"><div class="modal parchment"><h2>Ha ha! You found the decoy!</h2><p>The real seal is still hidden. Keep searching!</p>${btn('Keep searching →', 'close-decoy', 'button gold wide')}</div></div>`;
-  if (ui.modal === 'story') return `<div class="modal-backdrop"><section class="modal"><div class="modal-head"><h2>Read Story</h2>${btn('Close', 'close-modal', 'button ghost tiny')}</div><div class="parchment passage"><h2>The Lantern Keeper’s Secret</h2>${state.passage.map((paragraph, index) => `<p><b>[${index + 1}]</b> ${esc(paragraph)}</p>`).join('')}</div></section></div>`;
+  if (ui.decoy) return `<div class="modal-backdrop"><section class="modal decoy-modal"><img src="./assets/decoy-reveal.webp" alt="A playful goose hides among paper decorations; this is not the glass star"><div class="parchment decoy-message"><h2>Ha ha! You found the decoy!</h2><p>The real seal is still hidden. Keep searching!</p>${btn('Keep searching →', 'close-decoy', 'button gold wide')}</div></section></div>`;
+  if (ui.modal === 'story' || ui.modal === 'teacher-passage') return `<div class="modal-backdrop"><section class="modal reader-modal ${ui.modal === 'teacher-passage' ? 'teacher-reader-modal' : ''}"><div class="modal-head"><h2>Read Passage</h2>${btn('Close', 'close-modal', 'button ghost tiny')}</div>${readerPage(ui.modal === 'teacher-passage')}</section></div>`;
   if (ui.modal === 'journal') return `<div class="modal-backdrop"><section class="modal"><div class="modal-head"><h2>Investigation Journal</h2>${btn('Close', 'close-modal', 'button ghost tiny')}</div><p class="muted">Only clues you have actually collected appear here. Replaying a scene never grants another discovery.</p><div class="journal-list">${state.journal.map(item => `<article class="journal-item">${item.number === 10 ? '<span class="glass-star"></span>' : evidence(item.number)}<b>${esc(item.name)}</b><small>${esc(item.evidence)}</small></article>`).join('') || '<p>No discoveries yet. Follow the story to begin.</p>'}</div><hr>${state.dialogueHistory?.length ? `<h3>Replay story scenes</h3><div class="camera-controls">${state.dialogueHistory.map(row => btn(`Scene ${row.question}`, `replay-${row.question}`, 'button ghost tiny')).join('')}</div>` : ''}</section></div>`;
   if (ui.modal === 'replay') { const row = state.dialogueHistory?.find(item => item.question === ui.replay); return `<div class="modal-backdrop"><section class="modal"><div class="modal-head"><h2>Scene ${ui.replay} · Replay</h2>${btn('Close', 'close-modal', 'button ghost tiny')}</div><div class="parchment">${row ? row.lines.map(([speaker, text]) => `<p><b>${esc(speaker)}:</b> ${esc(text)}</p>`).join('') : '<p>This scene is not unlocked yet.</p>'}</div></section></div>`; }
   if (ui.modal === 'manual-seal') return `<div class="modal-backdrop"><section class="modal"><div class="modal-head"><h2>Enter a keeper seal</h2>${btn('Close', 'close-modal', 'button ghost tiny')}</div><p class="muted">If your camera cannot scan, type the short code printed beneath a classroom seal.</p><label for="seal-code">Seal code</label><input id="seal-code" class="manual-input" autocomplete="off" autocapitalize="characters" maxlength="20" placeholder="12-character code">${btn('Check this seal', 'check-seal', 'button gold wide')}</section></div>`;
@@ -220,11 +229,11 @@ function render() {
 }
 
 async function openCamera() {
-  if (!['success', 'camera', 'hunt', 'star'].includes(state?.me?.stage) || media) return;
+  if (!['success', 'camera', 'hunt', 'star', 'hunt-dialogue'].includes(state?.me?.stage) || media) return;
   if (!navigator.mediaDevices?.getUserMedia) { ui.cameraError = 'This browser has no camera access. Your reading progress is safe.'; render(); return; }
   try {
     media = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } } });
-    if (!['camera', 'hunt', 'star'].includes(state?.me?.stage) && !(state?.me?.stage === 'success' && pending?.type === 'student:discover')) { stopCamera(); return; }
+    if (!['camera', 'hunt', 'star'].includes(state?.me?.stage) && !(state?.me?.stage === 'success' && pending?.type === 'student:discover') && !(state?.me?.stage === 'hunt-dialogue' && state.me.dialogueIndex === 1)) { stopCamera(); return; }
     ui.cameraError = ''; render();
     if (state?.me?.stage === 'hunt' && !scanFrame) scanLoop();
   } catch { ui.cameraError = 'Camera unavailable or permission denied. Your completed answers are saved. For the final hunt, use a printed seal code or another camera-enabled phone.'; render(); }
@@ -238,7 +247,13 @@ function scanLoop() {
     const ctx = canvas.getContext('2d', { willReadFrequently: true }); ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const found = window.jsQR(pixels.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
-    if (found?.data?.startsWith(`LK1|${pin}|`) && found.data !== ui.lastScan) { ui.lastScan = found.data; void sendAction('student:scan', { code: found.data }); }
+    if (!found?.data) {
+      if (!ui.sealAbsentSince) ui.sealAbsentSince = Date.now();
+      if (Date.now() - ui.sealAbsentSince > 500) ui.lastScan = '';
+    } else {
+      ui.sealAbsentSince = 0;
+      if (found.data.startsWith(`LK1|${pin}|`) && found.data !== ui.lastScan) { ui.lastScan = found.data; void sendAction('student:scan', { code: found.data }); }
+    }
   }
   scanFrame = requestAnimationFrame(scanLoop);
 }
@@ -269,12 +284,21 @@ app.addEventListener('click', event => {
   if (action === 'new-room') { storage.remove('lantern-keeper:last-host'); navigate('home'); void createRoom(true); return; }
   if (action === 'seals') { void showSeals(); return; }
   if (action === 'print-seals') { window.print(); return; }
-  if (action === 'dialogue-next') { void sendAction('student:dialogue-next'); return; }
+  if (action === 'show-passage') { ui.readerPage = 1; ui.modal = 'teacher-passage'; render(); return; }
+  if (action === 'reader-prev' || action === 'reader-next' || /^reader-[1-6]$/.test(action)) {
+    ui.readerPage = action === 'reader-prev' ? Math.max(1, ui.readerPage - 1) : action === 'reader-next' ? Math.min(6, ui.readerPage + 1) : Number(action.slice(7));
+    render(); const scrollBox = document.querySelector('.reader-modal'); if (scrollBox) scrollBox.scrollTo(0, 0); else window.scrollTo(0, 0); return;
+  }
+  if (action === 'begin-questions') { if (state?.me?.stage === 'reading' && ui.readerPage === 6) void sendAction('student:begin-questions'); return; }
+  if (action === 'dialogue-next') {
+    if (state?.me?.stage === 'hunt-dialogue' && state.me.dialogueIndex === 1) void openCamera();
+    void sendAction('student:dialogue-next'); return;
+  }
   if (action === 'submit') { void sendAction('student:submit', { questionNumber: state.me.q, answer: ui.answer }); return; }
   if (action === 'discover') { if (state?.me?.q < 10) void openCamera(); void sendAction('student:discover'); return; }
   if (action === 'collect') { void sendAction('student:collect'); return; }
   if (action === 'star') { void sendAction('student:star'); return; }
-  if (action === 'story' || action === 'journal' || action === 'manual-seal') { ui.modal = action; render(); return; }
+  if (action === 'story' || action === 'journal' || action === 'manual-seal') { if (action === 'story') ui.readerPage = 1; ui.modal = action; render(); return; }
   if (action.startsWith('replay-')) { ui.replay = Number(action.slice(7)); ui.modal = 'replay'; render(); return; }
   if (action === 'close-modal') { ui.modal = ''; render(); return; }
   if (action === 'close-decoy') { ui.decoy = false; render(); return; }

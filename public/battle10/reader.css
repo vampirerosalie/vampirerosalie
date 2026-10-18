@@ -1,0 +1,96 @@
+/* Battle 10 reading and visibility refinements; the original game styles remain intact. */
+.entry .scene-0 {
+  background-image: url('./assets/lobby-wide.webp');
+  background-size: cover;
+  background-position: center;
+  aspect-ratio: 1672 / 941;
+  min-height: 0;
+}
+.entry .scene-0::after { display: none; }
+.entry .parchment { margin: 14px 0 22px; }
+.lobby-art { aspect-ratio: 1672 / 941; min-height: 0; padding: 0; display: block; }
+.lobby-art::after { display: none; }
+.lobby-title { margin-bottom: 21px; }
+.lobby-title h1 { font-size: clamp(26px, 3vw, 43px); line-height: 1.1; }
+.lobby-title p { color: #dfecf7; margin-top: 5px; }
+.camera-object > .evidence {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: url('./assets/evidence.webp');
+  background-size: 300% 300%;
+  background-position: var(--object-x) var(--object-y);
+}
+.reader-intro {
+  margin: 15px 0;
+  padding: 18px;
+  border: 1px solid #ba9964;
+  border-radius: 15px;
+  background: #14314c;
+}
+.reader-intro h2 { color: #ffe5ad; font-size: clamp(23px, 3vw, 31px); }
+.reader-intro p { margin: 7px 0 0; }
+.reader-modal { width: min(100%, 890px); }
+.teacher-reader-modal { width: min(97vw, 1450px); }
+.reader-modal .modal-head h2 { color: #ffe2a9; }
+.reader-page {
+  display: grid;
+  grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  padding: 15px;
+  border: 2px solid #bb9560;
+  border-radius: 18px;
+  background: #102943;
+}
+.reader-heading, .reader-jumps, .reader-controls, .reader-return { grid-column: 1 / -1; }
+.reader-heading .eyebrow { color: #ffdf9b; }
+.reader-heading h2 { color: #ffedc7; font-size: clamp(27px, 3vw, 43px); line-height: 1.15; margin: 4px 0 12px; }
+.reader-progress { height: 9px; border-radius: 99px; background: #42647a; overflow: hidden; }
+.reader-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #e9b258, #ffe1a0); }
+.reader-illustration {
+  width: 100%;
+  height: min(55dvh, 540px);
+  object-fit: contain;
+  border-radius: 12px;
+  background: #071b2d;
+}
+.reader-text { margin: 0; min-height: 100%; padding: clamp(19px, 3vw, 34px); }
+.reader-text p { margin: 0; font: clamp(18px, 1.65vw, 27px)/1.62 Georgia, serif; color: #253144; }
+.reader-text b { color: #214c6b; }
+.reader-jumps { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.reader-jump {
+  min-width: 42px; min-height: 42px; border: 1px solid #d4b684; border-radius: 10px;
+  background: #153b58; color: #fff1d3; font-size: 18px; font-weight: 800; cursor: pointer;
+}
+.reader-jump.selected { background: #f5d387; color: #15344c; }
+.reader-controls { display: flex; justify-content: space-between; gap: 12px; }
+.reader-controls .button { flex: 1; }
+.reader-return .button { width: 100%; }
+.reader-controls .button:disabled { opacity: .5; cursor: default; }
+.phone .reader-page { display: block; }
+.phone .reader-heading, .phone .reader-illustration, .phone .reader-text, .phone .reader-jumps, .phone .reader-controls, .phone .reader-return { margin-bottom: 12px; }
+.phone .reader-illustration { height: auto; max-height: none; }
+.phone .reader-text p { font-size: clamp(19px, 4vw, 23px); line-height: 1.57; }
+.phone .reader-controls { display: flex; flex-direction: column; }
+.phone .reader-controls .button { width: 100%; }
+.decoy-modal { width: min(100%, 570px); text-align: center; }
+.decoy-modal img { display: block; width: 100%; max-height: 53dvh; object-fit: contain; border-radius: 12px; background: #0c243a; }
+.decoy-message { margin: 12px 0 0; }
+.decoy-message h2 { color: #203950; }
+.decoy-message p { font-size: 19px; margin-bottom: 16px; }
+@media (max-width: 700px) {
+  .reader-page { display: block; padding: 10px; }
+  .reader-heading, .reader-illustration, .reader-text, .reader-jumps, .reader-controls, .reader-return { margin-bottom: 12px; }
+  .reader-illustration { height: auto; max-height: none; }
+  .reader-text p { font-size: clamp(19px, 5vw, 23px); line-height: 1.57; }
+  .reader-controls { display: flex; flex-direction: column; }
+  .reader-controls .button { width: 100%; }
+  .reader-modal { padding: 9px; }
+  .reader-jump { min-width: 39px; min-height: 39px; }
+}
+@media print { .reader-modal { display: none !important; } }

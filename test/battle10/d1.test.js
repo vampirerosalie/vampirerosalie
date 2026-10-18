@@ -41,10 +41,21 @@ test('lost response retry uses the durable receipt without incrementing attempts
   const s = await setup(1), t = s.students[0].playerToken;
   await s.act(s.host.hostToken, 'host:start');
   for (let i = 0; i < 3; i++) await s.act(t, 'student:dialogue-next');
+  await s.act(t, 'student:begin-questions');
   const receipt = randomUUID(); s.db.failAfterCommit = true;
   await assert.rejects(s.act(t, 'student:submit', { questionNumber: 1, answer: 'boats' }, receipt), /Lost response/);
   const retry = await s.act(t, 'student:submit', { questionNumber: 1, answer: 'boats' }, receipt);
   assert.equal(retry.replayed, true); assert.equal(s.db.room(s.host.pin).players[0].attempts[0], 1);
+});
+test('opening passage stage and completed reading survive a fresh Worker instance', async () => {
+  const s = await setup(1), t = s.students[0].playerToken;
+  await s.act(s.host.hostToken, 'host:start');
+  for (let i = 0; i < 3; i++) await s.act(t, 'student:dialogue-next');
+  assert.equal((await s.store().state(s.host.pin, t)).me.stage, 'reading');
+  assert.equal((await s.store().state(s.host.pin, s.host.hostToken)).students[0].status, 'Reading passage');
+  await s.act(t, 'student:begin-questions');
+  assert.equal((await s.store().state(s.host.pin, t)).me.stage, 'question');
+  assert.equal(s.db.room(s.host.pin).players[0].readingComplete, true);
 });
 test('HTTP keeps hunt seals and answers private, rejects cross-origin actions and renders join QR', async () => {
   const s = await setup(1), base = `https://example.test/api/lantern/rooms/${s.host.pin}`;

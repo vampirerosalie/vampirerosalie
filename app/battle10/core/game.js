@@ -64,6 +64,7 @@ export class LanternGame {
     if (player.stage === 'camera') return 'Discovery ready';
     if (player.stage === 'success' || player.stage === 'hunt-dialogue') return 'Answer accepted';
     if (player.stage === 'question') return player.q === 8 || player.q === 9 ? 'Vocabulary' : 'Answering';
+    if (player.stage === 'reading') return 'Reading passage';
     if (player.stage === 'ending') return 'Returning to beacon';
     return player.stage === 'lobby' ? 'Waiting' : 'Story dialogue';
   }
@@ -71,7 +72,7 @@ export class LanternGame {
     const base = { pin: room.pin, role: actor.role, version: room.version, phase: room.phase, serverTime: this.now(),
       joinedCount: room.players.length, onlineCount: room.players.filter(p => (this.lastSeen.get(`${room.pin}:${p.id}`) ?? 0) > this.now() - 25000).length };
     if (actor.role === 'host') {
-      return { ...base, students: room.players.map(p => ({ id: p.id, name: p.name, q: p.q, completed: p.accepted.filter(Boolean).length,
+      return { ...base, passage: PASSAGE, students: room.players.map(p => ({ id: p.id, name: p.name, q: p.q, completed: p.accepted.filter(Boolean).length,
         discoveries: p.discoveries.length, status: this.status(p), finalSearch: ['hunt', 'star', 'ending', 'complete'].includes(p.stage),
         finished: p.stage === 'complete', online: (this.lastSeen.get(`${room.pin}:${p.id}`) ?? 0) > this.now() - 25000 })) };
     }
@@ -130,9 +131,14 @@ export class LanternGame {
       const lines = dialogueFor(p.stage, p.q);
       if (++p.dialogueIndex >= lines.length) {
         p.dialogueIndex = 0;
-        p.stage = p.stage === 'hunt-dialogue' ? 'hunt' : p.stage === 'ending' ? 'complete' : 'question';
+        p.stage = p.stage === 'hunt-dialogue' ? 'hunt' : p.stage === 'ending' ? 'complete' : p.q === 1 && !p.readingComplete ? 'reading' : 'question';
       }
       return { advanced: true };
+    }
+    if (type === 'student:begin-questions') {
+      if (p.stage !== 'reading' || p.q !== 1) fail('Finish the opening passage before beginning the questions.');
+      p.readingComplete = true; p.stage = 'question';
+      return { began: true };
     }
     if (type === 'student:submit') {
       if (p.stage !== 'question' || body.questionNumber !== p.q) fail('That question is no longer open for you.', 'STALE_QUESTION');
