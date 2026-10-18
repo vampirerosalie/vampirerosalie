@@ -32,7 +32,7 @@
       if (!audio) {
         audio = new Audio(); audio.preload = 'none'; audio.loop = true;
         audio.addEventListener('error', () => { failed = true; pause(); paint('Music unavailable. The game continues normally.'); });
-        audio.src = '/battle10/assets/lantern-house-theme.wav';
+        audio.src = '/battle10/assets/skye-cuillin.mp3';
       }
       audio.volume = volume;
       if (failed) { failed = false; audio.load(); }
@@ -50,7 +50,7 @@
       panel = document.createElement('section');
       panel.className = 'lantern-music';
       panel.setAttribute('aria-label', 'Teacher background music');
-      panel.innerHTML = '<span class="lantern-music-title">♫ Story music<small>Soft instrumental · no vocals</small></span><button type="button" class="button ghost tiny" aria-pressed="false">Play music</button><label>Volume <input aria-label="Music volume" type="range" min="0" max="100" step="1"></label><span class="lantern-music-status" role="status"></span>';
+      panel.innerHTML = '<span class="lantern-music-title">♫ Story music<small>Skye Cuillin · 3:13</small></span><button type="button" class="button ghost tiny" aria-pressed="false">Play music</button><label>Volume <input aria-label="Music volume" type="range" min="0" max="100" step="1"></label><span class="lantern-music-status" role="status"></span><span class="lantern-music-credit"><a href="https://www.incompetech.com/music/royalty-free/index.html?isrc=USUAN1100346" target="_blank" rel="noopener noreferrer">“Skye Cuillin” by Kevin MacLeod</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></span>';
       button = panel.querySelector('button'); slider = panel.querySelector('input'); status = panel.querySelector('.lantern-music-status');
       button.addEventListener('click', () => void toggle());
       slider.addEventListener('input', () => {
