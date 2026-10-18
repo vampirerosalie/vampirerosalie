@@ -43,7 +43,7 @@ test('teacher-only music starts off and downloads audio only after Play', async 
   assert.equal(s.panel.parts.button.textContent, 'Play music'); assert.equal(s.sounds.length, 0);
   await s.press();
   assert.equal(s.sounds.length, 1);
-  assert.equal(s.sounds[0].src, '/battle9/assets/violet-market.wav');
+  assert.equal(s.sounds[0].src, '/battle10/assets/lantern-house-theme.wav');
   assert.equal(s.sounds[0].preload, 'none'); assert.equal(s.sounds[0].loop, true);
   assert.equal(s.sounds[0].volume, 0.18);
   assert.match(appSource, /mode === 'host' && state\?\.role === 'host' && state\.phase !== 'ended' \? '<div id="teacher-music-slot/);
@@ -79,4 +79,24 @@ test('music errors never call the game API and remain retryable', async () => {
   await s.press(); audio.reject = true; await s.press();
   assert.match(s.panel.parts['.lantern-music-status'].textContent, /game is unaffected/);
   assert.doesNotMatch(source, /fetch\(|WebSocket|api\/|sendAction|setInterval|setTimeout/);
+});
+
+test('Battle 10 has its own playable instrumental file, separate from Battle 9', () => {
+  const lantern = readFileSync(new URL('../../public/battle10/assets/lantern-house-theme.wav', import.meta.url));
+  const market = readFileSync(new URL('../../public/battle9/assets/violet-market.wav', import.meta.url));
+  assert.equal(lantern.toString('ascii', 0, 4), 'RIFF');
+  assert.equal(lantern.toString('ascii', 8, 12), 'WAVE');
+  assert.equal(lantern.readUInt16LE(20), 1); // PCM
+  assert.equal(lantern.readUInt16LE(22), 1); // mono
+  assert.equal(lantern.readUInt16LE(34), 16);
+  assert.ok(lantern.length > 100000);
+  assert.equal(lantern.equals(market), false);
+  let peak = 0, energy = 0;
+  for (let i = 44; i < lantern.length; i += 2) {
+    const sample = lantern.readInt16LE(i) / 32768;
+    peak = Math.max(peak, Math.abs(sample));
+    energy += sample * sample;
+  }
+  assert.ok(peak < 0.9 && Math.sqrt(energy / ((lantern.length - 44) / 2)) > 0.02);
+  assert.ok(Math.abs(lantern.readInt16LE(44) - lantern.readInt16LE(lantern.length - 2)) < 150);
 });

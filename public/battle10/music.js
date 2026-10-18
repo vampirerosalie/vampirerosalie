@@ -32,7 +32,7 @@
       if (!audio) {
         audio = new Audio(); audio.preload = 'none'; audio.loop = true;
         audio.addEventListener('error', () => { failed = true; pause(); paint('Music unavailable. The game continues normally.'); });
-        audio.src = '/battle9/assets/violet-market.wav';
+        audio.src = '/battle10/assets/lantern-house-theme.wav';
       }
       audio.volume = volume;
       if (failed) { failed = false; audio.load(); }
