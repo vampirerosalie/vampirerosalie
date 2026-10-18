@@ -1,0 +1,24 @@
+/* Each setting is a separately cropped illustration, never a stretched atlas. */
+.scene{background-size:cover;background-position:center}
+.scene-0{background-image:url('./assets/scene-0.webp')}
+.scene-1{background-image:url('./assets/scene-1.webp')}
+.scene-2{background-image:url('./assets/scene-2.webp')}
+.scene-3{background-image:url('./assets/scene-3.webp')}
+.scene-4{background-image:url('./assets/scene-4.webp')}
+.hero.scene-0,.dashboard-hero.scene-0{background-image:url('./assets/lobby-wide.webp');background-position:center 46%}
+.lobby-art.scene-0{background-image:url('./assets/lobby-wide.webp');background-position:center 46%}
+.lobby-art{min-height:245px;display:flex;align-items:end;padding:14px;margin-bottom:18px}
+.lobby-art .parchment{padding:13px 17px;max-width:500px}
+.lobby-art h1{font-size:clamp(23px,2.7vw,36px)}
+.lobby-art p{font-size:13px;margin-top:4px}
+.lobby-art .eyebrow{font-size:9px;margin-bottom:4px}
+.scan img{width:min(100%,285px);margin:10px auto}
+.hero.scene-0:after{background:linear-gradient(90deg,#071a2a60,transparent 75%)}
+.character.mara.support{left:32%;right:auto;width:37%;height:55%;z-index:1;opacity:.9}
+@media print{
+  .shell{display:block!important;max-width:none;padding:0}
+  .shell>:not(.modal-backdrop){display:none!important}
+  .modal-backdrop{display:block!important;position:static;padding:0;background:#fff}
+  .modal{display:block!important;max-height:none;overflow:visible}
+  .seal-card{padding:10mm}
+}
