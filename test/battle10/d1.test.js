@@ -43,9 +43,30 @@ test('lost response retry uses the durable receipt without incrementing attempts
   for (let i = 0; i < 3; i++) await s.act(t, 'student:dialogue-next');
   await s.act(t, 'student:begin-questions');
   const receipt = randomUUID(); s.db.failAfterCommit = true;
-  await assert.rejects(s.act(t, 'student:submit', { questionNumber: 1, answer: 'boats' }, receipt), /Lost response/);
-  const retry = await s.act(t, 'student:submit', { questionNumber: 1, answer: 'boats' }, receipt);
+  await assert.rejects(s.act(t, 'student:submit', { questionNumber: 1, answer: 'fishing boats' }, receipt), /Lost response/);
+  const retry = await s.act(t, 'student:submit', { questionNumber: 1, answer: 'fishing boats' }, receipt);
   assert.equal(retry.replayed, true); assert.equal(s.db.room(s.host.pin).players[0].attempts[0], 1);
+  assert.equal((await s.store().state(s.host.pin, t)).me.stage, 'success');
+});
+test('parallel late joins share the active room and do not reset students already playing', async () => {
+  const s = await setup(2), first = s.students[0].playerToken;
+  await s.act(s.host.hostToken, 'host:start');
+  for (let i = 0; i < 3; i++) await s.act(first, 'student:dialogue-next');
+  await s.act(first, 'student:begin-questions');
+  const lateClients = Array.from({ length: 12 }, (_, i) => ({ clientId: randomUUID(), name: `Late ${i + 1}` }));
+  const late = await Promise.all(lateClients.map(client => s.store().join(s.host.pin, client)));
+  const hostView = await s.store().state(s.host.pin, s.host.hostToken);
+  assert.equal(hostView.students.length, 14);
+  assert.equal((await s.store().state(s.host.pin, first)).me.stage, 'question');
+  for (const student of late) {
+    const view = await s.store().state(s.host.pin, student.playerToken);
+    assert.equal(view.me.q, 1); assert.equal(view.me.stage, 'dialogue');
+  }
+  const again = await s.store().join(s.host.pin, lateClients[0]);
+  assert.equal(again.playerId, late[0].playerId);
+  assert.equal((await s.store().state(s.host.pin, s.host.hostToken)).students.length, 14);
+  await s.act(s.host.hostToken, 'host:end');
+  await assert.rejects(s.store().join(s.host.pin, { clientId: randomUUID(), name: 'Too late' }), /ended/);
 });
 test('opening passage stage and completed reading survive a fresh Worker instance', async () => {
   const s = await setup(1), t = s.students[0].playerToken;

@@ -57,7 +57,7 @@ test('two students progress independently through every question, nine objects a
     assert.equal(s.view(b).me.stage, 'dialogue');
   }
   const before = s.view(a); assert.equal(before.me.q, 10); assert.equal(before.me.discoveries.length, 9);
-  progress(s, a, 10, ' THE MOON CUPBOARD. ');
+  progress(s, a, 10, ' The moon cupboard ');
   assert.equal(s.view(a).me.stage, 'hunt');
   assert.equal(s.view(a).me.completed, 10);
   assert.equal(s.view(a).me.discoveries.length, 9);
@@ -71,13 +71,14 @@ test('two students progress independently through every question, nine objects a
   assert.equal(s.view(b).me.stage, 'dialogue');
   const host = s.view(s.host.hostToken); assert.equal(host.students[0].finished, true); assert.equal(host.students[1].finished, false);
 });
-test('accepted answer variants, strict vocabulary, word limit, retry and hint', () => {
+test('strict answers retain word limit, retry and hint without unlocking on rejection', () => {
   const s = setup(1), t = s.students[0].playerToken; s.act(s.host.hostToken, 'host:start'); dialogue(s, t);
   assert.equal(s.act(t, 'student:submit', { questionNumber: 1, answer: 'a boat' }).result.correct, false);
   assert.equal(s.act(t, 'student:submit', { questionNumber: 1, answer: 'not fishing boats' }).result.correct, false);
   assert.match(s.view(t).me.hint, /waiting outside/i);
   assert.throws(() => s.act(t, 'student:submit', { questionNumber: 1, answer: 'one two three four five six' }), /five words/);
-  assert.equal(s.act(t, 'student:submit', { questionNumber: 1, answer: '  BOATS!! ' }).result.correct, true);
+  assert.equal(s.view(t).me.stage, 'question'); assert.equal(s.view(t).me.discoveries.length, 0);
+  assert.equal(s.act(t, 'student:submit', { questionNumber: 1, answer: '  fishing boats  ' }).result.correct, true);
   assert.equal(s.view(t).me.stage, 'success');
   assert.throws(() => s.act(t, 'student:submit', { questionNumber: 1, answer: 'boats' }), /no longer open/);
   s.act(t, 'student:discover'); s.act(t, 'student:collect');
@@ -85,16 +86,39 @@ test('accepted answer variants, strict vocabulary, word limit, retry and hint', 
   dialogue(s, t); assert.equal(s.view(t).me.q, 8);
   assert.equal(s.act(t, 'student:submit', { questionNumber: 8, answer: 'hesitant' }).result.correct, false);
   assert.throws(() => s.act(t, 'student:submit', { questionNumber: 8, answer: 'very reluctant' }), /one word/);
-  assert.equal(s.act(t, 'student:submit', { questionNumber: 8, answer: 'RELUCTANT.' }).result.correct, true);
+  assert.equal(s.act(t, 'student:submit', { questionNumber: 8, answer: 'Reluctant' }).result.correct, true);
   s.act(t, 'student:discover'); s.act(t, 'student:collect');
   assert.equal(s.view(t).me.q, 9); assert.equal(s.view(t).me.stage, 'question');
-  assert.equal(s.act(t, 'student:submit', { questionNumber: 9, answer: 'faint.' }).result.correct, true);
+  assert.equal(s.act(t, 'student:submit', { questionNumber: 9, answer: 'Faint' }).result.correct, true);
 });
-test('every approved short-answer variation is accepted as a complete answer', () => {
+test('every approved exact answer is accepted, with only outer whitespace trimmed', () => {
   for (let q = 1; q <= 10; q++) for (const variant of QUESTIONS[q - 1].answers) {
     const s = setup(1), token = s.students[0].playerToken;
     const room = s.room(), player = room.players[0]; room.phase = 'active'; player.stage = 'question'; player.q = q;
-    assert.equal(s.act(token, 'student:submit', { questionNumber: q, answer: `  ${variant.toUpperCase()}.  ` }).result.correct, true, `Q${q}: ${variant}`);
+    assert.equal(s.act(token, 'student:submit', { questionNumber: q, answer: `  ${variant}  ` }).result.correct, true, `Q${q}: ${variant}`);
+    assert.equal(s.view(token).me.stage, 'success');
+  }
+});
+test('unapproved capitalisation, synonyms, fragments, punctuation and extra words never unlock discoveries', () => {
+  const rejected = {
+    1: ['Fishing boats', 'FISHING BOATS', 'boats', 'the fishing boats', 'fishing boats.', 'fishing  boats'],
+    2: ['RAINWATER', 'water', 'rain water', 'Rainwater.', 'rainwater and cloth'],
+    3: ['Copper', 'copper', 'The Copper Lantern', 'the copper lantern.', 'copper lantern and silver'],
+    4: ['handle', 'The Damaged Handle', 'a damaged handle', 'the damaged handle.'],
+    5: ['walkway', 'The covered walkway', 'a Covered walkway', 'covered walkway.'],
+    6: ['stone floor', 'the firm stone floor', 'Its Firm Stone Floor', 'firm stone floor.'],
+    7: ['shutter', 'the loose shutter', 'A Loose Shutter', 'loose shutter.'],
+    8: ['RELUCTANT', 'hesitant', 'reluctantly', 'reluctant.'],
+    9: ['FAINT', 'faintly', 'weak', 'Faint.'],
+    10: ['moon', 'moon or sun', 'The Moon Cupboard', 'the moon cupboard.'],
+  };
+  for (let q = 1; q <= 10; q++) for (const answer of rejected[q]) {
+    const s = setup(1), token = s.students[0].playerToken;
+    const room = s.room(), player = room.players[0]; room.phase = 'active'; player.stage = 'question'; player.q = q;
+    assert.equal(s.act(token, 'student:submit', { questionNumber: q, answer }).result.correct, false, `Q${q}: ${answer}`);
+    assert.equal(s.view(token).me.stage, 'question');
+    assert.equal(s.view(token).me.discoveries.length, 0);
+    assert.throws(() => s.act(token, 'student:discover'), /Answer the reading question first/);
   }
 });
 test('sealed QR claims cannot bypass reading or duplicate collection; retry receipt is idempotent', () => {
@@ -124,4 +148,19 @@ test('a room accepts 40 independent students, preserves reconnect identity, and 
   s.act(s.host.hostToken, 'host:start'); s.act(s.host.hostToken, 'host:end');
   assert.equal(s.view(s.students[0].playerToken).phase, 'ended');
   assert.throws(() => s.act(s.students[0].playerToken, 'student:dialogue-next'), /ended/);
+  assert.throws(() => s.game.join(s.host.pin, { clientId: randomUUID(), name: 'Late student' }), /ended/);
+});
+test('late students join the same active room at Question 1 without resetting existing students', () => {
+  const s = setup(1), first = s.students[0].playerToken;
+  s.act(s.host.hostToken, 'host:start'); dialogue(s, first);
+  assert.equal(s.view(first).me.stage, 'question');
+  const identity = randomUUID();
+  const late = s.game.join(s.host.pin, { clientId: identity, name: 'Late student' });
+  assert.equal(s.view(late.playerToken).phase, 'active');
+  assert.equal(s.view(late.playerToken).me.q, 1);
+  assert.equal(s.view(late.playerToken).me.stage, 'dialogue');
+  assert.equal(s.view(first).me.stage, 'question');
+  assert.equal(s.view(s.host.hostToken).students.length, 2);
+  assert.equal(s.game.join(s.host.pin, { clientId: identity, name: 'Renamed' }).playerId, late.playerId);
+  assert.equal(s.view(s.host.hostToken).students.length, 2);
 });

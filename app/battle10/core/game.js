@@ -10,7 +10,7 @@ const equal = (a, b) => typeof a === 'string' && typeof b === 'string' && a.leng
 const id = () => randomBytes(12).toString('hex');
 const seal = () => randomBytes(9).toString('base64url').toUpperCase();
 const nameOf = value => String(value ?? '').normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 28);
-const answerOf = value => String(value ?? '').normalize('NFKC').toLowerCase().replace(/[’‘]/g, "'").trim().replace(/[.!?。！？]+$/u, '').replace(/\s+/g, ' ').trim();
+const answerOf = value => String(value ?? '').trim();
 export const sceneFor = q => q <= 1 ? 0 : q <= 5 ? 1 : q <= 6 ? 2 : 3;
 const dialogueFor = (stage, q) => stage === 'hunt-dialogue' ? DIALOGUE.hunt : stage === 'ending' ? DIALOGUE.ending : DIALOGUE[q] ?? [];
 
@@ -39,11 +39,11 @@ export class LanternGame {
     if (typeof clientId !== 'string' || !/^[-a-zA-Z0-9]{20,100}$/.test(clientId)) fail('Reload this phone to create its saved identity.', 'BAD_IDENTITY', 400);
     const existing = room.players.find(p => p.clientId === clientId);
     if (existing) { this.touch(room, existing); return { playerId: existing.id, playerToken: this.studentToken(room, clientId) }; }
-    if (room.phase !== 'lobby') fail('The adventure has begun. Joined students may still reconnect.', 'JOIN_CLOSED');
+    if (room.phase !== 'lobby' && room.phase !== 'active') fail('This adventure has ended. Joined students may still reconnect.', 'JOIN_CLOSED');
     if (room.players.length >= 40) fail('This adventure room has 40 students already.', 'ROOM_FULL');
     if (!nameOf(name)) fail('Enter your name.');
     const token = this.studentToken(room, clientId);
-    const player = { id: id(), clientId, tokenHash: hash(token), name: nameOf(name), q: 1, stage: 'lobby', dialogueIndex: 0,
+    const player = { id: id(), clientId, tokenHash: hash(token), name: nameOf(name), q: 1, stage: room.phase === 'active' ? 'dialogue' : 'lobby', dialogueIndex: 0,
       attempts: Array(10).fill(0), accepted: Array(10).fill(null), hints: [], discoveries: [], decoySeen: false };
     room.players.push(player); room.version++; this.touch(room, player); this.save(room);
     return { playerId: player.id, playerToken: token };
@@ -146,7 +146,7 @@ export class LanternGame {
       const answer = answerOf(body.answer), question = QUESTIONS[p.q - 1], words = answer ? answer.split(' ').length : 0;
       if (!answer || words > (question.vocabulary ? 1 : 5)) fail(question.vocabulary ? 'Enter one word from the passage.' : 'Use no more than five words from the passage.', 'BAD_ANSWER', 400);
       p.attempts[p.q - 1] = Math.min(999, p.attempts[p.q - 1] + 1);
-      const correct = question.answers.some(variant => answerOf(variant) === answer);
+      const correct = question.answers.includes(answer);
       if (correct) { p.accepted[p.q - 1] = answer; p.stage = 'success'; }
       return { correct, attempts: p.attempts[p.q - 1] };
     }

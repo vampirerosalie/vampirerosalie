@@ -21,9 +21,14 @@
   padding: 0;
   border-radius: 0;
   background-color: transparent;
-  background-image: url('./assets/evidence.webp');
-  background-size: 300% 300%;
-  background-position: var(--object-x) var(--object-y);
+  object-fit: contain;
+  background-image: none;
+}
+.evidence {
+  object-fit: contain;
+  background-image: none;
+  background-size: auto;
+  background-position: center;
 }
 .reader-intro {
   margin: 15px 0;
