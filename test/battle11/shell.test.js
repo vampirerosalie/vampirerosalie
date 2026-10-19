@@ -31,7 +31,7 @@ test('one shared menu renders all eleven battles including the default teacher m
   assert.equal((page.match(/<BattleTabs /g) || []).length, 3);
   assert.doesNotMatch(page, /BATTLE_CHOICES|className="battle-tabs"/);
   assert.match(page, /isMuseum \? <MuseumFrame frameRef=\{frameRef\}/);
-  assert.match(page, /\['lobby', 'finished', 'ended'\]\.includes\(standaloneStatus\.phase\)/);
+  assert.match(page, /isMuseum \|\| \['lobby', 'finished', 'ended'\]\.includes\(standaloneStatus\.phase\)/);
 });
 
 function frameHarness() {

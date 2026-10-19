@@ -142,3 +142,20 @@ test('Battle 11 menu survives refresh and reconnection to an ended adventure', (
   fresh.message(status); assert.equal(fresh.tabs().props.selected, 11);
   assert.match(JSON.stringify(fresh.tree), /54321/);
 });
+
+test('Battle 11 keeps the battle menu during play, refresh and reconnection', () => {
+  const h = harness({ search: '?battle=11&teacher=1' });
+  assert.equal(h.tabs().props.selected, 11);
+  const status = { type: 'museum-jewel:status', pin: '54321', phase: 'active', onlineCount: 12 };
+  h.message(status);
+  assert.equal(h.tabs().props.selected, 11);
+  assert.match(JSON.stringify(h.tree), /is in progress/);
+  h.go('?battle=11&teacher=1', 'pageshow');
+  assert.equal(h.tabs().props.selected, 11);
+  const fresh = harness({ search: '?battle=11&teacher=1' });
+  fresh.message(status);
+  assert.equal(fresh.tabs().props.selected, 11);
+  assert.match(JSON.stringify(fresh.tree), /54321/);
+  fresh.tabs().props.onSelect(10);
+  assert.equal(fresh.location.href, '/?battle=10&teacher=1');
+});

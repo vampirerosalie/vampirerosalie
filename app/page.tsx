@@ -1038,8 +1038,8 @@ export default function Home() {
       <button type="button" className="fullscreen-button" aria-pressed={isFullscreen} onClick={() => void toggleFullscreen()}><span aria-hidden="true">{isFullscreen ? '↙' : '⛶'}</span>{isFullscreen ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
     </header>
     {fullscreenError && <p role="status">{fullscreenError}</p>}
-    {['lobby', 'finished', 'ended'].includes(standaloneStatus.phase) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
-      <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle} is ready</strong></div>
+    {(isMuseum || ['lobby', 'finished', 'ended'].includes(standaloneStatus.phase)) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
+      <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle}{isMuseum && standaloneStatus.phase === 'active' ? ' is in progress' : ' is ready'}</strong></div>
       <BattleTabs selected={standaloneBattle} onSelect={battle => { if (battle !== standaloneBattle) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }} />
     </section>}
     {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow="fullscreen" style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />}
