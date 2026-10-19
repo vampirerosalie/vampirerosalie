@@ -7,6 +7,7 @@ import QRCode from 'qrcode';
 import jsQR from 'jsqr';
 import { LanternD1Store } from '../../app/battle10/d1-store.js';
 import { handleLanternRequest } from '../../app/battle10/http.js';
+import { sealPayload } from '../../app/battle10/core/game.js';
 
 class TestD1 {
   constructor() { this.sqlite = new DatabaseSync(':memory:'); this.sqlite.exec('PRAGMA foreign_keys=ON'); this.conflicts = 0; this.failAfterCommit = false; }
@@ -94,10 +95,10 @@ test('HTTP keeps hunt seals and answers private, rejects cross-origin actions an
   const cross = await handle(req('/action', { type: 'host:start', requestId: randomUUID() }, s.host.hostToken, { origin: 'https://evil.test' }));
   assert.equal(cross.status, 403);
 });
-test('printed seal payloads decode to the exact in-game room token format', async () => {
+test('printed seal payloads decode to the permanent room-independent format', async () => {
   const s = await setup(1), seals = await s.store().seals(s.host.pin, s.host.hostToken);
   for (const code of [seals.genuine, seals.decoy]) {
-    const payload = `LK1|${s.host.pin}|${code}`, qr = QRCode.create(payload, { errorCorrectionLevel: 'M' });
+    const payload = sealPayload(code), qr = QRCode.create(payload, { errorCorrectionLevel: 'M' });
     const scale = 7, margin = 4, width = (qr.modules.size + margin * 2) * scale, pixels = new Uint8ClampedArray(width * width * 4);
     for (let y = 0; y < width; y++) for (let x = 0; x < width; x++) {
       const moduleX = Math.floor(x / scale) - margin, moduleY = Math.floor(y / scale) - margin;
@@ -106,4 +107,16 @@ test('printed seal payloads decode to the exact in-game room token format', asyn
     }
     assert.equal(jsQR(pixels, width, width)?.data, payload);
   }
+});
+
+test('HTTP returns identical permanent QR artwork and roles across persisted rooms, with different joining QRs', async () => {
+  const s = await setup(1), next = await s.store().create();
+  const get = async (room, endpoint) => handleLanternRequest(new Request(`https://example.test/api/lantern/rooms/${room.pin}/${endpoint}`, {
+    headers: { authorization: 'Bearer ' + room.hostToken },
+  }), s.db, s.options);
+  const first = await (await get(s.host, 'seals')).json(), second = await (await get(next, 'seals')).json();
+  assert.deepEqual(first, second); assert.equal(first.genuineCard, 'A');
+  assert.notEqual(await (await get(s.host, 'qr.svg')).text(), await (await get(next, 'qr.svg')).text());
+  const expected = await QRCode.toString(sealPayload(first.genuine.code), { type: 'svg', errorCorrectionLevel: 'M', margin: 4, width: 420, color: { dark: '#18334b', light: '#ffffff' } });
+  assert.equal(first.genuine.svg, expected);
 });

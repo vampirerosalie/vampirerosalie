@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 import { createHash } from 'node:crypto';
-import { GameError } from './core/game.js';
+import { GameError, sealPayload } from './core/game.js';
 import { LanternD1Store } from './d1-store.js';
 
 const MAX_BODY_BYTES = 4096;
@@ -58,7 +58,7 @@ export async function handleLanternRequest(request, db, options = {}) {
       return new Response(svg, { headers: { ...headers, 'Content-Type': 'image/svg+xml; charset=utf-8' } });
     }
     if (operation === 'seals' && request.method === 'GET') {
-      const cards = await store.seals(pin, token), make = async code => QRCode.toString(`LK1|${pin}|${code}`, { type: 'svg', errorCorrectionLevel: 'M', margin: 3, width: 420, color: { dark: '#18334b', light: '#fff8e6' } });
+      const cards = await store.seals(pin, token), make = async code => QRCode.toString(sealPayload(code), { type: 'svg', errorCorrectionLevel: 'M', margin: 4, width: 420, color: { dark: '#18334b', light: '#ffffff' } });
       return json({ genuine: { code: cards.genuine, svg: await make(cards.genuine) }, decoy: { code: cards.decoy, svg: await make(cards.decoy) }, genuineCard: cards.genuineCard });
     }
     throw new GameError('Method not allowed.', 'METHOD_NOT_ALLOWED', 405);

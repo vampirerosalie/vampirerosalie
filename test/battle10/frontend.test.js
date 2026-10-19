@@ -67,6 +67,18 @@ test('teacher can show the same join QR during play, but not after ending', () =
   h.control.setHost('ended');
   assert.doesNotMatch(h.app.innerHTML, /Show join QR|join-qr-image/);
 });
+
+test('teacher print panel explains one-time printing and fixed roles without exposing the key on the cards', () => {
+  const h = frontend(); h.control.setHost();
+  h.control.ui.seals = { genuineCard: 'A', genuine: { code: 'GENUINE', svg: '<svg></svg>' }, decoy: { code: 'DECOY', svg: '<svg></svg>' } };
+  h.control.ui.modal = 'seals'; h.control.render();
+  assert.match(h.app.innerHTML, /reuse them for every new Battle 10 game/);
+  assert.match(h.app.innerHTML, /Only the joining QR changes/);
+  assert.match(h.app.innerHTML, /Their roles stay the same in every game/);
+  const cards = h.app.innerHTML.match(/<article class="seal-card">.*?<\/article>/g);
+  assert.equal(cards.length, 2);
+  for (const card of cards) assert.doesNotMatch(card, /Private key|is genuine|is the decoy/);
+});
 test('finished student scene shows Lina and Rafi without Mara', () => {
   const h = frontend(); h.control.setStage('complete');
   assert.match(h.app.innerHTML, /character lina/);

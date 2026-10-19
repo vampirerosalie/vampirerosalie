@@ -8,7 +8,10 @@ const fail = (message, code = 'INVALID_ACTION', status = 409) => { throw new Gam
 const hash = value => createHash('sha256').update(value).digest('hex');
 const equal = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 const id = () => randomBytes(12).toString('hex');
-const seal = () => randomBytes(9).toString('base64url').toUpperCase();
+// Permanent classroom cards: never regenerate these when creating a room.
+// Their meaning stays server-side; scanning uses the student's authenticated room.
+export const PERMANENT_SEALS = Object.freeze({ genuine: 'N7QK2M8R4V6H', decoy: 'T5H9M3VP8C2L', genuineCard: 'A' });
+export const sealPayload = code => `LK2|S|${code}`;
 const nameOf = value => String(value ?? '').normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 28);
 const answerOf = value => String(value ?? '').trim();
 export const sceneFor = q => q <= 1 ? 0 : q <= 5 ? 1 : q <= 6 ? 2 : 3;
@@ -30,7 +33,7 @@ export class LanternGame {
     let pin; do { pin = String(10000 + this.random(90000)); } while (this.rooms.has(pin));
     const hostToken = randomBytes(32).toString('hex');
     const room = { pin, hostHash: hash(hostToken), createdAt: this.now(), expiresAt: this.now() + this.retentionMs,
-      version: 1, phase: 'lobby', players: [], seals: { genuine: seal(), decoy: seal(), genuineCard: this.random(2) === 0 ? 'A' : 'B' }, receipts: {} };
+      version: 1, phase: 'lobby', players: [], seals: { ...PERMANENT_SEALS }, receipts: {} };
     this.rooms.set(pin, room); this.save(room); return { pin, hostToken };
   }
   studentToken(room, clientId) { return createHmac('sha256', this.secret).update(`lantern:${room.pin}:${room.createdAt}:${clientId}`).digest('hex'); }
@@ -94,7 +97,7 @@ export class LanternGame {
   sealCards(pin, token) {
     const room = this.room(pin), actor = this.auth(room, token);
     if (actor.role !== 'host') fail('Only the teacher can print hunt seals.', 'FORBIDDEN', 403);
-    return { pin, genuine: room.seals.genuine, decoy: room.seals.decoy, genuineCard: room.seals.genuineCard };
+    return { pin, ...PERMANENT_SEALS };
   }
   action(pin, token, body = {}) {
     const room = this.room(pin), actor = this.auth(room, token);
@@ -165,10 +168,15 @@ export class LanternGame {
     if (type === 'student:scan') {
       if (p.stage !== 'hunt' || !p.accepted[9] || p.discoveries.length !== 9) fail('Finish the investigation before scanning a seal.', 'HUNT_LOCKED');
       const scanned = String(body.code ?? '').trim().toUpperCase();
-      const code = scanned.startsWith(`LK1|${room.pin}|`) ? scanned.slice(10) : scanned;
-      if (equal(code, room.seals.decoy)) { const first = !p.decoySeen; p.decoySeen = true; return { decoy: true, first }; }
-      if (equal(code, room.seals.genuine)) { p.stage = 'star'; return { genuine: true }; }
-      fail('That is not one of this room’s two hidden seals. Keep searching.', 'UNKNOWN_SEAL');
+      // LK2 carries no room identity. Legacy LK1 cards remain valid only in
+      // their original room, so existing printed games are not interrupted.
+      const permanent = scanned.startsWith('LK2|S|') ? scanned.slice(6) : scanned;
+      const legacy = scanned.startsWith(`LK1|${room.pin}|`) ? scanned.slice(10) : scanned;
+      if (equal(permanent, PERMANENT_SEALS.decoy) || equal(legacy, room.seals?.decoy)) {
+        const first = !p.decoySeen; p.decoySeen = true; return { decoy: true, first };
+      }
+      if (equal(permanent, PERMANENT_SEALS.genuine) || equal(legacy, room.seals?.genuine)) { p.stage = 'star'; return { genuine: true }; }
+      fail('That is not a keeper seal for this adventure. Keep searching.', 'UNKNOWN_SEAL');
     }
     if (type === 'student:star') {
       if (p.stage !== 'star' || !p.accepted[9]) fail('Find the genuine seal first.', 'SEAL_REQUIRED');

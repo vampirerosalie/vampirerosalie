@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { LanternGame } from '../../app/battle10/core/game.js';
+import { LanternGame, PERMANENT_SEALS, sealPayload } from '../../app/battle10/core/game.js';
 import { DIALOGUE, PASSAGE, QUESTIONS } from '../../app/battle10/data.js';
 
 function setup(n = 2) {
@@ -163,4 +163,47 @@ test('late students join the same active room at Question 1 without resetting ex
   assert.equal(s.view(s.host.hostToken).students.length, 2);
   assert.equal(s.game.join(s.host.pin, { clientId: identity, name: 'Renamed' }).playerId, late.playerId);
   assert.equal(s.view(s.host.hostToken).students.length, 2);
+});
+
+test('permanent seals work across new rooms but only advance the authenticated student after the hunt unlocks', () => {
+  const s = setup(2), token = s.students[0].playerToken;
+  s.game.random = () => 1;
+  const host2 = s.game.create(), student2 = s.game.join(host2.pin, { clientId: randomUUID(), name: 'Next class' });
+  const other = {
+    view: t => s.game.state(host2.pin, t),
+    act: (t, type, extra = {}, requestId = randomUUID()) => s.game.action(host2.pin, t, { type, requestId, ...extra }),
+  };
+  const cards = s.game.sealCards(s.host.pin, s.host.hostToken), nextCards = s.game.sealCards(host2.pin, host2.hostToken);
+  assert.notEqual(cards.pin, nextCards.pin);
+  for (const key of ['genuine', 'decoy', 'genuineCard']) assert.equal(cards[key], nextCards[key]);
+  s.act(s.host.hostToken, 'host:start'); other.act(host2.hostToken, 'host:start');
+  assert.throws(() => other.act(student2.playerToken, 'student:scan', { code: sealPayload(cards.genuine) }), /Finish the investigation/);
+  for (let q = 1; q <= 10; q++) progress(s, token, q);
+  assert.equal(s.act(token, 'student:scan', { code: sealPayload(cards.decoy) }).result.decoy, true);
+  assert.equal(s.act(token, 'student:scan', { code: sealPayload(cards.decoy) }).result.first, false);
+  assert.equal(s.view(token).me.stage, 'hunt');
+  assert.throws(() => s.act(token, 'student:scan', { code: 'https://unrelated.example/' }), /not a keeper seal/);
+  s.act(token, 'student:scan', { code: sealPayload(cards.genuine) });
+  const receipt = randomUUID(); s.act(token, 'student:star', {}, receipt);
+  assert.equal(s.act(token, 'student:star', {}, receipt).replayed, true);
+  assert.equal(s.view(token).me.discoveries.length, 10);
+  assert.equal(s.view(s.students[1].playerToken).me.discoveries.length, 0);
+  assert.equal(other.view(student2.playerToken).me.discoveries.length, 0);
+  s.act(s.host.hostToken, 'host:end');
+  for (let q = 1; q <= 10; q++) progress(other, student2.playerToken, q);
+  assert.equal(other.act(student2.playerToken, 'student:scan', { code: sealPayload(cards.genuine) }).result.genuine, true);
+  assert.equal(other.view(student2.playerToken).me.stage, 'star');
+});
+
+test('legacy printed room seals remain valid only in their original room; new printouts are permanent', () => {
+  const s = setup(1), token = s.students[0].playerToken;
+  s.room().seals = { genuine: 'OLDGENUINE12', decoy: 'OLDDECOY1234', genuineCard: 'B' };
+  const cards = s.game.sealCards(s.host.pin, s.host.hostToken);
+  assert.equal(cards.genuine, PERMANENT_SEALS.genuine); assert.equal(cards.genuineCard, 'A');
+  s.act(s.host.hostToken, 'host:start');
+  for (let q = 1; q <= 10; q++) progress(s, token, q);
+  assert.throws(() => s.act(token, 'student:scan', { code: 'LK1|99999|OLDGENUINE12' }), /not a keeper seal/);
+  assert.equal(s.act(token, 'student:scan', { code: `LK1|${s.host.pin}|OLDDECOY1234` }).result.decoy, true);
+  assert.equal(s.act(token, 'student:scan', { code: PERMANENT_SEALS.decoy }).result.decoy, true);
+  assert.equal(s.act(token, 'student:scan', { code: `LK1|${s.host.pin}|OLDGENUINE12` }).result.genuine, true);
 });
