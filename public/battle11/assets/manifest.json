@@ -1,0 +1,15 @@
+{
+  "game": "The Missing Museum Jewel",
+  "style": "Handcrafted 2.5D paper-cut museum detective scenes in burgundy, antique gold and parchment, with a restrained blue jewel accent",
+  "generator": "OpenAI imagegen",
+  "assets": [
+    { "file": "museum-hero.png", "purpose": "Museum lobby, case title, and detective introduction" },
+    { "file": "station-1.png", "purpose": "Paragraph 1: locked cabinet and missing jewel" },
+    { "file": "station-2.png", "purpose": "Paragraph 2: delivery driver leaving the museum" },
+    { "file": "station-3.png", "purpose": "Paragraph 3: guide and jewel photography session" },
+    { "file": "station-4.png", "purpose": "Paragraph 4: visitor portrait with mirror in museum" },
+    { "file": "station-5.png", "purpose": "Paragraph 5: display cloths and the side exit" },
+    { "file": "station-6.png", "purpose": "Paragraph 6: reporter preparing the final case report" }
+  ],
+  "usage": "Decorative images only. Reading text, option cards, QR codes and controls are HTML or server-generated SVG."
+}

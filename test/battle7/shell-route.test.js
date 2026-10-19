@@ -71,6 +71,12 @@ test('Battle 8 teacher selection stays in the main shell while student intent st
   assert.equal(resolveShellRoute('?battle=8&teacher=1', saved, hostKey).role, 'student');
 });
 
+test('Battle 11 teacher opens the museum shell while existing student intent remains student-only', () => {
+  assert.deepEqual(resolveShellRoute('?battle=11&teacher=1'), { mode: 'museum', role: 'teacher' });
+  assert.deepEqual(resolveShellRoute('?battle=11'), { mode: 'museum', role: 'teacher' });
+  assert.equal(resolveShellRoute('?battle=11&teacher=1', saved, hostKey).role, 'student');
+});
+
 test('iframe student transitions accept only exact join or student PIN entry', () => {
   assert.equal(acceptKitchenNavigation('?join=54321', pupil).search, '?battle=7&join=54321');
   assert.equal(acceptKitchenNavigation('?battle=7&student=1', pupil).search, '?battle=7&student=1');

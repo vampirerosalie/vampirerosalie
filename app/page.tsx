@@ -826,7 +826,7 @@ function StudentGame({ roomCode, requestedBattle }: { roomCode: string; requeste
 
 const BATTLE_CHOICES = [
   [1, 'Original questions'], [2, 'Grammar challenge'], [3, 'English board game'],
-  [4, 'BM board game'], [5, 'The Grammar Room'], [6, 'Witch’s Potion'], [7, 'Crazy Kitchen'], [8, 'Demolition Dash'], [9, 'English Black Market'], [10, 'Lantern Keeper’s Secret'],
+  [4, 'BM board game'], [5, 'The Grammar Room'], [6, 'Witch’s Potion'], [7, 'Crazy Kitchen'], [8, 'Demolition Dash'], [9, 'English Black Market'], [10, 'Lantern Keeper’s Secret'], [11, 'The Missing Museum Jewel'],
 ] as const;
 
 function hasKitchenHostCredential(pin: string) {
@@ -842,6 +842,7 @@ export default function Home() {
   const [demolitionStatus, setDemolitionStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [marketStatus, setMarketStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [lanternStatus, setLanternStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
+  const [museumStatus, setMuseumStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState('');
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -868,6 +869,14 @@ export default function Home() {
     };
     const readRoute = () => {
       const marketParams = new URLSearchParams(window.location.search);
+      let museumStudent: string | null = null;
+      try { museumStudent = window.sessionStorage.getItem('museum-jewel:student-route'); } catch {}
+      if (museumStudent !== null || (marketParams.get('battle') === '11' && (marketParams.has('join') || marketParams.has('student') || marketParams.has('room')))) {
+        let room = marketParams.get('join') || marketParams.get('room') || '';
+        if (museumStudent !== null && !room) { try { room = JSON.parse(museumStudent)?.room || ''; } catch {} }
+        window.location.replace('/battle11/index.html?' + (/^\d{5}$/.test(room) ? 'join=' + room : 'student=1'));
+        return;
+      }
       let lanternStudent: string | null = null;
       try { lanternStudent = window.sessionStorage.getItem('lantern-keeper:student-route'); } catch {}
       if (lanternStudent !== null || (marketParams.get('battle') === '10' && (marketParams.has('join') || marketParams.has('student') || marketParams.has('room')))) {
@@ -947,6 +956,12 @@ export default function Home() {
       if (!/^\d{5}$/.test(pin) || !['lobby', 'active', 'ended'].includes(phase) || !Number.isInteger(onlineCount) || onlineCount < 0 || onlineCount > 40) return;
       setLanternStatus(current => current.pin === pin && current.phase === phase && current.onlineCount === onlineCount ? current : { pin, phase, onlineCount });
     };
+    const syncMuseum = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || routeRef.current?.mode !== 'museum' || event.data?.type !== 'museum-jewel:status') return;
+      const { pin, phase, onlineCount } = event.data;
+      if (!/^\d{5}$/.test(pin) || !['lobby', 'active', 'ended'].includes(phase) || !Number.isInteger(onlineCount) || onlineCount < 0 || onlineCount > 40) return;
+      setMuseumStatus(current => current.pin === pin && current.phase === phase && current.onlineCount === onlineCount ? current : { pin, phase, onlineCount });
+    };
     // The initial render is deliberately neutral, so no teacher component mounts
     // before the tab's student intent has been checked.
     readRoute();
@@ -956,6 +971,7 @@ export default function Home() {
     window.addEventListener('message', syncDemolition);
     window.addEventListener('message', syncMarket);
     window.addEventListener('message', syncLantern);
+    window.addEventListener('message', syncMuseum);
     return () => {
       window.removeEventListener('popstate', readRoute);
       window.removeEventListener('pageshow', readRoute);
@@ -963,6 +979,7 @@ export default function Home() {
       window.removeEventListener('message', syncDemolition);
       window.removeEventListener('message', syncMarket);
       window.removeEventListener('message', syncLantern);
+      window.removeEventListener('message', syncMuseum);
     };
   }, []);
 
@@ -1010,12 +1027,13 @@ export default function Home() {
 
   const isMarket = route.mode === 'market';
   const isLantern = route.mode === 'lantern';
-  const standaloneStatus = isLantern ? lanternStatus : isMarket ? marketStatus : demolitionStatus;
-  const standaloneBattle = isLantern ? 10 : isMarket ? 9 : 8;
-  if (route.mode === 'demolition' || isMarket || isLantern) return <main className="game-shell host-shell" style={{ display: 'flex', flexDirection: 'column' }}>
+  const isMuseum = route.mode === 'museum';
+  const standaloneStatus = isMuseum ? museumStatus : isLantern ? lanternStatus : isMarket ? marketStatus : demolitionStatus;
+  const standaloneBattle = isMuseum ? 11 : isLantern ? 10 : isMarket ? 9 : 8;
+  if (route.mode === 'demolition' || isMarket || isLantern || isMuseum) return <main className="game-shell host-shell" style={{ display: 'flex', flexDirection: 'column' }}>
     <header className="host-topbar" style={{ flexShrink: 0 }}>
       <div className="game-logo"><span>★</span><strong>GRAMMAR</strong><em>BATTLE!</em></div>
-      <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{standaloneStatus.pin || '•••••'}</strong></div><div className="online-pill"><span />{standaloneStatus.onlineCount}{isLantern ? ' students online' : ' teams online'}</div><div className="connection-pill connected">{isLantern ? 'BATTLE 10 · LANTERN KEEPER' : isMarket ? 'BATTLE 9 · ENGLISH BLACK MARKET' : 'BATTLE 8 · DEMOLITION DASH'}</div></div>
+      <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{standaloneStatus.pin || '•••••'}</strong></div><div className="online-pill"><span />{standaloneStatus.onlineCount}{isLantern ? ' students online' : ' teams online'}</div><div className="connection-pill connected">{isMuseum ? 'BATTLE 11 · MUSEUM JEWEL' : isLantern ? 'BATTLE 10 · LANTERN KEEPER' : isMarket ? 'BATTLE 9 · ENGLISH BLACK MARKET' : 'BATTLE 8 · DEMOLITION DASH'}</div></div>
       <button type="button" className="fullscreen-button" aria-pressed={isFullscreen} onClick={() => void toggleFullscreen()}><span aria-hidden="true">{isFullscreen ? '↙' : '⛶'}</span>{isFullscreen ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
     </header>
     {fullscreenError && <p role="status">{fullscreenError}</p>}
@@ -1023,7 +1041,7 @@ export default function Home() {
       <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle} is ready</strong></div>
       <div className="battle-tabs" role="tablist">{BATTLE_CHOICES.map(([battle, description]) => <button type="button" key={battle} role="tab" aria-selected={battle === standaloneBattle} className={battle === standaloneBattle ? 'active' : ''} onClick={() => { if (battle !== standaloneBattle) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }}><b>{battle}</b><span>BATTLE {battle}<small>{description}</small></span></button>)}</div>
     </section>}
-    <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow="fullscreen" style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />
+    <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isMuseum ? "Battle Eleven: The Missing Museum Jewel teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isMuseum ? "/battle11/index.html?teacher=1" : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow="fullscreen" style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />
   </main>;
 
   const teacher = route.role === 'teacher';
