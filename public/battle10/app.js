@@ -257,7 +257,8 @@ function scanLoop() {
       if (Date.now() - ui.sealAbsentSince > 500) ui.lastScan = '';
     } else {
       ui.sealAbsentSince = 0;
-      if (found.data.startsWith(`LK1|${pin}|`) && found.data !== ui.lastScan) { ui.lastScan = found.data; void sendAction('student:scan', { code: found.data }); }
+      const isKeeperSeal = /^LK2\|S\|[A-Z0-9]{12}$/.test(found.data) || found.data.startsWith(`LK1|${pin}|`);
+      if (isKeeperSeal && found.data !== ui.lastScan) { ui.lastScan = found.data; void sendAction('student:scan', { code: found.data }); }
     }
   }
   scanFrame = requestAnimationFrame(scanLoop);
