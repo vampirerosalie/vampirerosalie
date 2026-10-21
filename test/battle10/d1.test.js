@@ -8,6 +8,7 @@ import jsQR from 'jsqr';
 import { LanternD1Store } from '../../app/battle10/d1-store.js';
 import { handleLanternRequest } from '../../app/battle10/http.js';
 import { sealPayload } from '../../app/battle10/core/game.js';
+import { QUESTIONS } from '../../app/battle10/data.js';
 
 class TestD1 {
   constructor() { this.sqlite = new DatabaseSync(':memory:'); this.sqlite.exec('PRAGMA foreign_keys=ON'); this.conflicts = 0; this.failAfterCommit = false; }
@@ -119,4 +120,56 @@ test('HTTP returns identical permanent QR artwork and roles across persisted roo
   assert.notEqual(await (await get(s.host, 'qr.svg')).text(), await (await get(next, 'qr.svg')).text());
   const expected = await QRCode.toString(sealPayload(first.genuine.code), { type: 'svg', errorCorrectionLevel: 'M', margin: 4, width: 420, color: { dark: '#18334b', light: '#ffffff' } });
   assert.equal(first.genuine.svg, expected);
+});
+
+async function unlockHunts(s) {
+  await s.act(s.host.hostToken, 'host:start');
+  for (const student of s.students) {
+    const token = student.playerToken;
+    const dialogue = async () => {
+      let view = await s.store().state(s.host.pin, token);
+      while (['dialogue', 'hunt-dialogue'].includes(view.me.stage)) {
+        await s.act(token, 'student:dialogue-next'); view = await s.store().state(s.host.pin, token);
+      }
+      if (view.me.stage === 'reading') await s.act(token, 'student:begin-questions');
+    };
+    for (let q = 1; q <= 10; q++) {
+      await dialogue();
+      await s.act(token, 'student:submit', { questionNumber: q, answer: QUESTIONS[q - 1].answers[0] });
+      await s.act(token, 'student:discover');
+      if (q < 10) await s.act(token, 'student:collect'); else await dialogue();
+    }
+  }
+}
+
+test('simultaneous real-seal scans store exactly one durable winner across Worker instances', async () => {
+  const s = await setup(2); await unlockHunts(s); s.tick(65000);
+  const cards = await s.store().seals(s.host.pin, s.host.hostToken);
+  const conflicts = s.db.conflicts;
+  await Promise.all(s.students.map(student => s.act(student.playerToken, 'student:scan', { code: sealPayload(cards.genuine) })));
+  assert.ok(s.db.conflicts > conflicts, 'simultaneous claims exercise compare-and-swap conflict handling');
+  const winner = (await s.store().state(s.host.pin, s.host.hostToken)).winner;
+  assert.ok(s.students.some(p => p.playerId === winner.playerId));
+  assert.equal(winner.elapsedMs, 65000);
+  for (const student of s.students) {
+    assert.equal((await s.store().state(s.host.pin, student.playerToken)).me.stage, 'star');
+    await s.act(student.playerToken, 'student:star');
+  }
+  s.tick(1000);
+  assert.deepEqual((await s.store().state(s.host.pin, s.host.hostToken)).winner, winner);
+  await s.act(s.host.hostToken, 'host:end');
+  assert.deepEqual((await s.store().state(s.host.pin, s.host.hostToken)).winner, winner);
+});
+
+test('lost winner response retry restores the same winner and timestamp', async () => {
+  const s = await setup(1); await unlockHunts(s); s.tick(120000);
+  const cards = await s.store().seals(s.host.pin, s.host.hostToken), receipt = randomUUID();
+  const payload = { code: sealPayload(cards.genuine) }, token = s.students[0].playerToken;
+  s.db.failAfterCommit = true;
+  await assert.rejects(s.act(token, 'student:scan', payload, receipt), /Lost response/);
+  const winner = (await s.store().state(s.host.pin, s.host.hostToken)).winner;
+  s.tick(9000);
+  assert.equal((await s.act(token, 'student:scan', payload, receipt)).replayed, true);
+  assert.deepEqual((await s.store().state(s.host.pin, s.host.hostToken)).winner, winner);
+  assert.equal(winner.elapsedMs, 120000);
 });

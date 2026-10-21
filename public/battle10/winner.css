@@ -1,0 +1,9 @@
+.winner-panel{margin:18px 0;padding:22px 28px;border:1px solid #b69a65;border-radius:18px;background:#132e45;color:#f7eace;overflow-wrap:anywhere}
+.winner-panel h2{font-size:clamp(28px,4vw,52px);margin:0 0 10px;color:#ffe0a0}
+.winner-panel p{max-width:850px}
+.winner-found{border:2px solid #efc777;background:linear-gradient(125deg,#f7e7b9,#e7c27d);color:#203449;box-shadow:0 8px 28px #03101f55}
+.winner-found .eyebrow{color:#6e4b18}
+.winner-found h2{color:#142e43;font-size:clamp(36px,5vw,68px)}
+.winner-time{font-size:24px;font-weight:800;margin-bottom:12px}
+.winner-time span{display:inline-block;font-size:15px;font-weight:500}
+@media(max-width:520px){.winner-panel{padding:18px}.winner-time span{display:block}}

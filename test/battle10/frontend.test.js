@@ -23,7 +23,7 @@ function frontend() {
   });
   vm.runInContext(source.slice(0, source.lastIndexOf('initialRoute();')) + `
     globalThis.frontend = {
-      ui, render, openCamera,
+      ui, render, openCamera, signature,
       setStage(stage, dialogue) {
         mode = 'join'; pin = '12345'; token = 'student-token';
         state = { pin, role: 'student', phase: 'active', scene: 2,
@@ -32,12 +32,12 @@ function frontend() {
           journal: [], dialogueHistory: [], dialogue };
         render();
       },
-      setHost(phase = 'active') {
+      setHost(phase = 'active', extra = {}) {
         mode = 'host'; pin = '12345'; token = 'host-token';
         state = { pin, role: 'host', phase, joinedCount: 2, onlineCount: 2, students: [
           { id: 'a', name: 'First', q: 3, completed: 2, discoveries: 2, status: 'Answering', online: true },
           { id: 'b', name: 'Second', q: 1, completed: 0, discoveries: 0, status: 'Story dialogue', online: true },
-        ] };
+        ], ...extra };
         render();
       }
     };
@@ -122,4 +122,27 @@ test('the final hunt retains camera scanning and shows the decoy as an in-camera
   h.control.ui.decoy = false;
   h.control.setStage('star');
   assert.match(h.app.innerHTML, /glass-star/);
+});
+
+test('teacher winner panel shows safe name and elapsed time in active and ended games', () => {
+  const h = frontend();
+  h.control.setHost();
+  assert.match(h.app.innerHTML, /Who will find it first/);
+  const winner = { name: '<Reader & One>', playerId: 'a', elapsedMs: 125999 };
+  const before = h.control.signature({ phase: 'active', students: [] });
+  const after = h.control.signature({ phase: 'active', students: [], winner });
+  assert.notEqual(before, after, 'winner-only changes trigger dashboard redraw');
+  for (const phase of ['active', 'ended']) {
+    h.control.setHost(phase, { winner });
+    assert.match(h.app.innerHTML, /WINNER · FIRST TO FIND THE REAL SEAL/);
+    assert.match(h.app.innerHTML, /&lt;Reader &amp; One&gt;/);
+    assert.match(h.app.innerHTML, /2 min 05 sec/);
+    assert.match(h.app.innerHTML, /Everyone else can keep playing/);
+  }
+  h.control.setHost('ended');
+  assert.match(h.app.innerHTML, /No winner this time/);
+  h.control.setHost('active', { winnerUnavailable: true });
+  assert.match(h.app.innerHTML, /Winner not recorded for this older game/);
+  h.control.setHost('active', { winner: { ...winner, elapsedMs: null } });
+  assert.doesNotMatch(h.app.innerHTML, /winner-time|NaN/);
 });

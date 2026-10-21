@@ -16,6 +16,8 @@ const nameOf = value => String(value ?? '').normalize('NFKC').replace(/[\u0000-\
 const answerOf = value => String(value ?? '').trim();
 export const sceneFor = q => q <= 1 ? 0 : q <= 5 ? 1 : q <= 6 ? 2 : 3;
 const dialogueFor = (stage, q) => stage === 'hunt-dialogue' ? DIALOGUE.hunt : stage === 'ending' ? DIALOGUE.ending : DIALOGUE[q] ?? [];
+// Older rooms did not record seal timing. Never invent a winner for them.
+const hasUnrecordedSeal = room => room.players.some(p => ['star', 'ending', 'complete'].includes(p.stage) && !Number.isFinite(p.sealFoundAt));
 
 export class LanternGame {
   constructor({ now = Date.now, random = randomInt, secret = randomBytes(32).toString('hex'), retentionHours = 48 } = {}) {
@@ -33,7 +35,7 @@ export class LanternGame {
     let pin; do { pin = String(10000 + this.random(90000)); } while (this.rooms.has(pin));
     const hostToken = randomBytes(32).toString('hex');
     const room = { pin, hostHash: hash(hostToken), createdAt: this.now(), expiresAt: this.now() + this.retentionMs,
-      version: 1, phase: 'lobby', players: [], seals: { ...PERMANENT_SEALS }, receipts: {} };
+      version: 1, phase: 'lobby', startedAt: null, winner: null, players: [], seals: { ...PERMANENT_SEALS }, receipts: {} };
     this.rooms.set(pin, room); this.save(room); return { pin, hostToken };
   }
   studentToken(room, clientId) { return createHmac('sha256', this.secret).update(`lantern:${room.pin}:${room.createdAt}:${clientId}`).digest('hex'); }
@@ -75,7 +77,7 @@ export class LanternGame {
     const base = { pin: room.pin, role: actor.role, version: room.version, phase: room.phase, serverTime: this.now(),
       joinedCount: room.players.length, onlineCount: room.players.filter(p => (this.lastSeen.get(`${room.pin}:${p.id}`) ?? 0) > this.now() - 25000).length };
     if (actor.role === 'host') {
-      return { ...base, passage: PASSAGE, students: room.players.map(p => ({ id: p.id, name: p.name, q: p.q, completed: p.accepted.filter(Boolean).length,
+      return { ...base, passage: PASSAGE, winner: room.winner ?? null, winnerUnavailable: !room.winner && hasUnrecordedSeal(room), students: room.players.map(p => ({ id: p.id, name: p.name, q: p.q, completed: p.accepted.filter(Boolean).length,
         discoveries: p.discoveries.length, status: this.status(p), finalSearch: ['hunt', 'star', 'ending', 'complete'].includes(p.stage),
         finished: p.stage === 'complete', online: (this.lastSeen.get(`${room.pin}:${p.id}`) ?? 0) > this.now() - 25000 })) };
     }
@@ -124,7 +126,7 @@ export class LanternGame {
     const type = body.type, p = actor.player;
     if (type === 'host:start') {
       if (room.phase !== 'lobby' || !room.players.length) fail('Wait for a student to join before starting.');
-      room.phase = 'active'; for (const player of room.players) { player.stage = 'dialogue'; player.dialogueIndex = 0; }
+      room.phase = 'active'; room.startedAt = this.now(); for (const player of room.players) { player.stage = 'dialogue'; player.dialogueIndex = 0; }
       return { started: true };
     }
     if (type === 'host:end') { room.phase = 'ended'; return { ended: true }; }
@@ -175,7 +177,17 @@ export class LanternGame {
       if (equal(permanent, PERMANENT_SEALS.decoy) || equal(legacy, room.seals?.decoy)) {
         const first = !p.decoySeen; p.decoySeen = true; return { decoy: true, first };
       }
-      if (equal(permanent, PERMANENT_SEALS.genuine) || equal(legacy, room.seals?.genuine)) { p.stage = 'star'; return { genuine: true }; }
+      if (equal(permanent, PERMANENT_SEALS.genuine) || equal(legacy, room.seals?.genuine)) {
+        const earlierUnrecorded = hasUnrecordedSeal(room);
+        p.sealFoundAt = this.now(); p.stage = 'star';
+        // Saved atomically with the scan by the room store. Later scans and
+        // retries cannot replace the first accepted real-seal claim.
+        if (!room.winner && !earlierUnrecorded) room.winner = {
+          playerId: p.id, name: p.name, foundAt: p.sealFoundAt,
+          elapsedMs: Number.isFinite(room.startedAt) ? Math.max(0, p.sealFoundAt - room.startedAt) : null,
+        };
+        return { genuine: true };
+      }
       fail('That is not a keeper seal for this adventure. Keep searching.', 'UNKNOWN_SEAL');
     }
     if (type === 'student:star') {

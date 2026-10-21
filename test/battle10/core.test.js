@@ -207,3 +207,48 @@ test('legacy printed room seals remain valid only in their original room; new pr
   assert.equal(s.act(token, 'student:scan', { code: PERMANENT_SEALS.decoy }).result.decoy, true);
   assert.equal(s.act(token, 'student:scan', { code: `LK1|${s.host.pin}|OLDGENUINE12` }).result.genuine, true);
 });
+
+test('first genuine scan wins before collection, persists on reconnect/end, and ignores client timing', () => {
+  const s = setup(2), [a, b] = s.students.map(p => p.playerToken);
+  s.act(s.host.hostToken, 'host:start');
+  assert.equal(s.room().startedAt, 1_000_000);
+  assert.throws(() => s.act(a, 'student:scan', { code: sealPayload(PERMANENT_SEALS.genuine) }), /Finish the investigation/);
+  for (const token of [a, b]) for (let q = 1; q <= 10; q++) progress(s, token, q);
+  s.act(a, 'student:scan', { code: sealPayload(PERMANENT_SEALS.decoy) });
+  assert.equal(s.view(s.host.hostToken).winner, null);
+  s.tick(123456);
+  const receipt = randomUUID(), payload = { code: sealPayload(PERMANENT_SEALS.genuine), foundAt: 0, elapsedMs: 0 };
+  s.act(b, 'student:scan', payload, receipt);
+  const winner = s.view(s.host.hostToken).winner;
+  assert.deepEqual(winner, { playerId: s.students[1].playerId, name: 'Student 2', foundAt: 1_123_456, elapsedMs: 123456 });
+  assert.equal(s.view(b).me.stage, 'star');
+  assert.equal(s.view(b).me.discoveries.length, 9);
+  assert.equal(s.view(b).winner, undefined);
+  assert.equal(s.game.state(s.host.pin).winner, undefined);
+  s.tick(1000);
+  assert.equal(s.act(b, 'student:scan', payload, receipt).replayed, true);
+  s.act(a, 'student:scan', { code: sealPayload(PERMANENT_SEALS.genuine) });
+  s.act(a, 'student:star'); // Losing player collects first; the winner cannot change.
+  assert.deepEqual(s.view(s.host.hostToken).winner, winner);
+  assert.equal(s.view(a).phase, 'active');
+  const restored = new LanternGame({ secret: s.game.secret, now: () => 1_124_456 });
+  restored.rooms.set(s.host.pin, JSON.parse(JSON.stringify(s.room())));
+  assert.deepEqual(restored.state(s.host.pin, s.host.hostToken).winner, winner);
+  s.act(s.host.hostToken, 'host:end');
+  assert.deepEqual(s.view(s.host.hostToken).winner, winner);
+  s.game.random = () => 1;
+  const next = s.game.create();
+  assert.equal(s.game.state(next.pin, next.hostToken).winner, null);
+});
+
+test('older rooms with previous real-seal discoveries do not invent a winner', () => {
+  const s = setup(2), [a, b] = s.students.map(p => p.playerToken);
+  s.act(s.host.hostToken, 'host:start');
+  for (const token of [a, b]) for (let q = 1; q <= 10; q++) progress(s, token, q);
+  s.room().players[0].stage = 'star'; // Saved pre-update room without scan timestamps.
+  delete s.room().startedAt; delete s.room().winner;
+  assert.equal(s.view(s.host.hostToken).winnerUnavailable, true);
+  s.act(b, 'student:scan', { code: sealPayload(PERMANENT_SEALS.genuine) });
+  assert.equal(s.view(s.host.hostToken).winner, null);
+  assert.equal(s.view(s.host.hostToken).winnerUnavailable, true);
+});
