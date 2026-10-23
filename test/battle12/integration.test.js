@@ -15,7 +15,7 @@ class TestD1 {
   room(pin){return JSON.parse(this.sqlite.prepare('SELECT state_json FROM treasure_rooms WHERE pin=?').get(pin).state_json);}
   fixture(pin,fn){const r=this.room(pin);fn(r);this.sqlite.prepare('UPDATE treasure_rooms SET state_json=? WHERE pin=?').run(JSON.stringify(r),pin);}
 }
-async function setup(n=3){const db=new TestD1();let now=1_000_000;const options={now:()=>now,sleep:async()=>{}};const store=()=>new TreasureD1Store(db,options),host=await store().create();const clients=Array.from({length:n},(_,i)=>({clientId:randomUUID(),name:`TEST player ${i+1}`}));const players=await Promise.all(clients.map(c=>store().join(host.pin,c)));const act=(token,type,extra={},requestId=randomUUID())=>store().action(host.pin,token,{type,requestId,...extra});const view=t=>store().state(host.pin,t);return {db,options,store,host,clients,players,act,view,tick:ms=>now+=ms};}
+async function setup(n=3,autoMark=false){const db=new TestD1();let now=1_000_000;const options={now:()=>now,sleep:async()=>{}};const store=()=>new TreasureD1Store(db,options),host=await store().create();const clients=Array.from({length:n},(_,i)=>({clientId:randomUUID(),name:`TEST player ${i+1}`}));const players=await Promise.all(clients.map(c=>store().join(host.pin,c)));const act=(token,type,extra={},requestId=randomUUID())=>store().action(host.pin,token,{type,requestId,...extra});const view=t=>store().state(host.pin,t);if(!autoMark)await act(host.hostToken,'host:auto-mark',{enabled:false});return {db,options,store,host,clients,players,act,view,tick:ms=>now+=ms};}
 async function accept(s,index=0,raw='Silver Gull'){const t=s.players[index].playerToken,q=(await s.view(t)).question;await s.act(t,'student:submit',{questionId:q.id,answer:raw,attempt:0});await s.act(s.host.hostToken,'host:review',{questionId:q.id,playerId:s.players[index].playerId,attempt:1,decision:'accept'});}
 async function playerAction(s,i,type,extra={},requestId){const t=s.players[i].playerToken,m=(await s.view(t)).me;return s.act(t,type,{expectedVersion:m.actionVersion,...extra},requestId);}
 function request(s,path,token,body,method=body?'POST':'GET'){return handleTreasureRequest(new Request('https://example.test/api/treasure/'+path,{method,headers:{...(token?{authorization:'Bearer '+token}:{}),...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})}),s.db,s.options);}
@@ -43,7 +43,7 @@ test('real HTTP role gates, private review and redacted public/teacher/student s
   }
   assert.ok(!JSON.stringify(await s.view(s.host.hostToken)).includes('SECRET original answer'));
   const review=await (await request(s,p+'/review',s.host.hostToken)).json();assert.equal(review.entries[0].response.value,'SECRET original answer');assert.equal(review.entries[0].suggestion.status,'teacher_review');
-  for(const type of ['host:start','host:pause','host:review','host:end','host:finish','host:advance','host:reveal','host:final-banking'])assert.equal((await request(s,p+'/action',t,{type,requestId:randomUUID(),confirm:true})).status,403);
+  for(const type of ['host:start','host:pause','host:review','host:auto-mark','host:end','host:finish','host:advance','host:reveal','host:final-banking'])assert.equal((await request(s,p+'/action',t,{type,requestId:randomUUID(),confirm:true})).status,403);
   assert.equal((await request(s,p+'/content')).status,401);
   const c=await (await request(s,p+'/content',t)).json();assert.equal(c.paragraphs.length,9);assert.equal(c.items.length,18);assert.ok(!JSON.stringify(c).includes('modelAnswer'));
 });
@@ -132,4 +132,58 @@ test('all original illustrations present; production bundle has no engine, test 
   assert.ok(!readdirSync(new URL('../../public/battle12/',import.meta.url)).includes('engine.js'));
   assert.ok(app.includes("new Audio('/battle12/assets/master-of-the-feast.mp3')"));
   assert.ok(app.includes('if(!host)return;'));
+});
+
+test('automatic approved match uses original normalization and awards exactly once under retries',async()=>{
+  const s=await setup(2,true),t=s.players[0].playerToken;
+  assert.equal((await s.view(s.host.hostToken)).autoMark,true);
+  await s.act(s.host.hostToken,'host:start');
+  const body={questionId:'q01',answer:'  SILVER   GULL.  ',attempt:0},receipt=randomUUID();
+  await Promise.all(Array.from({length:8},()=>s.act(t,'student:submit',body,receipt)));
+  const me=(await s.view(t)).me;
+  assert.equal(me.actions,1);assert.equal(me.response.status,'accepted');assert.equal(me.response.markedBy,'automatic');assert.equal(me.response.value,body.answer);
+  assert.equal(me.actionVersion,1);
+  await assert.rejects(s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'accept'}),/no new answer/);
+  await assert.rejects(s.act(t,'student:submit',body),/changed/);
+  assert.equal((await s.view(t)).me.actions,1);
+});
+
+test('unmatched answers remain pending and block Next until teacher accepts or rejects inline',async()=>{
+  const s=await setup(1,true),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');
+  await s.act(t,'student:submit',{questionId:'q01',answer:'a questionable longer answer',attempt:0});
+  assert.equal((await s.view(t)).me.actions,0);assert.equal((await s.view(t)).me.response.status,'submitted');
+  await assert.rejects(s.act(s.host.hostToken,'host:advance',{questionId:'q01',skip:true}),/Mark every/);
+  await s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'revise'});
+  await s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:1});
+  assert.equal((await s.view(t)).me.actions,1);
+  await s.act(s.host.hostToken,'host:advance',{questionId:'q01'});
+  assert.equal((await s.view(t)).question.number,2);
+});
+
+test('auto-mark toggle persists, accepts existing matches once, and leaves unmatched answers alone',async()=>{
+  const s=await setup(2),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');
+  await s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0});
+  await s.act(s.players[1].playerToken,'student:submit',{questionId:'q01',answer:'the Silver Gull ship',attempt:0});
+  assert.equal((await s.view(t)).me.actions,0);
+  await Promise.all([s.act(s.host.hostToken,'host:auto-mark',{enabled:true}),s.act(s.host.hostToken,'host:auto-mark',{enabled:true})]);
+  assert.equal((await s.view(t)).me.actions,1);assert.equal((await s.view(s.players[1].playerToken)).me.actions,0);
+  assert.equal((await s.store().state(s.host.pin,s.host.hostToken)).autoMark,true);
+  await s.act(s.host.hostToken,'host:end',{confirm:true});
+  await assert.rejects(s.act(s.host.hostToken,'host:auto-mark',{enabled:false}),/ended/);
+});
+
+test('teacher map exposes actual committed destinations; blocked moves never move a marker',async()=>{
+  const s=await setup(1,true),t=s.players[0].playerToken;
+  assert.equal((await s.view(s.host.hostToken)).players[0].location,'camp');
+  await s.act(s.host.hostToken,'host:start');
+  await assert.rejects(playerAction(s,0,'student:explore',{location:'cave'}));
+  assert.equal((await s.view(s.host.hostToken)).players[0].location,'camp');
+  await s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0});
+  await playerAction(s,0,'student:explore',{location:'cave'});
+  assert.equal((await s.view(s.host.hostToken)).players[0].location,'cave');
+  await s.act(s.host.hostToken,'host:advance',{questionId:'q01'});
+  await s.act(t,'student:submit',{questionId:'q02',answer:'six',attempt:0});
+  await playerAction(s,0,'student:bank');
+  assert.equal((await s.view(s.host.hostToken)).players[0].location,'camp');
+  assert.equal('location' in (await s.view(t)).players[0],false);
 });

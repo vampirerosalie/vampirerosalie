@@ -27,6 +27,8 @@ try{
   const t=players[0].playerToken;
   await api(root+'/review',t,undefined,403);
   await act(t,'host:end',{confirm:true},randomUUID(),403);
+  assert.equal((await api(root+'/state',h.hostToken)).autoMark,true);
+  await act(h.hostToken,'host:auto-mark',{enabled:false});
   await act(h.hostToken,'host:start');
   const c=await api(root+'/content',t);assert.equal(c.paragraphs.length,9);assert.equal(c.items.length,18);assert.ok(!JSON.stringify(c).includes('acceptedAnswers'));
   for(let n=1;n<=9;n++){const res=await fetch(`${base}/battle12/assets/paragraph_${String(n).padStart(2,'0')}.png`,{method:'HEAD'});assert.equal(res.status,200);assert.match(res.headers.get('content-type'),/image\/png/);}
@@ -40,15 +42,21 @@ try{
   let me=(await api(root+'/state',t)).me;assert.equal(me.actions,1);
   const explore=randomUUID(),exploreBody={location:'cave',expectedVersion:me.actionVersion};
   const reward=await act(t,'student:explore',exploreBody,explore);await act(t,'student:explore',exploreBody,explore);assert.ok(!('weight' in reward.result));
+  assert.equal((await api(root+'/state',h.hostToken)).players.find(p=>p.id===players[0].playerId).location,'cave');
   me=(await api(root+'/state',t)).me;assert.equal(me.actions,0);assert.ok([2,3].includes(me.bag));log('teacher acceptance and exploration retry each change resources once');
   await act(h.hostToken,'host:advance',{questionId:'q01',skip:true});
   await act(h.hostToken,'host:pause',{paused:true});
-  await act(t,'student:submit',{questionId:'q02',answer:'6',attempt:0});
-  await act(h.hostToken,'host:review',{questionId:'q02',playerId:players[0].playerId,attempt:1,decision:'accept'});
+  await act(h.hostToken,'host:auto-mark',{enabled:true});
+  const autoReceipt=randomUUID(),autoAnswer={questionId:'q02',answer:'6',attempt:0};
+  await act(t,'student:submit',autoAnswer,autoReceipt);await act(t,'student:submit',autoAnswer,autoReceipt);
+  assert.equal((await api(root+'/state',t)).me.actions,1);
+  log('automatic approved match awards exactly once while Question 2 is open');
   me=(await api(root+'/state',t)).me;
   await act(t,'student:bank',{expectedVersion:me.actionVersion},randomUUID(),409);
   await act(h.hostToken,'host:pause',{paused:false});await act(t,'student:bank',{expectedVersion:me.actionVersion});
-  me=(await api(root+'/state',t)).me;assert.ok(me.vault>=2);assert.equal(me.bag,0);log('pause preserves marking; paid banking succeeds after resume');
+  me=(await api(root+'/state',t)).me;assert.ok(me.vault>=2);assert.equal(me.bag,0);
+  assert.equal((await api(root+'/state',h.hostToken)).players.find(p=>p.id===players[0].playerId).location,'camp');
+  log('pause preserves marking; paid banking succeeds and teacher marker returns to Camp');
   await act(h.hostToken,'host:end',{},randomUUID(),409);
   await act(h.hostToken,'host:end',{confirm:true});
   const ended=await api(root+'/state',t);assert.equal(ended.role,'student');assert.equal(ended.phase,'ended');assert.equal(ended.me.vault,me.vault);

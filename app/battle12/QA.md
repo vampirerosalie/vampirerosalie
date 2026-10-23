@@ -2,6 +2,17 @@
 
 This is a personal-review build, not a claim of classroom readiness.
 
+## Unified teacher desk revision — 2026-10-23
+
+This revision supersedes the separate review-window workflow below, following the owner's request for one teacher page.
+
+- 286 tests passed across Battles 7–12, including 27 Battle 12 tests. Added server-side automatic approved-answer acceptance, duplicate/concurrent receipt protection, unmatched manual review, persistent marking mode, post-end/role restrictions, and committed map locations.
+- Local Worker/D1 HTTP smoke passed: manual/automatic marking, Question 2, QR decoding, location changing to cave after exploration and back to camp after banking, pause, one-time rewards, student-safe End Game.
+- Browser local room 29379: created/joined, started Q1, automatically accepted Silver Gull, clicked prominent Next to Q2, submitted five, observed disabled Next with pending count and inline Accept/Reject, rejected, resubmitted six, auto-accepted, explored cave, verified teacher marker and roster moved there.
+- Teacher default now intentionally displays submitted answers on the same authenticated page. Raw answers/key remain absent from public/student and ordinary state payloads; review data still uses the authenticated host-only endpoint. A hide-answers control removes them from the rendered page for projection. It does not claim to make visible teacher material private on a mirrored screen.
+- Original content, normalization, exploration/card/banking rules and Battles 1–11 are unchanged. Only Battle 12 teacher UI, auto-mark orchestration, tests and notes are revised.
+- Physical phone/Wi-Fi testing remains unperformed. Live checks are reported after deployment, not inferred from this local result.
+
 ## Executed before publication
 
 - Supplied untouched prototype: `node test.cjs` → **464 checks pass**; `node phone-test.cjs` → **67 checks pass**. These are baseline single-browser checks, not multiplayer evidence.

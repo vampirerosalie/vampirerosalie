@@ -6,9 +6,9 @@ Integrated for personal review on the existing grammartest Cloudflare Worker and
 
 1. Open `/?battle=12&teacher=1` on the teacher laptop, or `/battle12/?teacher=1` directly.
 2. Create a room. Scan its joining QR on a phone and enter only a name. Each name is one independent crew internally; no predefined group selection.
-3. Start question 1. Read opens all nine illustrated paragraphs on either role. A submitted answer waits for teacher marking.
-4. Open **Teacher review** on a private display. The ordinary dashboard shows only statuses/resources. A mirrored laptop also mirrors the review window: it is not secretly hidden from a projector.
-5. Accept earns one Action. Explore or bank each costs one Action. Read/navigation preserve the current draft and paragraph.
+3. Start question 1. The current question and large **Next question** control are at the upper left. Read opens all nine illustrated paragraphs on either role.
+4. Review answers directly in the left panel; the island and latest confirmed student destinations are on the right. There is no separate review window. Use **Hide answers for projector** before mirroring the teacher screen; this preference survives refresh. Visible answer panels are not private from a mirrored projector.
+5. **Auto-mark** defaults on: server-approved normalized allowlist matches earn exactly one Action. Unmatched submissions remain for teacher Accept/Reject; no automatic rejection. Turn auto-mark off for manual marking. Enabling it marks current pending approved matches atomically. Next question explains and blocks on pending reviews. Explore/bank each costs one Action; the map moves players only after these confirmed actions. Reading/navigation preserve drafts and paragraphs.
 6. **Join QR** remains available during play for late arrivals/rejoining. Same browser/device storage restores identity; clearing storage or changing browser does not recover that capability automatically.
 7. Normal completion: finish all 18 questions and pending marking → final normal play → Final banking → wait for bank/pass → show results.
 8. **End Game** is a different, confirmed immediate termination. Only existing Vault totals score; no automatic banking, late marking or further actions. Student links remain student pages.

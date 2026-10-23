@@ -20,7 +20,7 @@ export class TreasureGame {
     let pin; do { pin=String(10000+this.random(90000)); } while(this.rooms.has(pin));
     const hostToken=randomBytes(32).toString('hex'), game=E.createState('treasure-raid-v02');
     game.crews=[]; delete game.role; delete game.crewId; delete game.operations;
-    const room={pin,hostHash:hash(hostToken),createdAt:this.now(),expiresAt:this.now()+48*3600000,version:1,players:[],receipts:{},game,startAt:null,endedAt:null,results:null};
+    const room={pin,hostHash:hash(hostToken),createdAt:this.now(),expiresAt:this.now()+48*3600000,version:1,players:[],receipts:{},game,autoMark:true,startAt:null,endedAt:null,results:null};
     this.rooms.set(pin,room); return {pin,hostToken};
   }
   room(pin) {
@@ -62,6 +62,10 @@ export class TreasureGame {
     if(actor.role==='public') return base;
     const players=s.crews.map(c=>({id:c.id,name:c.name,bag:c.bag,vault:c.vault,actions:c.actions,shields:c.shields,settled:c.settled,online:(this.lastSeen.get(`${r.pin}:${c.id}`)??0)>now-25000,answerStatus:c.responses[q.id]?.status??'not-submitted',acceptedCount:Object.values(c.responses).filter(v=>v.awarded).length}));
     const result={...base,players,question:publicQuestion(q),questionCount:18,log:s.log,...(s.revealed[q.id]?{revealedAnswer:q.modelAnswer}:{}),...(r.results?{results:r.results}:{} )};
+    if(actor.role==='host') {
+      result.autoMark=r.autoMark!==false;
+      for(const player of players)player.location=E.getCrew(s,player.id).location;
+    }
     if(actor.role==='student') {
       const c=E.getCrew(s,actor.player.id);
       result.me={...players.find(p=>p.id===c.id),cards:[...c.cards],location:c.location,actionVersion:actor.player.actionVersion,response:c.responses[q.id]??null,usedAttack:!!c.attacks[q.id]};
@@ -96,6 +100,12 @@ export class TreasureGame {
     if(closed(s)) fail('This voyage has ended. Scores are locked.','GAME_ENDED');
     if(b.type==='host:start'){if(!r.players.length)fail('Wait for someone to join.');E.start(s);r.startAt=this.now();return;}
     if(b.type==='host:pause'){if(typeof b.paused!=='boolean')fail('Choose pause or resume.');E.pause(s,b.paused);return;}
+    if(b.type==='host:auto-mark'){
+      if(typeof b.enabled!=='boolean')fail('Choose automatic or manual marking.');
+      r.autoMark=b.enabled;
+      if(b.enabled&&s.phase==='questions')for(const crew of s.crews)this.autoAccept(r,crew,q);
+      return;
+    }
     if(['host:review','host:advance','host:reveal','student:submit'].includes(b.type)&&b.questionId!==q.id) fail('The question has changed. Reload the current question.','STALE_QUESTION');
     if(b.type==='host:review'){
       const c=E.getCrew(s,b.playerId),response=c.responses[q.id];
@@ -110,7 +120,9 @@ export class TreasureGame {
       if(typeof b.answer!=='string'||b.answer.length>300)fail('Use a short written answer (maximum 300 characters).','BAD_ANSWER',400);
       const previous=E.getCrew(s,p.id).responses[q.id];
       if(b.attempt!==(previous?.attempts??0))fail('Your answer has changed. Refresh before resubmitting.','STALE_ANSWER');
-      E.submit(s,CONTENT,p.id,b.answer);return {submitted:true};
+      E.submit(s,CONTENT,p.id,b.answer);
+      const accepted=this.autoAccept(r,E.getCrew(s,p.id),q);
+      return {submitted:true,autoAccepted:accepted};
     }
     if(a.role==='student'&&['student:explore','student:bank','student:attack','student:pass'].includes(b.type)){
       if(b.expectedVersion!==p.actionVersion)fail('Your resources changed. Please check them and try again.','STALE_RESOURCES');
@@ -125,5 +137,13 @@ export class TreasureGame {
       p.actionVersion++;return result;
     }
     fail('Unknown Treasure Raid action.','UNKNOWN_ACTION',400);
+  }
+  autoAccept(r,crew,q) {
+    const response=crew.responses[q.id];
+    if(r.autoMark===false||response?.status!=='submitted'||E.suggestAnswer(response.value,q).status!=='suggest_accept')return false;
+    E.review(r.game,CONTENT,crew.id,'accept');
+    response.markedBy='automatic';
+    r.players.find(p=>p.id===crew.id).actionVersion++;
+    return true;
   }
 }
