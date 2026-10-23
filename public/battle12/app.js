@@ -1,10 +1,17 @@
 import { resolveTreasureRoute } from './route.js?v=2';
+import { retireReviewSession } from './retire-review-session.js?v=1';
 const $=s=>document.querySelector(s), app=$('#app'), dialog=$('#dialog');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const PREFIX='treasure-raid:', params=new URLSearchParams(location.search);
 const get=(k,f='')=>{try{return localStorage.getItem(PREFIX+k)??f;}catch{return f;}};
 const put=(k,v)=>{try{localStorage.setItem(PREFIX+k,v);}catch{}};
 const del=k=>{try{localStorage.removeItem(PREFIX+k);}catch{}};
+try {
+  await retireReviewSession(location.search,localStorage,sessionStorage,async (room,key)=>{
+    const response=await fetch('/api/treasure/rooms/'+room+'/state',{headers:{Authorization:'Bearer '+key},cache:'no-store',signal:AbortSignal.timeout(16000)});
+    return response.ok ? response.json() : null;
+  });
+} catch { /* Storage restrictions must not interrupt normal joining. */ }
 let marker='';try{marker=sessionStorage.getItem(PREFIX+'student-route')??'';}catch{}
 const route=resolveTreasureRoute(location.search,get,marker);
 let {pin,token,hostIntent}=route;
