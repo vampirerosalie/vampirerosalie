@@ -17,6 +17,7 @@ class TestD1 {
 }
 async function setup(n=3,autoMark=false){const db=new TestD1();let now=1_000_000;const options={now:()=>now,sleep:async()=>{}};const store=()=>new TreasureD1Store(db,options),host=await store().create();const clients=Array.from({length:n},(_,i)=>({clientId:randomUUID(),name:`TEST player ${i+1}`}));const players=await Promise.all(clients.map(c=>store().join(host.pin,c)));const act=(token,type,extra={},requestId=randomUUID())=>store().action(host.pin,token,{type,requestId,...extra});const view=t=>store().state(host.pin,t);if(!autoMark)await act(host.hostToken,'host:auto-mark',{enabled:false});return {db,options,store,host,clients,players,act,view,tick:ms=>now+=ms};}
 async function accept(s,index=0,raw='Silver Gull'){const t=s.players[index].playerToken,q=(await s.view(t)).question;await s.act(t,'student:submit',{questionId:q.id,answer:raw,attempt:0});await s.act(s.host.hostToken,'host:review',{questionId:q.id,playerId:s.players[index].playerId,attempt:1,decision:'accept'});}
+async function finalize(s){const state=await s.view(s.host.hostToken);return s.act(s.host.hostToken,'host:reveal',{questionId:state.question.id,reviewVersion:state.reviewVersion});}
 async function playerAction(s,i,type,extra={},requestId){const t=s.players[i].playerToken,m=(await s.view(t)).me;return s.act(t,type,{expectedVersion:m.actionVersion,...extra},requestId);}
 function request(s,path,token,body,method=body?'POST':'GET'){return handleTreasureRequest(new Request('https://example.test/api/treasure/'+path,{method,headers:{...(token?{authorization:'Bearer '+token}:{}),...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})}),s.db,s.options);}
 
@@ -43,7 +44,7 @@ test('real HTTP role gates, private review and redacted public/teacher/student s
   }
   assert.ok(!JSON.stringify(await s.view(s.host.hostToken)).includes('SECRET original answer'));
   const review=await (await request(s,p+'/review',s.host.hostToken)).json();assert.equal(review.entries[0].response.value,'SECRET original answer');assert.equal(review.entries[0].suggestion.status,'teacher_review');
-  for(const type of ['host:start','host:pause','host:review','host:auto-mark','host:end','host:finish','host:advance','host:reveal','host:final-banking'])assert.equal((await request(s,p+'/action',t,{type,requestId:randomUUID(),confirm:true})).status,403);
+  for(const type of ['host:start','host:pause','host:review','host:accept-all','host:start-countdown','host:auto-mark','host:end','host:finish','host:advance','host:reveal','host:final-banking'])assert.equal((await request(s,p+'/action',t,{type,requestId:randomUUID(),confirm:true})).status,403);
   assert.equal((await request(s,p+'/content')).status,401);
   const c=await (await request(s,p+'/content',t)).json();assert.equal(c.paragraphs.length,9);assert.equal(c.items.length,18);assert.ok(!JSON.stringify(c).includes('modelAnswer'));
 });
@@ -53,23 +54,25 @@ test('unmatched answer is reviewed, original raw text retained; acceptance once 
   assert.equal((await s.view(t)).me.actions,0);
   const b={questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'accept'},id=randomUUID();
   const results=await Promise.all(Array.from({length:8},()=>s.act(s.host.hostToken,'host:review',b,id)));
-  assert.equal(results.filter(r=>r.replayed).length,7);assert.equal((await s.view(t)).me.actions,1);
-  await assert.rejects(s.act(s.host.hostToken,'host:review',b),/no new answer/);
+  assert.equal(results.filter(r=>r.replayed).length,7);assert.equal((await s.view(t)).me.actions,0);
+  await finalize(s);assert.equal((await s.view(t)).me.actions,1);
+  await assert.rejects(s.act(s.host.hostToken,'host:review',b),/finalized/);
   assert.equal((await s.view(t)).me.response.value,'  teacher decides this variant!  ');
 });
-test('reject/revise history and stale review, stale question and delayed submission safety',async()=>{
-  const s=await setup(1),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');
-  await s.act(t,'student:submit',{questionId:'q01',answer:'wrong',attempt:0});
-  await s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'revise'});
-  await s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:1});
-  await assert.rejects(s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'accept'}),/changed/);
-  await s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:2,decision:'accept'});
-  assert.equal((await s.view(t)).me.response.history[0].value,'wrong');
-  await s.act(s.host.hostToken,'host:advance',{questionId:'q01',skip:true});
+test('teacher can override suggestions; single submission, stale question and locked review safety',async()=>{
+  const s=await setup(1,true),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');
+  await s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0});
+  await assert.rejects(s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:2,decision:'accept'}),/changed/);
+  await s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'reject'});
+  await assert.rejects(s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:1}),/already submitted/);
+  assert.equal((await s.view(t)).me.actions,0);assert.equal((await s.view(t)).me.response.status,'submitted');
+  await finalize(s);assert.equal((await s.view(t)).me.response.status,'rejected');assert.equal((await s.view(t)).me.actions,0);
+  await s.act(s.host.hostToken,'host:advance',{questionId:'q01'});
   await assert.rejects(s.act(t,'student:submit',{questionId:'q01',answer:'six',attempt:0}),/question has changed/);
 });
+
 test('lost response retry and rapid double exploration cannot spend or reward twice',async()=>{
-  const s=await setup(1),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');await accept(s);
+  const s=await setup(1),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');await accept(s);await finalize(s);
   const v=(await s.view(t)).me.actionVersion,id=randomUUID(),body={expectedVersion:v,location:'cave'};
   s.db.failAfterCommit=true;await assert.rejects(s.act(t,'student:explore',body,id),/Lost response/);
   const repeat=await s.act(t,'student:explore',body,id);assert.equal(repeat.replayed,true);assert.ok(!('weight' in repeat.result));assert.equal(repeat.result.visual,'gems');
@@ -78,11 +81,11 @@ test('lost response retry and rapid double exploration cannot spend or reward tw
   assert.equal((await s.view(t)).me.bag,m.bag);
 });
 test('pause blocks resources but allows submit/mark; reconnect preserves resources',async()=>{
-  const s=await setup(2),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');await s.act(s.host.hostToken,'host:pause',{paused:true});await accept(s);
+  const s=await setup(2),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');await s.act(s.host.hostToken,'host:pause',{paused:true});await accept(s);await finalize(s);
   await assert.rejects(playerAction(s,0,'student:explore',{location:'cave'}),/paused/);
   const before=(await s.view(t)).me;await s.store().join(s.host.pin,s.clients[0]);assert.deepEqual((await s.view(t)).me,before);
   await s.act(s.host.hostToken,'host:pause',{paused:false});await playerAction(s,0,'student:explore',{location:'cave'});
-  await s.act(s.host.hostToken,'host:advance',{questionId:'q01',skip:true});await accept(s,0,'six');await playerAction(s,0,'student:bank');assert.ok((await s.view(t)).me.vault>=2);
+  await s.act(s.host.hostToken,'host:advance',{questionId:'q01',skip:true});await accept(s,0,'six');await finalize(s);await playerAction(s,0,'student:bank');assert.ok((await s.view(t)).me.vault>=2);
 });
 test('concurrent bank and attacks serialize; vault protection, shields, limits and duplicates',async()=>{
   const s=await setup(3);await s.act(s.host.hostToken,'host:start');
@@ -96,7 +99,7 @@ test('concurrent bank and attacks serialize; vault protection, shields, limits a
   for(let seed=0;seed<300;seed++){const x=E.createState('fixture');E.start(x);const c=x.crews[0];c.actions=1;c.cards=['raid','sabotage'];c.shields=1;x.seed=seed*2347;const event=E.explore(x,c.id,'ruins');assert.equal(c.cards.length,2);assert.equal(c.shields,1);assert.equal(c.bag,1);assert.ok(event.title);}
 });
 test('explicit end is confirmed, atomic, repeatable without changes, no autobank and student-safe restore',async()=>{
-  const s=await setup(2),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');await accept(s);
+  const s=await setup(2),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');await accept(s);await finalize(s);
   s.db.fixture(s.host.pin,r=>{r.game.crews[0].bag=12;r.game.crews[0].vault=4;r.game.crews[1].vault=4;});
   await assert.rejects(s.act(s.host.hostToken,'host:end'),/Confirm/);
   assert.equal((await s.view(t)).phase,'questions');
@@ -109,7 +112,7 @@ test('explicit end is confirmed, atomic, repeatable without changes, no autobank
 });
 test('complete 18 shared questions, normal final play and paid banking distinct from termination',async()=>{
   const s=await setup(2);await s.act(s.host.hostToken,'host:start');
-  for(const q of CONTENT.items){for(let i=0;i<2;i++)await accept(s,i,q.modelAnswer.toUpperCase());await s.act(s.host.hostToken,'host:advance',{questionId:q.id});}
+  for(const q of CONTENT.items){for(let i=0;i<2;i++)await accept(s,i,q.modelAnswer.toUpperCase());await finalize(s);await s.act(s.host.hostToken,'host:advance',{questionId:q.id});}
   assert.equal((await s.view(s.players[0].playerToken)).me.actions,18);assert.equal((await s.view(s.host.hostToken)).phase,'finalPlay');
   await playerAction(s,0,'student:explore',{location:'cave'});await playerAction(s,1,'student:explore',{location:'cave'});
   await s.act(s.host.hostToken,'host:final-banking');await assert.rejects(s.act(s.host.hostToken,'host:finish'),/bank or explicitly pass/);
@@ -134,39 +137,42 @@ test('all original illustrations present; production bundle has no engine, test 
   assert.ok(app.includes('if(!host)return;'));
 });
 
-test('automatic approved match uses original normalization and awards exactly once under retries',async()=>{
+test('automatic approved match is provisional and finalization awards exactly once',async()=>{
   const s=await setup(2,true),t=s.players[0].playerToken;
   assert.equal((await s.view(s.host.hostToken)).autoMark,true);
   await s.act(s.host.hostToken,'host:start');
   const body={questionId:'q01',answer:'  SILVER   GULL.  ',attempt:0},receipt=randomUUID();
   await Promise.all(Array.from({length:8},()=>s.act(t,'student:submit',body,receipt)));
   const me=(await s.view(t)).me;
-  assert.equal(me.actions,1);assert.equal(me.response.status,'accepted');assert.equal(me.response.markedBy,'automatic');assert.equal(me.response.value,body.answer);
-  assert.equal(me.actionVersion,1);
-  await assert.rejects(s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'accept'}),/no new answer/);
-  await assert.rejects(s.act(t,'student:submit',body),/changed/);
+  assert.equal(me.actions,0);assert.equal(me.response.status,'submitted');assert.equal(me.response.value,body.answer);
+  assert.equal(me.actionVersion,0);
+  const privateReview=await (await s.store().load(s.host.pin)).game.review(s.host.pin,s.host.hostToken);assert.equal(privateReview.entries[0].response.markedBy,'automatic');
+  await finalize(s);
+  await assert.rejects(s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'accept'}),/finalized/);
+  await assert.rejects(s.act(t,'student:submit',body),/Time is up/);
   assert.equal((await s.view(t)).me.actions,1);
 });
 
-test('unmatched answers remain pending and block Next until teacher accepts or rejects inline',async()=>{
+test('unmatched answers remain pending and block Finalize until teacher decides',async()=>{
   const s=await setup(1,true),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');
   await s.act(t,'student:submit',{questionId:'q01',answer:'a questionable longer answer',attempt:0});
   assert.equal((await s.view(t)).me.actions,0);assert.equal((await s.view(t)).me.response.status,'submitted');
-  await assert.rejects(s.act(s.host.hostToken,'host:advance',{questionId:'q01',skip:true}),/Mark every/);
-  await s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'revise'});
-  await s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:1});
-  assert.equal((await s.view(t)).me.actions,1);
+  await assert.rejects(finalize(s),/Review every/);
+  await assert.rejects(s.act(s.host.hostToken,'host:advance',{questionId:'q01',skip:true}),/Finalize/);
+  await s.act(s.host.hostToken,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'accept'});
+  await finalize(s);assert.equal((await s.view(t)).me.actions,1);
   await s.act(s.host.hostToken,'host:advance',{questionId:'q01'});
   assert.equal((await s.view(t)).question.number,2);
 });
 
-test('auto-mark toggle persists, accepts existing matches once, and leaves unmatched answers alone',async()=>{
+test('auto-mark toggle persists, suggests existing matches, and leaves unmatched answers pending',async()=>{
   const s=await setup(2),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');
   await s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0});
   await s.act(s.players[1].playerToken,'student:submit',{questionId:'q01',answer:'the Silver Gull ship',attempt:0});
   assert.equal((await s.view(t)).me.actions,0);
   await Promise.all([s.act(s.host.hostToken,'host:auto-mark',{enabled:true}),s.act(s.host.hostToken,'host:auto-mark',{enabled:true})]);
-  assert.equal((await s.view(t)).me.actions,1);assert.equal((await s.view(s.players[1].playerToken)).me.actions,0);
+  assert.equal((await s.view(t)).me.actions,0);assert.equal((await s.view(s.players[1].playerToken)).me.actions,0);
+  assert.equal(s.db.room(s.host.pin).game.crews[0].responses.q01.status,'accepted');assert.equal(s.db.room(s.host.pin).game.crews[1].responses.q01.status,'submitted');
   assert.equal((await s.store().state(s.host.pin,s.host.hostToken)).autoMark,true);
   await s.act(s.host.hostToken,'host:end',{confirm:true});
   await assert.rejects(s.act(s.host.hostToken,'host:auto-mark',{enabled:false}),/ended/);
@@ -178,11 +184,11 @@ test('teacher map exposes actual committed destinations; blocked moves never mov
   await s.act(s.host.hostToken,'host:start');
   await assert.rejects(playerAction(s,0,'student:explore',{location:'cave'}));
   assert.equal((await s.view(s.host.hostToken)).players[0].location,'camp');
-  await s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0});
+  await s.act(t,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0});await finalize(s);
   await playerAction(s,0,'student:explore',{location:'cave'});
   assert.equal((await s.view(s.host.hostToken)).players[0].location,'cave');
   await s.act(s.host.hostToken,'host:advance',{questionId:'q01'});
-  await s.act(t,'student:submit',{questionId:'q02',answer:'six',attempt:0});
+  await s.act(t,'student:submit',{questionId:'q02',answer:'six',attempt:0});await finalize(s);
   const banked=await playerAction(s,0,'student:bank');assert.equal(banked.result.visual,'bank');
   assert.equal((await s.view(s.host.hostToken)).players[0].location,'camp');
   assert.equal('location' in (await s.view(t)).players[0],false);
@@ -197,4 +203,49 @@ test('reward illustration metadata follows committed outcome without altering du
     const me=(await s.view(s.players[0].playerToken)).me;
     assert.equal(me.bag,1);assert.equal(me.cards.length,2);assert.equal(me.shields,1);assert.equal(me.actions,0);
   }
+});
+
+test('countdown is authoritative, exactly ten seconds, does not restart, and locks late submits',async()=>{
+  const s=await setup(3,true),h=s.host.hostToken;await s.act(h,'host:start');
+  const first=await s.act(h,'host:start-countdown',{questionId:'q01'});
+  assert.equal(first.state.answerCountdownEndsAt-first.state.serverTime,10000);
+  s.tick(5000);assert.equal((await s.act(h,'host:start-countdown',{questionId:'q01'})).state.answerCountdownEndsAt,first.state.answerCountdownEndsAt);
+  assert.equal((await s.store().state(s.host.pin,h)).answerCountdownEndsAt,first.state.answerCountdownEndsAt);
+  s.tick(4999);await s.act(s.players[0].playerToken,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0});
+  s.tick(1);await assert.rejects(s.act(s.players[1].playerToken,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0}),/Time is up/);
+  assert.equal((await s.view(h)).answersClosed,true);assert.equal((await s.view(s.players[0].playerToken)).me.actions,0);
+  await finalize(s);await s.act(h,'host:advance',{questionId:'q01'});
+  assert.equal((await s.view(h)).answerCountdownEndsAt,null);assert.equal((await s.view(h)).answersClosed,false);
+});
+
+test('accept all is explicit, revision guarded, skips missing answers, finalization cannot duplicate rewards',async()=>{
+  const s=await setup(3,true),h=s.host.hostToken;await s.act(h,'host:start');
+  await s.act(h,'host:review',{questionId:'q01',playerId:s.players[2].playerId,attempt:0,decision:'reject'});
+  await assert.rejects(s.act(h,'host:review',{questionId:'q01',playerId:s.players[2].playerId,attempt:0,decision:'accept'}),/No answer/);
+  await s.act(s.players[0].playerToken,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0});
+  const stale=(await s.view(h)).reviewVersion;
+  await s.act(s.players[1].playerToken,'student:submit',{questionId:'q01',answer:'teacher judgement',attempt:0});
+  await assert.rejects(s.act(h,'host:accept-all',{questionId:'q01',reviewVersion:stale}),/Answers changed/);
+  await assert.rejects(s.act(h,'host:reveal',{questionId:'q01',reviewVersion:stale}),/Answers changed/);
+  await s.act(h,'host:accept-all',{questionId:'q01',reviewVersion:(await s.view(h)).reviewVersion});
+  assert.ok(s.db.room(s.host.pin).game.crews.every(c=>c.actions===0));
+  const body={questionId:'q01',reviewVersion:(await s.view(h)).reviewVersion},id=randomUUID();
+  await Promise.all(Array.from({length:8},()=>s.act(h,'host:reveal',body,id)));
+  await s.act(h,'host:reveal',body); // distinct receipt, same finalized question
+  assert.deepEqual(s.db.room(s.host.pin).game.crews.map(c=>c.actions),[1,1,0]);
+  await assert.rejects(s.act(h,'host:accept-all',{questionId:'q01',reviewVersion:(await s.view(h)).reviewVersion}),/finalized/);
+  assert.equal((await s.view(h)).paused,false);
+  await playerAction(s,0,'student:explore',{location:'cave'});
+});
+
+test('manual pause remains independent across finalize and Next; legacy awarded actions are preserved',async()=>{
+  const s=await setup(1,true),h=s.host.hostToken;await s.act(h,'host:start');await s.act(h,'host:pause',{paused:true});
+  await s.act(s.players[0].playerToken,'student:submit',{questionId:'q01',answer:'Silver Gull',attempt:0});
+  // A room from the previous deployment may already have awarded this question.
+  s.db.fixture(s.host.pin,r=>{const c=r.game.crews[0];c.actions=3;c.responses.q01.awarded=true;});
+  await assert.rejects(s.act(h,'host:review',{questionId:'q01',playerId:s.players[0].playerId,attempt:1,decision:'reject'}),/already awarded/);
+  await finalize(s);assert.equal((await s.view(h)).paused,true);
+  assert.equal((await s.view(s.players[0].playerToken)).me.actions,3);
+  await s.act(h,'host:advance',{questionId:'q01'});assert.equal((await s.view(h)).paused,true);
+  await s.act(h,'host:pause',{paused:false});await playerAction(s,0,'student:explore',{location:'cave'});
 });

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { resolveTreasureRoute, treasureTeacherShellUrl } from '../../public/battle12/route.js';
+import { questionDesk, responseStatuses, reviewDialog } from '../../public/battle12/teacher-desk.js';
 
 const storage = {'host-room':'12345','host:12345':'HOST','student-room':'67890','student:67890':'STUDENT'};
 const get = data => key => data[key] || '';
@@ -48,13 +49,17 @@ function render(name,overrides={}) {
   if(['teacherView','teacherQuestion','answerPanel','teacherMap'].includes(name))code=source.slice(source.indexOf('function teacherControls()'),source.indexOf('let music=null'));
   const ctx={host:true,pin:'12345',hideAnswers:false,screen:'answer',esc:String,locations:[['camp','Camp'],['cave','Crystal Cave']],btn:(label,action,cls,disabled)=>`<button data-action="${action}" ${disabled?'disabled':''}>${label}</button>`,ended:()=>false,qrContent:()=>'<img alt="Joining QR">',musicControls:()=>'',reader:()=>'',readerControls:()=>'',results:()=>'',state:{phase:'lobby',players:[],log:[],question:{id:'q01',number:1,group:'Expedition',prompt:'Name of ship'},results:[]},review:null,...overrides};
   ctx.embedded=true;
+  Object.assign(ctx,{questionDesk,responseStatuses,dialog:{addEventListener(){}}});
   return vm.runInNewContext(code+';'+name+'()',ctx);
 }
-test('teacher dashboard contains QR in lobby AND while questions are running',()=>{
-  assert.match(render('teacherView'),/Teacher lobby/);
+test('large joining QR is in left lobby; gameplay uses QR button without duplicate QR',()=>{
+  const lobby=render('teacherView');
+  assert.match(lobby,/Scan to join Treasure Raid/);
+  assert.ok(lobby.indexOf('alt="Joining QR"')<lobby.indexOf('island-desk'));
   for(const phase of ['lobby','questions']) {
     const html=render('teacherView',{state:{phase,players:[],log:[],question:{number:1,group:'Expedition',prompt:'Name of ship'}}});
-    assert.match(html,/TEACHER MODE/);assert.match(html,/Student joining QR/);assert.match(html,/alt="Joining QR"/);assert.doesNotMatch(html,/answer-form|join-form/);
+    assert.match(html,/TEACHER MODE/);assert.match(html,/Show joining QR/);assert.doesNotMatch(html,/answer-form|join-form/);
+    assert.equal((html.match(/alt="Joining QR"/g)||[]).length,phase==='lobby'?1:0);
   }
 });
 test('teacher reader provides QR and return controls',()=>{
@@ -63,20 +68,20 @@ test('teacher reader provides QR and return controls',()=>{
   }
 });
 
-test('single teacher page has answers on left, live destinations on right and prominent Next',()=>{
-  const state={phase:'questions',question:{id:'q01',number:1,prompt:'Ship name'},players:[{id:'p1',name:'TEST pupil',location:'cave',answerStatus:'submitted',online:true}],log:[]};
+test('kitchen-style desk hides answers until review, then Next appears only after finalize',()=>{
+  const state={phase:'questions',pendingReviewCount:1,question:{id:'q01',number:1,prompt:'Ship name'},players:[{id:'p1',name:'TEST pupil',location:'cave',answerStatus:'submitted',online:true}],log:[]};
   const review={question:{id:'q01',acceptedAnswers:['Silver Gull']},entries:[{id:'p1',name:'TEST pupil',response:{value:'My answer',status:'submitted',attempts:1},suggestion:{status:'teacher_review'}}]};
   const html=render('teacherView',{state,review});
   assert.ok(html.indexOf('marking-desk')<html.indexOf('island-desk'));
-  assert.ok(html.indexOf('Next question')<html.indexOf('My answer'));
-  assert.match(html,/1 answer needs marking/);assert.match(html,/data-action="advance" disabled/);
-  assert.match(html,/data-action="accept"/);assert.match(html,/data-action="reject"/);assert.match(html,/data-action="auto-mark"/);
+  assert.doesNotMatch(html,/My answer|Silver Gull|data-action="advance"|data-action="accept"/);
+  assert.match(html,/Start 10-second countdown/);assert.match(html,/Finalize &amp;|Finalize & reveal/);
+  assert.match(html,/data-action="review-open"/);assert.match(html,/Answered/);
   assert.match(html,/Crystal Cave: 1 players/);assert.match(html,/Camp: 0 players/);
   assert.doesNotMatch(html,/Teacher review ↗|Open teacher review/);
-  const hidden=render('teacherView',{state,review,hideAnswers:true});
-  assert.doesNotMatch(hidden,/My answer|Silver Gull/);assert.match(hidden,/Where students are/);
-  state.players[0].answerStatus='accepted';
-  assert.doesNotMatch(render('teacherQuestion',{state}),/data-action="advance" disabled/);
+  const opened=reviewDialog(state,review);
+  assert.match(opened,/My answer|Silver Gull/);assert.match(opened,/data-action="accept"/);assert.match(opened,/data-action="reject"/);assert.match(opened,/Accept all submitted answers/);
+  state.finalized=true;
+  assert.match(questionDesk(state),/Next question/);assert.doesNotMatch(questionDesk(state),/data-action="finalize"/);
 });
 test('teacher results are worded as teacher results, not student instructions',()=>{
   const state={phase:'ended',results:[]};

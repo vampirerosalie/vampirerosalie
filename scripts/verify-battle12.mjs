@@ -13,6 +13,7 @@ const hash=b=>createHash('sha256').update(b).digest('hex');
 assert.equal(hash(Buffer.from(await (await fetch(base+'/battle12/app.js')).arrayBuffer())),hash(await readFile(new URL('../public/battle12/app.js',import.meta.url))));log('deployed frontend exactly matches the checked source');
 const h=await api('rooms','',{},201),root=`rooms/${h.pin}`;
 const act=(token,type,body={},requestId=randomUUID(),expected=200)=>api(root+'/action',token,{type,requestId,...body},expected);
+const finalize=async()=>{const st=await api(root+'/state',h.hostToken);return act(h.hostToken,'host:reveal',{questionId:st.question.id,reviewVersion:st.reviewVersion});};
 console.log('Isolated review test room: '+h.pin);
 try{
   const clients=Array.from({length:3},(_,i)=>({clientId:randomUUID(),name:`TEST B12 Review ${i+1}`}));
@@ -41,7 +42,12 @@ try{
   const review=await api(root+'/review',h.hostToken),entry=review.entries.find(e=>e.id===players[0].playerId);assert.equal(entry.response.value,'  SILVER GULL.  ');assert.equal(entry.suggestion.status,'suggest_accept');
   const receipt=randomUUID(),mark={questionId:'q01',playerId:players[0].playerId,attempt:1,decision:'accept'};
   await act(h.hostToken,'host:review',mark,receipt);await act(h.hostToken,'host:review',mark,receipt);
-  let me=(await api(root+'/state',t)).me;assert.equal(me.actions,1);
+  let me=(await api(root+'/state',t)).me;assert.equal(me.actions,0);
+  await act(h.hostToken,'host:start-countdown',{questionId:'q01'});
+  const countdown=await api(root+'/state',h.hostToken);assert.ok(countdown.answerCountdownEndsAt>countdown.serverTime);
+  await finalize();await finalize();
+  me=(await api(root+'/state',t)).me;assert.equal(me.actions,1);
+  assert.equal((await api(root+'/state',h.hostToken)).paused,false);
   const explore=randomUUID(),exploreBody={location:'cave',expectedVersion:me.actionVersion};
   const reward=await act(t,'student:explore',exploreBody,explore);await act(t,'student:explore',exploreBody,explore);assert.ok(!('weight' in reward.result));
   assert.equal(reward.result.visual,'gems');
@@ -52,8 +58,10 @@ try{
   await act(h.hostToken,'host:auto-mark',{enabled:true});
   const autoReceipt=randomUUID(),autoAnswer={questionId:'q02',answer:'6',attempt:0};
   await act(t,'student:submit',autoAnswer,autoReceipt);await act(t,'student:submit',autoAnswer,autoReceipt);
-  assert.equal((await api(root+'/state',t)).me.actions,1);
-  log('automatic approved match awards exactly once while Question 2 is open');
+  assert.equal((await api(root+'/state',t)).me.actions,0);
+  await finalize();assert.equal((await api(root+'/state',t)).me.actions,1);
+  assert.equal((await api(root+'/state',h.hostToken)).paused,true);
+  log('automatic approved match waits for finalization; one reward and manual pause preserved');
   me=(await api(root+'/state',t)).me;
   await act(t,'student:bank',{expectedVersion:me.actionVersion},randomUUID(),409);
   await act(h.hostToken,'host:pause',{paused:false});await act(t,'student:bank',{expectedVersion:me.actionVersion});

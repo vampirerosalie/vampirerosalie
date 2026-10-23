@@ -42,7 +42,7 @@ export class TreasureGame {
     const token=this.studentToken(r,clientId), id=randomBytes(12).toString('hex');
     r.players.push({id,clientId,name:safeName,tokenHash:hash(token),actionVersion:0});
     r.game.crews.push({id,name:safeName,bag:0,vault:0,actions:0,cards:[],shields:0,responses:{},attacks:{},location:'camp',settled:false});
-    r.version++; return {playerId:id,playerToken:token};
+    r.reviewVersion=(r.reviewVersion??0)+1;r.version++; return {playerId:id,playerToken:token};
   }
   auth(r,token) {
     if(!token) return {role:'public'};
@@ -60,21 +60,33 @@ export class TreasureGame {
     const s=r.game,q=question(s),now=this.now();
     const base={pin:r.pin,role:actor.role,version:r.version,phase:s.phase==='reading'?'lobby':s.phase,paused:s.paused,serverTime:now,startAt:r.startAt,endedAt:r.endedAt,onlineCount:r.players.filter(p=>(this.lastSeen.get(`${r.pin}:${p.id}`)??0)>now-25000).length,joinedCount:r.players.length};
     if(actor.role==='public') return base;
-    const players=s.crews.map(c=>({id:c.id,name:c.name,bag:c.bag,vault:c.vault,actions:c.actions,shields:c.shields,settled:c.settled,online:(this.lastSeen.get(`${r.pin}:${c.id}`)??0)>now-25000,answerStatus:c.responses[q.id]?.status??'not-submitted',acceptedCount:Object.values(c.responses).filter(v=>v.awarded).length}));
-    const result={...base,players,question:publicQuestion(q),questionCount:18,log:s.log,...(s.revealed[q.id]?{revealedAnswer:q.modelAnswer}:{}),...(r.results?{results:r.results}:{} )};
+    const players=s.crews.map(c=>({id:c.id,name:c.name,bag:c.bag,vault:c.vault,actions:c.actions,shields:c.shields,settled:c.settled,online:(this.lastSeen.get(`${r.pin}:${c.id}`)??0)>now-25000,answerStatus:c.responses[q.id]?.unanswered?'unanswered':c.responses[q.id]?.status??'not-submitted',acceptedCount:Object.values(c.responses).filter(v=>v.awarded).length}));
+    const finalized=!!s.finalized?.[q.id];
+    const result={...base,players,question:publicQuestion(q),questionCount:18,log:s.log,finalized,
+      answerCountdownEndsAt:r.answerCountdownEndsAt??null,
+      answersClosed:finalized||!!s.revealed[q.id]||!!(r.answerCountdownEndsAt&&now>=r.answerCountdownEndsAt),
+      ...(s.revealed[q.id]?{revealedAnswer:q.modelAnswer}:{}),...(r.results?{results:r.results}:{} )};
     if(actor.role==='host') {
       result.autoMark=r.autoMark!==false;
+      result.reviewVersion=r.reviewVersion??0;
+      result.pendingReviewCount=s.crews.filter(c=>c.responses[q.id]?.status==='submitted').length;
       for(const player of players)player.location=E.getCrew(s,player.id).location;
     }
     if(actor.role==='student') {
       const c=E.getCrew(s,actor.player.id);
       result.me={...players.find(p=>p.id===c.id),cards:[...c.cards],location:c.location,actionVersion:actor.player.actionVersion,response:c.responses[q.id]??null,usedAttack:!!c.attacks[q.id]};
+      // Provisional teacher decisions are not results; reveal them only on finalize.
+      if(!finalized){
+        for(const player of players)if(!['not-submitted','unanswered'].includes(player.answerStatus))player.answerStatus='submitted';
+        if(result.me.response?.unanswered){result.me.response=null;result.me.answerStatus='not-submitted';}
+        if(result.me.response&&!result.me.response.awarded){result.me.response={value:result.me.response.value,attempts:result.me.response.attempts,status:'submitted',awarded:false};result.me.answerStatus='submitted';}
+      }
     }
     return result;
   }
   state(pin,token){ const r=this.room(pin);return this.view(r,this.auth(r,token)); }
   content(pin,token){ const r=this.room(pin),a=this.auth(r,token);if(a.role==='public') fail('Join this room to read.','UNAUTHORIZED',401);return {title:CONTENT.title,instructions:CONTENT.instructions,paragraphs:CONTENT.passageParagraphs,items:CONTENT.items.map(publicQuestion)}; }
-  review(pin,token){ const r=this.room(pin),a=this.auth(r,token);if(a.role!=='host') fail('Teacher key required.','FORBIDDEN',403);const q=question(r.game);return {question:q,entries:r.game.crews.map(c=>({id:c.id,name:c.name,response:c.responses[q.id]??null,suggestion:c.responses[q.id]?E.suggestAnswer(c.responses[q.id].value,q):null}))}; }
+  review(pin,token){ const r=this.room(pin),a=this.auth(r,token);if(a.role!=='host') fail('Teacher key required.','FORBIDDEN',403);const q=question(r.game);return {question:q,reviewVersion:r.reviewVersion??0,entries:r.game.crews.map(c=>({id:c.id,name:c.name,response:c.responses[q.id]??null,suggestion:c.responses[q.id]?.value?E.suggestAnswer(c.responses[q.id].value,q):null}))}; }
   action(pin,token,body={}) {
     const r=this.room(pin),a=this.auth(r,token);
     if(a.role==='public') fail('Join this room first.','UNAUTHORIZED',401);
@@ -103,26 +115,64 @@ export class TreasureGame {
     if(b.type==='host:auto-mark'){
       if(typeof b.enabled!=='boolean')fail('Choose automatic or manual marking.');
       r.autoMark=b.enabled;
-      if(b.enabled&&s.phase==='questions')for(const crew of s.crews)this.autoAccept(r,crew,q);
+      if(b.enabled&&s.phase==='questions'&&!s.finalized?.[q.id])for(const crew of s.crews)this.autoAccept(r,crew,q);
+      r.reviewVersion=(r.reviewVersion??0)+1;
       return;
     }
-    if(['host:review','host:advance','host:reveal','student:submit'].includes(b.type)&&b.questionId!==q.id) fail('The question has changed. Reload the current question.','STALE_QUESTION');
-    if(b.type==='host:review'){
-      const c=E.getCrew(s,b.playerId),response=c.responses[q.id];
-      if(!response||response.attempts!==b.attempt) fail('This answer has changed. Review the latest submission.','STALE_ANSWER');
-      E.review(s,CONTENT,c.id,b.decision);r.players.find(x=>x.id===c.id).actionVersion++;return;
+    if(['host:review','host:accept-all','host:start-countdown','host:advance','host:reveal','student:submit'].includes(b.type)&&b.questionId!==q.id) fail('The question has changed. Reload the current question.','STALE_QUESTION');
+    if(b.type==='host:start-countdown'){
+      if(s.phase!=='questions'||s.finalized?.[q.id]||s.revealed[q.id])fail('This question is closed.','QUESTION_CLOSED');
+      r.answerCountdownEndsAt??=this.now()+10000;
+      return {answerCountdownEndsAt:r.answerCountdownEndsAt};
     }
-    if(b.type==='host:advance'){E.advance(s,CONTENT,b.skip===true);for(const player of r.players)player.actionVersion++;return;}
-    if(b.type==='host:reveal'){E.reveal(s,CONTENT);return;}
+    if(b.type==='host:review'){
+      if(s.phase!=='questions'||s.finalized?.[q.id])fail('This question is finalized.','QUESTION_CLOSED');
+      const c=E.getCrew(s,b.playerId);let response=c.responses[q.id];
+      if((response?.attempts??0)!==b.attempt) fail('This answer has changed. Review the latest submission.','STALE_ANSWER');
+      if(!['accept','reject','revise'].includes(b.decision))fail('Choose Accept or Mark wrong.');
+      if(response?.awarded)fail('This action was already awarded by the earlier game version; it cannot be changed.','REWARD_LOCKED');
+      if(b.decision==='accept'&&(!response||response.unanswered))fail('No answer was submitted.','NO_SUBMISSION');
+      if(!response){if(b.decision==='accept')fail('No answer was submitted.','NO_SUBMISSION');response=c.responses[q.id]={value:'',attempts:0,awarded:false,unanswered:true};}
+      response.status=b.decision==='accept'?'accepted':'rejected';response.markedBy='teacher';
+      r.reviewVersion=(r.reviewVersion??0)+1;return;
+    }
+    if(b.type==='host:accept-all'){
+      if(s.phase!=='questions'||s.finalized?.[q.id])fail('This question is finalized.','QUESTION_CLOSED');
+      if(b.reviewVersion!==(r.reviewVersion??0))fail('Answers changed. Review the latest answers before accepting all.','STALE_REVIEW');
+      for(const c of s.crews){const response=c.responses[q.id];if(response&&!response.unanswered&&!response.awarded){response.status='accepted';response.markedBy='teacher';}}
+      r.reviewVersion=(r.reviewVersion??0)+1;return;
+    }
+    if(b.type==='host:advance'){
+      if(!s.finalized?.[q.id])fail('Finalize and reveal this answer before moving to the next question.','NOT_FINALIZED');
+      E.advance(s,CONTENT,true);r.answerCountdownEndsAt=null;r.reviewVersion=(r.reviewVersion??0)+1;
+      for(const player of r.players)player.actionVersion++;return;
+    }
+    if(b.type==='host:reveal'){
+      if(s.phase!=='questions')fail('No question to finalize.','QUESTION_CLOSED');
+      if(s.finalized?.[q.id])return {finalized:true};
+      if(b.reviewVersion!==(r.reviewVersion??0))fail('Answers changed. Review the latest answers before finalizing.','STALE_REVIEW');
+      if(s.crews.some(c=>c.responses[q.id]?.status==='submitted'))fail('Review every submitted answer before finalizing.','REVIEWS_PENDING');
+      for(const c of s.crews){
+        const response=c.responses[q.id]??={value:'',attempts:0,status:'rejected',unanswered:true,awarded:false};
+        if(response.status==='accepted'&&!response.awarded){response.awarded=true;c.actions++;r.players.find(p=>p.id===c.id).actionVersion++;}
+        response.finalized=true;
+      }
+      (s.finalized??={})[q.id]=true;s.revealed[q.id]=true;r.answerCountdownEndsAt=null;
+      r.reviewVersion=(r.reviewVersion??0)+1;
+      // Answer reveal must never toggle the teacher's separate Pause actions control.
+      return {finalized:true};
+    }
     if(b.type==='host:final-banking'){E.finalBanking(s);return;}
     if(b.type==='host:finish'){E.finish(s);r.endedAt=this.now();r.results=this.ranking(r);return;}
     if(b.type==='student:submit'){
+      if(s.finalized?.[q.id]||(r.answerCountdownEndsAt&&this.now()>=r.answerCountdownEndsAt))fail('Time is up. Wait for your teacher to review the answers.','ANSWER_TIME_UP');
       if(typeof b.answer!=='string'||b.answer.length>300)fail('Use a short written answer (maximum 300 characters).','BAD_ANSWER',400);
       const previous=E.getCrew(s,p.id).responses[q.id];
       if(b.attempt!==(previous?.attempts??0))fail('Your answer has changed. Refresh before resubmitting.','STALE_ANSWER');
+      if(previous&&!previous.unanswered)fail('Your answer is already submitted. Wait for the next question.','ALREADY_SUBMITTED');
       E.submit(s,CONTENT,p.id,b.answer);
-      const accepted=this.autoAccept(r,E.getCrew(s,p.id),q);
-      return {submitted:true,autoAccepted:accepted};
+      this.autoAccept(r,E.getCrew(s,p.id),q);r.reviewVersion=(r.reviewVersion??0)+1;
+      return {submitted:true};
     }
     if(a.role==='student'&&['student:explore','student:bank','student:attack','student:pass'].includes(b.type)){
       if(b.expectedVersion!==p.actionVersion)fail('Your resources changed. Please check them and try again.','STALE_RESOURCES');
@@ -144,9 +194,8 @@ export class TreasureGame {
   autoAccept(r,crew,q) {
     const response=crew.responses[q.id];
     if(r.autoMark===false||response?.status!=='submitted'||E.suggestAnswer(response.value,q).status!=='suggest_accept')return false;
-    E.review(r.game,CONTENT,crew.id,'accept');
+    response.status='accepted';
     response.markedBy='automatic';
-    r.players.find(p=>p.id===crew.id).actionVersion++;
     return true;
   }
 }

@@ -2,6 +2,16 @@
 
 This is a personal-review build, not a claim of classroom readiness.
 
+## Kitchen-style teacher desk — 2026-10-24
+
+This supersedes the inline-answer / immediate-auto-award workflow documented below.
+
+- Repository suite: **297 passed**, including **36 Battle 12 tests**. Coverage includes the prominent left lobby QR; no duplicate gameplay QR; hidden answer text; same-page Review with Accept / Mark wrong / Accept all; provisional automatic matches; deadline persistence and exact expiry; stale review guards; finalization retries; unchanged manual pause; legacy already-awarded resources; all 18 questions and normal final banking; student role safety.
+- Local real Worker/D1 HTTP smoke: **passed**, room **53069**, three isolated test players, QR SVG decoding, original illustrations, provisional marking, countdown creation, finalization, single reward, exploration, banking, manual pause preservation, reconnect and End Game. Test room closed.
+- Browser-control connection timed out three times before a usable page observation. No new visual-browser or physical-phone verification is claimed for this revision. HTML render tests are automated source/presentation tests, not visual-browser evidence.
+- Content JSON, answer variants, artwork, resource rules and other battles are unchanged. Existing earned Actions are preserved and cannot be awarded again by finalization.
+- Production build: `pnpm run build:cloudflare` passed, preserving all existing API routes. Deployment verification is recorded separately after publication.
+
 ## Unified teacher desk revision — 2026-10-23
 
 This revision supersedes the separate review-window workflow below, following the owner's request for one teacher page.

@@ -1,5 +1,6 @@
 import { resolveTreasureRoute, treasureTeacherShellUrl } from './route.js?v=3';
 import { retireReviewSession } from './retire-review-session.js?v=1';
+import { questionDesk, responseStatuses, reviewDialog } from './teacher-desk.js?v=1';
 import { REWARD_ART, rewardArt, artImage } from './reward-art.js?v=1';
 const $=s=>document.querySelector(s), app=$('#app'), dialog=$('#dialog');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19,7 +20,7 @@ const embedded=window.parent!==window;
 let {pin,token,hostIntent}=route;
 let host=false,state=null,content=null,review=null,busy=false,online=true,lastVersion=-1,screen='answer',readPage=0,readScroll=0;
 let clientId=get('client-id');if(!clientId){clientId=crypto.randomUUID();put('client-id',clientId);}
-let hideAnswers=get('hide-answers:'+pin)==='1',pending=null;
+let reviewOpen=false,serverOffset=0,pending=null;
 try{pending=JSON.parse(get('pending:'+pin,'null'));}catch{}
 const drafts=()=>{try{return JSON.parse(get('drafts:'+pin,'{}'));}catch{return {};}};
 const draft=q=>drafts()[q]??'';
@@ -42,8 +43,9 @@ async function refresh(force=false){
     if(token&&next.role==='host'){host=true;if(!content)content=await api(`rooms/${pin}/content`);}
     if(token&&next.role==='student'){studentRoute();if(!content)content=await api(`rooms/${pin}/content`);}
     const change=force||next.version!==lastVersion||(host&&JSON.stringify(next.players)!==JSON.stringify(state?.players));
-    state=next;lastVersion=next.version;
-    if(host)review=await api(`rooms/${pin}/review`);
+    if(state?.question?.id!==next.question?.id){reviewOpen=false;if(dialog.classList.contains('answer-review'))dialog.close();}
+    state=next;lastVersion=next.version;serverOffset=next.serverTime-Date.now();
+    if(host&&reviewOpen)review=await api(`rooms/${pin}/review`);
     if(change&&!busy)render();
     updateConnection();
     if(host)parent.postMessage({type:'treasure-raid:status',pin,phase:state.phase,onlineCount:state.onlineCount},location.origin);
@@ -55,13 +57,14 @@ async function send(type,extra={}){
   const body=pending??{type,requestId:crypto.randomUUID(),...extra};pending=body;put('pending:'+pin,JSON.stringify(body));
   try{
     const data=await api(`rooms/${pin}/action`,{method:'POST',body});pending=null;del('pending:'+pin);state=data.state;lastVersion=state.version;online=true;
-    if(host)review=await api(`rooms/${pin}/review`);
+    serverOffset=state.serverTime-Date.now();
+    if(host&&reviewOpen)review=await api(`rooms/${pin}/review`);
     if(data.result?.title)showOutcome(data.result);else if(type==='student:submit')notice(data.result?.autoAccepted?'Answer accepted · 1 Action earned.':'Answer submitted. Waiting for your teacher.');
   }catch(e){if(!e.network){pending=null;del('pending:'+pin);}notice(e.message);await refresh();}
   finally{busy=false;render();}
 }
 function modal(title,body,confirmLabel,onConfirm){
-  dialog.classList.remove('reward-dialog');
+  reviewOpen=false;dialog.classList.remove('reward-dialog','answer-review');
   dialog.innerHTML=`<h2>${esc(title)}</h2>${body}<div class="row"><button id="modal-cancel" class="quiet">${confirmLabel?'Cancel':'Close'}</button>${confirmLabel?`<button id="modal-confirm" class="gold">${esc(confirmLabel)}</button>`:''}</div>`;
   $('#modal-cancel').onclick=()=>dialog.close();if(confirmLabel)$('#modal-confirm').onclick=()=>{dialog.close();onConfirm();};if(!dialog.open)dialog.showModal();
 }
@@ -81,7 +84,7 @@ function questionView(){const q=state.question,m=state.me,r=m.response;
   if(state.phase==='lobby')return `<img class="hero-map" src="/battle12/assets/island.png" alt="Treasure island"><section class="paper"><span class="eyebrow">Welcome aboard, ${esc(m.name)}</span><h1>Your voyage awaits</h1><p>Read Captain Mira’s story while your teacher gets ready.</p>${btn('Read the illustrated story','read','gold wide')}<div class="rules">${rules()}</div></section>`;
   if(state.phase==='finalBank')return `<section class="paper"><span class="eyebrow">Final banking</span><h1>Return to Camp</h1><p>Exploration and attacks are closed. Bank your Backpack for 1 Action, or pass. Only Vault gems score.</p>${m.settled?'<p>Your final banking decision is saved. Waiting for results.</p>':`${btn('Bank · 1 Action','bank','gold wide',m.actions<1||m.bag<1)}${btn('Pass final banking','pass','wide')}`}</section>`;
   if(state.phase==='finalPlay')return `<section class="paper"><span class="eyebrow">All 18 questions complete</span><h1>One last adventure</h1><p>Use or save your earned Actions. Your teacher will open Final banking next.</p>${btn('Visit the island','voyage','gold wide')}</section>`;
-  return `<span class="eyebrow">Question ${q.number} / 18 · ${esc(q.group)}</span><section class="paper"><p class="question">${esc(q.prompt)}</p><p class="rule-note">${esc(content.instructions)}</p>${state.revealedAnswer?`<p>Teacher’s revealed answer: <b>${esc(state.revealedAnswer)}</b></p>`:''}<form id="answer-form"><label for="answer">Your answer</label><input id="answer" data-question="${q.id}" maxlength="300" autocomplete="off" value="${esc(draft(q.id)||r?.value||'')}" ${r?.status==='accepted'||r?.status==='submitted'||state.revealedAnswer?'disabled':''}><button class="gold wide" style="margin-top:14px" ${r?.status==='accepted'||r?.status==='submitted'||state.revealedAnswer?'disabled':''}>Submit answer</button></form></section>${r?`<div class="saved"><b>${r.status==='accepted'?'Accepted · 1 Action earned':r.status==='submitted'?'Waiting for teacher review':r.status==='revise'?'Please revise your answer':'Submissions closed'}</b><div class="response">${esc(r.value)}</div></div>`:''}<div class="row">${btn('Read passage','read')}${btn('All 18 notes','notes')}</div>${state.paused?'<p class="saved">Game actions are paused. You can still read and answer.</p>':''}`;
+  return `<span class="eyebrow">Question ${q.number} / 18 · ${esc(q.group)}</span><section class="paper"><p class="question">${esc(q.prompt)}</p><p class="rule-note">${esc(content.instructions)}</p>${state.revealedAnswer?`<p>Teacher’s revealed answer: <b>${esc(state.revealedAnswer)}</b></p>`:''}<div class="answer-clock" data-countdown hidden></div>${state.answersClosed&&!state.finalized?'<p>Time’s up. Your teacher is reviewing the answers.</p>':''}<form id="answer-form"><label for="answer">Your answer</label><input id="answer" data-question="${q.id}" maxlength="300" autocomplete="off" value="${esc(draft(q.id)||r?.value||'')}" ${r?.status==='accepted'||r?.status==='submitted'||state.answersClosed?'disabled':''}><button class="gold wide" style="margin-top:14px" ${r?.status==='accepted'||r?.status==='submitted'||state.answersClosed?'disabled':''}>Submit answer</button></form></section>${r?`<div class="saved"><b>${r.status==='accepted'?'Accepted · 1 Action earned':r.status==='submitted'?'Waiting for teacher review':'Not accepted this question'}</b><div class="response">${esc(r.value)}</div></div>`:''}<div class="row">${btn('Read passage','read')}${btn('All 18 notes','notes')}</div>${state.paused?'<p class="saved">Game actions are paused. You can still read and answer.</p>':''}`;
 }
 function reader(){const art=window.TREASURE_ART[readPage];return `<div class="book-heading"><span class="eyebrow">Captain Mira’s journal · paragraph ${readPage+1} / 9</span><h1>${esc(content.title)}</h1><div class="progress"><span style="width:${(readPage+1)/9*100}%"></span></div></div><div class="reader-page"><img class="book-illustration" src="/battle12/${art.src}" alt="${esc(art.alt)}"><section class="paper book-text"><p><b>[${readPage+1}]</b> ${esc(content.paragraphs[readPage])}</p></section></div>`;}
 function readerControls(){return `<div class="book-controls"><div class="row">${btn('← Previous','prev','',readPage===0)}<span>${readPage+1} / 9</span>${btn('Next →','next','',readPage===8)}</div><details><summary>Jump to paragraph</summary><div class="jumps">${Array.from({length:9},(_,i)=>btn(String(i+1),'page','',false,`data-page="${i}" aria-current="${readPage===i?'page':'false'}"`)).join('')}</div></details>${btn(host?'Back to teacher dashboard':'Back to answer',host?'dashboard':'answer','quiet wide')}</div>`;}
@@ -97,26 +100,32 @@ function studentView(){const body=screen==='read'?reader():screen==='notes'?`<se
   return `<div class="phone"><header><div class="brand">TREASURE RAID<small>${esc(state.me.name)}</small></div><div class="room-label">Room ${pin}</div></header>${resourceBar()}<div class="connection"></div><section class="scroll">${body}</section>${screen==='read'?readerControls():''}<nav aria-label="Game views">${['voyage','read','answer','cards'].map(s=>btn(({voyage:'Island',read:'Read',answer:ended()?'Results':'Answer',cards:'Cards'})[s],s,'',false,`aria-current="${s===screen?'page':'false'}"`)).join('')}</nav></div>`;
 }
 function qrContent(){return `<p>Scan to join this same room. Rejoining on the same browser restores your player.</p><img class="qr" src="/api/treasure/rooms/${pin}/qr.svg" alt="Room ${pin} joining QR code"><div class="pin">${pin}</div><p class="join-link"><a href="${esc(state.joinUrl)}" target="_blank" rel="noopener">${esc(state.joinUrl)}</a></p>`;}
-function teacherControls(){return `<div class="row">${btn('Read illustrated story','read')}${btn('Show joining QR','qr')}${embedded?'':btn('Full screen','fullscreen')}${btn(hideAnswers?'Show answers':'Hide answers for projector','privacy')}${!ended()?btn('End Game','end','danger'):btn('New room','create','gold')}</div>`;}
-function teacherQuestion(){
-  const pendingCount=state.players.filter(p=>p.answerStatus==='submitted').length;
-  if(state.phase==='lobby')return `<section class="paper question-control"><span class="eyebrow">Teacher lobby</span><h2>Ready to set sail?</h2><p>Students scan the QR and enter a name. Everyone starts at Camp.</p>${btn('Start question 1 →','start','gold wide',!state.joinedCount)}</section>`;
-  return `<section class="paper question-control"><div class="question-heading"><strong>Question ${state.question.number} of 18</strong><span>${esc(state.phase==='questions'?'Answer & explore':state.phase==='finalPlay'?'Final exploration':'Final banking')}</span></div>${state.phase==='questions'?`${btn(state.question.number===18?'Finish questions →':'Next question →','advance','gold wide',pendingCount>0)}<p class="next-help" role="status">${pendingCount?pendingCount+' answer'+(pendingCount===1?'':'s')+(pendingCount===1?' needs':' need')+' marking below before you can continue.':'Ready when you are. Next question opens for every student.'}</p>`:''}<p class="question">${esc(state.question.prompt)}</p><div class="row">${['questions','finalPlay'].includes(state.phase)?btn(state.paused?'Resume actions':'Pause actions','pause'):''}${state.phase==='questions'?btn('Reveal answer to all','reveal','quiet'):''}${state.phase==='finalPlay'?btn('Open Final banking','final-banking','gold wide'):''}${state.phase==='finalBank'?btn('Show final results','finish','gold wide',state.players.some(p=>!p.settled)):''}</div></section>`;
+function teacherControls(){return `<div class="row">${btn('Read illustrated story','read')}${btn('Show joining QR','qr')}${embedded?'':btn('Full screen','fullscreen')}${!ended()?btn('End Game','end','danger'):btn('New room','create','gold')}</div>`;}
+function lobbyDesk(){return `<section class="lobby-join panel"><span class="eyebrow">Join the adventure</span><h2>Scan to join Treasure Raid</h2>${qrContent()}<p>Enter your name. No group selection needed.</p>${btn('Start question 1 →','start','gold wide',!state.joinedCount)}<p>${state.joinedCount} joined · ${state.onlineCount} online</p></section><section class="panel"><h2>Ready crew</h2>${state.players.length?state.players.map(p=>`<div class="status-row"><b>${esc(p.name)}</b><span>${p.online?'Connected':'Reconnecting'}</span></div>`).join(''):'<p>Student names will appear here.</p>'}</section>`;}
+function showReview(){
+  if(!reviewOpen||!host||review?.question?.id!==state.question.id)return;
+  const scroll=dialog.querySelector('.answer-list')?.scrollTop??0;
+  const focused=dialog.contains(document.activeElement)?{...document.activeElement.dataset}:null;
+  dialog.classList.remove('reward-dialog');dialog.classList.add('answer-review');
+  dialog.innerHTML=reviewDialog(state,review);
+  if(!dialog.open)dialog.showModal();
+  dialog.querySelector('.answer-list').scrollTop=scroll;
+  if(focused?.action)[...dialog.querySelectorAll('[data-action]')].find(el=>Object.entries(focused).every(([k,v])=>el.dataset[k]===v))?.focus({preventScroll:true});
 }
-function answerPanel(){
-  if(hideAnswers)return '<section class="panel"><h2>Answers hidden</h2><p>Use “Show answers” when you are ready to mark. The island remains visible.</p></section>';
-  const q=review?.question;
-  if(!q||q.id!==state.question.id)return '<section class="panel"><h2>Student answers</h2><p>Loading current answers…</p></section>';
-  const entries=[...review.entries].sort((a,b)=>(b.response?.status==='submitted')-(a.response?.status==='submitted'));
-  return `<section class="answer-desk"><div class="marking-heading"><h2>Student answers</h2>${btn(state.autoMark?'Auto-mark: ON':'Auto-mark: OFF','auto-mark',state.autoMark?'gold':'',ended())}</div><p class="rule-note">Approved matches earn 1 Action automatically when auto-mark is on. Other answers wait for your decision.</p><p class="privacy-note">Answers below are visible if you project this screen.</p>${state.phase==='questions'?`<details class="answer-key"><summary>Answer guide & evidence</summary><p>Suggested answer: <b>${esc(q.modelAnswer)}</b></p><p>${q.acceptedAnswers.map(esc).join(' / ')}</p><p>Paragraph ${q.evidenceParagraph}: ${esc(q.evidenceQuote)}</p><p>${esc(q.markingNotes)}</p></details>`:''}<div class="answer-list">${entries.length?entries.map(e=>{const r=e.response,waiting=r?.status==='submitted';return `<article class="review-card panel"><div class="answer-name"><b>${esc(e.name)}</b><span class="badge">${!r?'Not submitted':waiting?'Needs review':r.status==='accepted'?(r.markedBy==='automatic'?'Auto-accepted · +1':'Accepted · +1'):r.status==='revise'?'Asked to revise':'Closed'}</span></div>${r?`<blockquote>${esc(r.value)}</blockquote>${waiting?`<small>${e.suggestion.status==='suggest_accept'?'Approved answer match':'Teacher judgement needed'}${e.suggestion.overWordLimit?' · Over 3 words':''}</small><div class="row">${btn('Accept · +1 Action','accept','gold',ended()||state.phase!=='questions',`data-player="${e.id}" data-attempt="${r.attempts}"`)}${btn('Reject · revise','reject','',ended()||state.phase!=='questions',`data-player="${e.id}" data-attempt="${r.attempts}"`)}</div>`:''}`:'<p class="muted">Waiting for an answer.</p>'}</article>`;}).join(''):'<p>No students have joined yet.</p>'}</div></section>`;
+function updateCountdown(){
+  if(!state)return;
+  const seconds=state.answerCountdownEndsAt?Math.max(0,Math.ceil((state.answerCountdownEndsAt-Date.now()-serverOffset)/1000)):null;
+  for(const el of document.querySelectorAll('[data-countdown]')){el.hidden=seconds===null;el.textContent=seconds===null?'':seconds>0?seconds+' seconds left':"Time’s up — answers locked";}
+  if(!host&&(state.answersClosed||seconds===0))for(const el of document.querySelectorAll('#answer-form input,#answer-form button'))el.disabled=true;
 }
+dialog.addEventListener('close',()=>{reviewOpen=false;dialog.classList.remove('answer-review');dialog.innerHTML='';review=null;});
 function teacherMap(){
   const points={camp:[23,64],cave:[24,22],bridge:[49,20],ruins:[75,18],temple:[79,43],harbor:[81,72]};
-  return `<section class="island-desk"><div class="map-heading"><div><span class="eyebrow">Live island</span><h2>Where students are</h2></div><span class="badge">${state.onlineCount} online · ${state.joinedCount} joined</span></div><p class="rule-note">Latest confirmed destination: exploring moves a player there; banking returns them to Camp.</p><div class="live-map"><img src="/battle12/assets/island.png" alt="Treasure Raid island with live student destinations">${locations.map(([id,name])=>{const people=state.players.filter(p=>(p.location??'camp')===id),[x,y]=points[id];return `<button class="map-pin ${people.length?'occupied':''}" style="left:${x}%;top:${y}%" data-action="map-place" data-place="${id}" aria-label="${esc(name)}: ${people.length} players"><strong>${esc(name)}</strong><span>${people.length?people.slice(0,2).map(p=>esc(p.name)).join(', ')+(people.length>2?' +'+(people.length-2):''):'0 players'}</span></button>`;}).join('')}</div><div class="location-list">${locations.map(([id,name])=>{const people=state.players.filter(p=>(p.location??'camp')===id);return `<section><h3>${esc(name)} <span>${people.length}</span></h3><p>${people.length?people.map(p=>`<span class="location-player">${esc(p.name)}${p.online?'':' · offline'}</span>`).join(''):'<span class="muted">Nobody here</span>'}</p></section>`;}).join('')}</div><details class="join-compact" ${state.phase==='lobby'?'open':''}><summary>Student joining QR · Room ${pin}</summary>${qrContent()}</details><details><summary>Recent activity</summary><ul class="log">${state.log.slice(0,8).map(l=>`<li>${esc(l.text)}</li>`).join('')}</ul></details></section>`;
+  return `<section class="island-desk"><div class="map-heading"><div><span class="eyebrow">Live island</span><h2>Where students are</h2></div><span class="badge">${state.onlineCount} online · ${state.joinedCount} joined</span></div><p class="rule-note">Latest confirmed destination: exploring moves a player there; banking returns them to Camp.</p><div class="live-map"><img src="/battle12/assets/island.png" alt="Treasure Raid island with live student destinations">${locations.map(([id,name])=>{const people=state.players.filter(p=>(p.location??'camp')===id),[x,y]=points[id];return `<button class="map-pin ${people.length?'occupied':''}" style="left:${x}%;top:${y}%" data-action="map-place" data-place="${id}" aria-label="${esc(name)}: ${people.length} players"><strong>${esc(name)}</strong><span>${people.length?people.slice(0,2).map(p=>esc(p.name)).join(', ')+(people.length>2?' +'+(people.length-2):''):'0 players'}</span></button>`;}).join('')}</div><div class="location-list">${locations.map(([id,name])=>{const people=state.players.filter(p=>(p.location??'camp')===id);return `<section><h3>${esc(name)} <span>${people.length}</span></h3><p>${people.length?people.map(p=>`<span class="location-player">${esc(p.name)}${p.online?'':' · offline'}</span>`).join(''):'<span class="muted">Nobody here</span>'}</p></section>`;}).join('')}</div><details><summary>Recent activity</summary><ul class="log">${state.log.slice(0,8).map(l=>`<li>${esc(l.text)}</li>`).join('')}</ul></details></section>`;
 }
 function teacherView(){
   if(screen==='read')return `<div class="teacher"><header class="topbar"><span class="eyebrow">Teacher mode · room ${pin}</span><div class="row">${btn('Back to teacher dashboard','dashboard')}${btn('Show joining QR','qr')}</div></header><section class="teacher-reader">${reader()}${readerControls()}</section></div>`;
-  return `<div class="teacher command-centre"><header class="topbar"><div><span class="eyebrow">Battle 12 · TEACHER MODE · room ${pin}</span><h1>Treasure Raid</h1></div>${teacherControls()}</header><div class="row">${musicControls()}</div><div class="connection"></div>${ended()?results():''}<div class="teacher-workspace"><aside class="marking-desk">${!ended()?teacherQuestion():''}${answerPanel()}</aside>${teacherMap()}</div><section class="roster">${state.players.map(p=>`<article class="player"><b>${esc(p.name)}</b> <small>${p.online?'Online':'Disconnected'}</small><div class="score"><span>Actions <strong>${p.actions}</strong></span><span>Backpack <strong>${p.bag}</strong></span><span>Vault <strong>${p.vault}</strong></span></div><small>${p.acceptedCount}/18 accepted${state.phase==='finalBank'?' · '+(p.settled?'Settled':'Banking decision pending'):''}</small></article>`).join('')}</section><p class="credits">Music: “Master of the Feast” by Kevin MacLeod (<a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400019" target="_blank" rel="noopener">incompetech.com</a>), <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p></div>`;
+  return `<div class="teacher command-centre"><header class="topbar"><div><span class="eyebrow">Battle 12 · TEACHER MODE · room ${pin}</span><h1>Treasure Raid</h1></div>${teacherControls()}</header><div class="row">${musicControls()}</div><div class="connection"></div>${ended()?results():''}<div class="teacher-workspace"><aside class="marking-desk">${state.phase==='lobby'?lobbyDesk():!ended()?questionDesk(state)+responseStatuses(state):''}</aside>${teacherMap()}</div><section class="roster" ${state.phase==='lobby'?'hidden':''}>${state.players.map(p=>`<article class="player"><b>${esc(p.name)}</b> <small>${p.online?'Online':'Disconnected'}</small><div class="score"><span>Actions <strong>${p.actions}</strong></span><span>Backpack <strong>${p.bag}</strong></span><span>Vault <strong>${p.vault}</strong></span></div><small>${p.acceptedCount}/18 accepted${state.phase==='finalBank'?' · '+(p.settled?'Settled':'Banking decision pending'):''}</small></article>`).join('')}</section><p class="credits">Music: “Master of the Feast” by Kevin MacLeod (<a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400019" target="_blank" rel="noopener">incompetech.com</a>), <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p></div>`;
 }
 let music=null,musicOn=false,volume=.2;
 function musicControls(){return `<div class="music">${btn(musicOn?'Music: on ♫':'Music: off','music')}<label for="volume">Volume</label><input id="volume" type="range" min="0" max="0.6" step="0.01" value="${volume}" aria-label="Music volume"><small>Teacher only</small></div>`;}
@@ -131,7 +140,7 @@ function render(){saveDraft();const active=document.activeElement,focus=active?.
   if(screen==='read'&&$('.scroll'))$('.scroll').scrollTop=readScroll;else if($('.scroll'))$('.scroll').scrollTop=scroll;
   if(focus&&document.getElementById(focus)){document.getElementById(focus).focus({preventScroll:true});try{document.getElementById(focus).setSelectionRange(selection,selection);}catch{}}
   if(pending){const bar=document.createElement('div');bar.className='panel';bar.innerHTML=`<p>A previous action needs confirmation from the server. Retry safely with the same receipt.</p>${btn('Retry saved action','retry','gold')}`;app.prepend(bar);}
-  updateConnection();
+  updateConnection();updateCountdown();showReview();
   $('#join-form')?.addEventListener('submit',join);
   $('#answer')?.addEventListener('input',saveDraft);
   $('#answer-form')?.addEventListener('submit',e=>{e.preventDefault();send('student:submit',{questionId:state.question.id,answer:$('#answer').value,attempt:state.me.response?.attempts??0});});
@@ -141,8 +150,8 @@ async function join(e){e.preventDefault();if(busy)return;busy=true;
   try{pin=$('#pin').value.trim();const name=$('#name').value;const result=await api(`rooms/${pin}/join`,{method:'POST',body:{clientId,name},auth:''});token=result.playerToken;put('student:'+pin,token);put('name',name);studentRoute();content=null;lastVersion=-1;await refresh();}
   catch(error){notice(error.message);}finally{busy=false;render();}
 }
-app.addEventListener('click',async e=>{
-  const button=e.target.closest('[data-action]');if(!button||busy)return;const action=button.dataset.action;saveDraft();rememberReader();
+document.addEventListener('click',async e=>{
+  const button=e.target.closest('[data-action]');if(!button||button.disabled||busy||(!app.contains(button)&&!dialog.contains(button)))return;const action=button.dataset.action;saveDraft();rememberReader();
   if(['answer','read','voyage','cards','notes'].includes(action)){screen=action;render();if($('.scroll'))$('.scroll').scrollTop=screen==='read'?readScroll:0;return;}
   if(['next','prev','page'].includes(action)){readPage=Math.max(0,Math.min(8,action==='page'?Number(button.dataset.page):readPage+(action==='next'?1:-1)));readScroll=0;put('reader:'+pin,JSON.stringify({page:readPage,scroll:0}));render();window.scrollTo(0,0);return;}
   if(action==='create'){
@@ -152,8 +161,15 @@ app.addEventListener('click',async e=>{
   }
   if(action==='refresh')return refresh(true);
   if(action==='dashboard'&&host){screen='answer';history.replaceState(null,'','/battle12/?host='+pin);render();return;}
-  if(action==='privacy'&&host){hideAnswers=!hideAnswers;put('hide-answers:'+pin,hideAnswers?'1':'0');render();return;}
-  if(action==='auto-mark'&&host)return send('host:auto-mark',{enabled:!state.autoMark});
+  if(action==='review-open'&&host){
+    try{review=await api(`rooms/${pin}/review`);reviewOpen=true;showReview();}catch(e){notice(e.message);}return;
+  }
+  if(action==='review-close'){reviewOpen=false;dialog.close();return;}
+  if(action==='accept-all'&&host){
+    const revision=review.reviewVersion;
+    return modal('Accept all submitted answers?', '<p>This accepts every submitted answer, including those that did not match automatically. No Actions are awarded until finalization.</p>','Accept all',async()=>{await send('host:accept-all',{questionId:state.question.id,reviewVersion:revision});review=await api(`rooms/${pin}/review`);reviewOpen=true;showReview();});
+  }
+  if(action==='countdown'&&host)return send('host:start-countdown',{questionId:state.question.id});
   if(action==='map-place'&&host){const id=button.dataset.place,name=locations.find(l=>l[0]===id)?.[1],people=state.players.filter(p=>(p.location??'camp')===id);return modal(name,people.length?`<ul>${people.map(p=>`<li>${esc(p.name)} · ${p.online?'Online':'Disconnected'} · Backpack ${p.bag} · Vault ${p.vault}</li>`).join('')}</ul>`:'<p>Nobody is at this destination yet.</p>',null);}
   if(action==='retry')return send(pending.type);
   if(action==='music')return toggleMusic();
@@ -161,18 +177,16 @@ app.addEventListener('click',async e=>{
   if(action==='qr')return modal('Join room '+pin,qrContent(),null);
   if(action==='start')return send('host:start');
   if(action==='pause')return send('host:pause',{paused:!state.paused});
-  if(action==='advance'){
-    const waiting=state.players.filter(p=>p.answerStatus==='submitted').length;
-    if(waiting)return notice(`Mark the ${waiting} pending answer(s) in the left panel first.`);
-    const unfinished=state.players.filter(p=>p.answerStatus!=='accepted').length;
-    if(!unfinished)return send('host:advance',{questionId:state.question.id});
-    return modal(state.question.number===18?'Finish questions?':'Go to question '+(state.question.number+1)+'?',`<p>${unfinished} player(s) have not earned an Action for this question. Continue without their answers?</p>`,'Continue',()=>send('host:advance',{questionId:state.question.id,skip:true}));
+  if(action==='advance')return send('host:advance',{questionId:state.question.id});
+  if(action==='finalize'){
+    const questionId=state.question.id,revision=state.reviewVersion;
+    const missing=state.players.filter(p=>['not-submitted','unanswered'].includes(p.answerStatus)).length;
+    return modal('Finalize & reveal answer?',`<p>Lock your decisions, reveal the answer to everyone, and award 1 Action per accepted answer.</p>${missing?`<p>${missing} student(s) have no submitted answer and will receive no Action.</p>`:''}<p>Pause actions will stay ${state.paused?'on':'off'}.</p>`,'Finalize & reveal',()=>send('host:reveal',{questionId,reviewVersion:revision}));
   }
-  if(action==='reveal')return modal('Reveal to every player?',`<p>This shows the answer, closes new submissions for this question, and pauses game actions. Existing submissions can still be marked.</p>`,'Reveal answer',()=>send('host:reveal',{questionId:state.question.id}));
   if(action==='final-banking')return modal('Open Final banking?',`<p>Exploration and attacks will close. Players may spend one saved Action to bank, or pass.</p>`,'Open Final banking',()=>send('host:final-banking'));
   if(action==='finish')return send('host:finish');
   if(action==='end')return modal('End room '+pin+' now?',`<p>All answers, marking and game actions stop immediately. Only gems already in Vaults count. Backpack gems and unused Actions score zero.</p><p><b>No automatic banking or extra banking turn will happen.</b> Scores will be locked and students stay on their own results pages.</p>`,'End Game now',()=>send('host:end',{confirm:true}));
-  if(action==='accept'||action==='reject')return send('host:review',{questionId:review.question.id,playerId:button.dataset.player,attempt:Number(button.dataset.attempt),decision:action==='accept'?'accept':'revise'});
+  if(action==='accept'||action==='reject')return send('host:review',{questionId:review.question.id,playerId:button.dataset.player,attempt:Number(button.dataset.attempt),decision:action==='accept'?'accept':'reject'});
   const version=state.me?.actionVersion;
   if(action==='place'){
     const location=button.dataset.place,[,name]=locations.find(l=>l[0]===location);
@@ -188,4 +202,4 @@ window.addEventListener('online',()=>refresh(true));
 window.addEventListener('popstate',()=>{if(!host){studentRoute();refresh(true);}});
 const shellUrl=treasureTeacherShellUrl(route,embedded);
 if(shellUrl)location.replace(shellUrl);
-else{render();if(pin)refresh(true);setInterval(()=>{if(!busy&&!document.hidden)refresh();},1800);}
+else{render();setInterval(updateCountdown,250);if(pin)refresh(true);setInterval(()=>{if(!busy&&!document.hidden)refresh();},1800);}
