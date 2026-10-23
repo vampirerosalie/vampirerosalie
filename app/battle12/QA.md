@@ -46,4 +46,12 @@ Separate browser storage contexts: in-app browser teacher and Chrome student. La
 
 ## Publication check
 
+### Reward artwork check — 2026-10-23
+
+- Battle 12: 32/32 automated tests passed; Battles 7–12 regression suite: 291/291 passed.
+- Production Cloudflare build completed successfully.
+- Local real-HTTP smoke test passed in isolated room 79014, closed by the test: image hashes for all six reward PNGs, QR, joining/reconnection, answer marking, one-time exploration, banking, pause and End Game.
+- Browser UI test in separate local room 48215: name-only join, auto-marked Q1–Q3, Next question, hidden outcome preview, actual gem and shield reveals, and held-shield Cards view. Reward layout inspected at 390×844 and 360×740. No physical phone test claimed.
+- Duplicate-card conversion and blocked-attack visuals are covered by server and mapping tests; random browser play is not claimed to have produced every outcome.
+
 The existing GitHub → Cloudflare workflow is used. Run `scripts/verify-battle12.mjs` against the live origin after deployment; it verifies the frontend SHA, performs the real backend flow with clearly labelled test participants and closes its own new room. Record the live result in the delivery message; successful local tests alone do not prove deployment.

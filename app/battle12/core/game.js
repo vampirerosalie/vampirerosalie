@@ -129,10 +129,13 @@ export class TreasureGame {
       let result;
       if(b.type==='student:explore'){
         // Fresh secret entropy for every server transaction; the prototype's seed never leaves the server.
+        const crew=E.getCrew(s,p.id),held=new Set(crew.cards);
+        if(crew.shields)held.add('shield');
         s.seed=randomInt(0x100000000);result=E.explore(s,p.id,b.location);delete result.weight;
+        result.visual=held.has(result.kind)?'duplicate':result.kind;
       }
-      if(b.type==='student:bank')result={title:`Banked ${E.bank(s,p.id)} gems`,message:'Your vault is protected.'};
-      if(b.type==='student:attack'){result=E.attack(s,p.id,b.targetId,b.card,CONTENT);r.players.find(x=>x.id===b.targetId).actionVersion++;}
+      if(b.type==='student:bank')result={visual:'bank',title:`Banked ${E.bank(s,p.id)} gems`,message:'Your vault is protected.'};
+      if(b.type==='student:attack'){const blocked=E.getCrew(s,b.targetId).shields>0;result=E.attack(s,p.id,b.targetId,b.card,CONTENT);result.visual=blocked?'blocked':b.card;r.players.find(x=>x.id===b.targetId).actionVersion++;}
       if(b.type==='student:pass')E.pass(s,p.id);
       p.actionVersion++;return result;
     }

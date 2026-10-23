@@ -33,6 +33,8 @@ try{
   const c=await api(root+'/content',t);assert.equal(c.paragraphs.length,9);assert.equal(c.items.length,18);assert.ok(!JSON.stringify(c).includes('acceptedAnswers'));
   for(let n=1;n<=9;n++){const res=await fetch(`${base}/battle12/assets/paragraph_${String(n).padStart(2,'0')}.png`,{method:'HEAD'});assert.equal(res.status,200);assert.match(res.headers.get('content-type'),/image\/png/);}
   log('all nine images served; full passage available without private key');
+  for(const file of ['gems','shield','raid','sabotage','trap','vault']){const res=await fetch(`${base}/battle12/assets/rewards/${file}.png`);assert.equal(res.status,200);assert.equal(hash(Buffer.from(await res.arrayBuffer())),hash(await readFile(new URL(`../public/battle12/assets/rewards/${file}.png`,import.meta.url))));}
+  log('all six reward illustrations match the checked individual PNG assets');
   await act(t,'student:submit',{questionId:'q01',answer:'  SILVER GULL.  ',attempt:0});
   assert.equal((await api(root+'/state',t)).me.actions,0);
   assert.ok(!JSON.stringify(await api(root+'/state',h.hostToken)).includes('SILVER GULL.'));
@@ -42,6 +44,7 @@ try{
   let me=(await api(root+'/state',t)).me;assert.equal(me.actions,1);
   const explore=randomUUID(),exploreBody={location:'cave',expectedVersion:me.actionVersion};
   const reward=await act(t,'student:explore',exploreBody,explore);await act(t,'student:explore',exploreBody,explore);assert.ok(!('weight' in reward.result));
+  assert.equal(reward.result.visual,'gems');
   assert.equal((await api(root+'/state',h.hostToken)).players.find(p=>p.id===players[0].playerId).location,'cave');
   me=(await api(root+'/state',t)).me;assert.equal(me.actions,0);assert.ok([2,3].includes(me.bag));log('teacher acceptance and exploration retry each change resources once');
   await act(h.hostToken,'host:advance',{questionId:'q01',skip:true});

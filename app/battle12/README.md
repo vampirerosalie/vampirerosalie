@@ -47,6 +47,12 @@ Music: **Master of the Feast**, Kevin MacLeod (incompetech.com), [CC BY 4.0](htt
 
 ## Verification
 
+### Illustrated discoveries
+
+Six individual transparent PNGs in `public/battle12/assets/rewards/`: `gems.png` (gem pouch), `shield.png` (protection), `raid.png` and `sabotage.png` (held cards), `trap.png` (island mishap), and `vault.png` (banked treasure). Generated separately with the built-in image generator; original prompts are preserved in `reward-art-prompts.json`. No sprite-sheet cropping. The fixed manifest is `public/battle12/reward-art.js`.
+
+Artwork appears only after a committed outcome, or for items already held in the Cards view. A duplicate card shows its actual gem conversion; blocked attacks show the shield. Server metadata selects presentation only: the original engine, probabilities, costs and amounts remain unchanged. Animations respect reduced motion; illustrations use contain sizing rather than stretching.
+
 See `QA.md`. Run `node --test test/battle12/integration.test.js`, the repository suite `node --test "test/**/*.test.js"`, and `pnpm run build:cloudflare`.
 
 `node scripts/verify-battle12.mjs https://grammartest.grammarclassroom.workers.dev` creates a NEW labelled three-participant test room, checks the deployed source/QR/core flow/auth/termination, and closes that room in `finally`. It never selects an existing classroom room and prints no capabilities. Do not run unneeded repetitions during a class.

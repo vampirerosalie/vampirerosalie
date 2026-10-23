@@ -1,5 +1,6 @@
 import { resolveTreasureRoute } from './route.js?v=2';
 import { retireReviewSession } from './retire-review-session.js?v=1';
+import { REWARD_ART, rewardArt, artImage } from './reward-art.js?v=1';
 const $=s=>document.querySelector(s), app=$('#app'), dialog=$('#dialog');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const PREFIX='treasure-raid:', params=new URLSearchParams(location.search);
@@ -59,10 +60,16 @@ async function send(type,extra={}){
   finally{busy=false;render();}
 }
 function modal(title,body,confirmLabel,onConfirm){
+  dialog.classList.remove('reward-dialog');
   dialog.innerHTML=`<h2>${esc(title)}</h2>${body}<div class="row"><button id="modal-cancel" class="quiet">${confirmLabel?'Cancel':'Close'}</button>${confirmLabel?`<button id="modal-confirm" class="gold">${esc(confirmLabel)}</button>`:''}</div>`;
   $('#modal-cancel').onclick=()=>dialog.close();if(confirmLabel)$('#modal-confirm').onclick=()=>{dialog.close();onConfirm();};if(!dialog.open)dialog.showModal();
 }
-function showOutcome(o){modal(o.title,`<p>${esc(o.message)}</p>`,null);}
+function showOutcome(o){
+  const art=rewardArt(o);
+  modal(o.title,`${art?`<div class="reward-stage">${artImage(art,'reward-illustration')}</div><p class="reward-label">${art.label}</p>`:''}<p class="reward-message">${esc(o.message)}</p>`,null);
+  if(art)dialog.classList.add('reward-dialog');
+  $('#modal-cancel').textContent='Continue →';
+}
 const btn=(label,action,cls='',disabled=false,attrs='')=>`<button type="button" data-action="${action}" class="${cls}" ${disabled?'disabled':''} ${attrs}>${label}</button>`;
 const ended=()=>['ended','finished'].includes(state?.phase);
 const locations=[['camp','Camp'],['cave','Crystal Cave'],['bridge','Rope Bridge'],['ruins','Old Ruins'],['temple','Sun Temple'],['harbor','Hidden Harbor']];
@@ -78,7 +85,12 @@ function questionView(){const q=state.question,m=state.me,r=m.response;
 function reader(){const art=window.TREASURE_ART[readPage];return `<div class="book-heading"><span class="eyebrow">Captain Mira’s journal · paragraph ${readPage+1} / 9</span><h1>${esc(content.title)}</h1><div class="progress"><span style="width:${(readPage+1)/9*100}%"></span></div></div><div class="reader-page"><img class="book-illustration" src="/battle12/${art.src}" alt="${esc(art.alt)}"><section class="paper book-text"><p><b>[${readPage+1}]</b> ${esc(content.paragraphs[readPage])}</p></section></div>`;}
 function readerControls(){return `<div class="book-controls"><div class="row">${btn('← Previous','prev','',readPage===0)}<span>${readPage+1} / 9</span>${btn('Next →','next','',readPage===8)}</div><details><summary>Jump to paragraph</summary><div class="jumps">${Array.from({length:9},(_,i)=>btn(String(i+1),'page','',false,`data-page="${i}" aria-current="${readPage===i?'page':'false'}"`)).join('')}</div></details>${btn(host?'Back to teacher dashboard':'Back to answer',host?'dashboard':'answer','quiet wide')}</div>`;}
 function voyage(){return `<span class="eyebrow">Choose your next destination</span><h1>The island awaits</h1><figure class="map"><img src="/battle12/assets/island.png" alt="Treasure Raid’s original island map"></figure><div class="destinations">${locations.map(([id,name])=>btn(`${esc(name)}<small>${id==='camp'?'Bank':'Explore'} · 1 Action</small>`,'place','destination',ended(),`data-place="${id}"`)).join('')}</div><p class="rule-note">Keep an Action for banking. Only gems safely in your Vault count at the end.</p><details><summary>How to play</summary><div class="rules">${rules()}</div></details>`;}
-function cards(){const m=state.me,can=!state.paused&&['questions','finalPlay'].includes(state.phase)&&!m.usedAttack;return `<span class="eyebrow">Your satchel</span><h1>Cards & crews</h1><p>Shield: ${m.shields?'Ready · blocks one attack':'None'}</p><p>Your cards: ${m.cards.length?m.cards.map(esc).join(', '):'None yet'}</p>${m.usedAttack?'<p>You have used your attack for this question.</p>':''}${state.players.filter(c=>c.id!==m.id).map(c=>`<section class="rival"><h3>${esc(c.name)}</h3><p>Backpack ${c.bag} · Vault ${c.vault} · Shield ${c.shields}</p><div class="row">${['raid','sabotage'].map(card=>btn(card==='raid'?'Raid':'Sabotage','attack','',!can||!m.cards.includes(card)||c.bag<1,`data-card="${card}" data-target="${c.id}"`)).join('')}</div></section>`).join('')}<p class="rule-note">Vaults are always protected. Attacks cost the card, not an Action.</p>`;}
+function collectedCards(m){
+  const held=[...m.cards,...(m.shields?['shield']:[])];
+  if(!held.length)return '<section class="panel empty-satchel"><h2>Your satchel is waiting</h2><p>No cards or shield yet. Any you discover will appear here.</p></section>';
+  return `<div class="collected-cards">${held.map(kind=>{const art=REWARD_ART[kind];return `<article class="collected-card">${artImage(art,'collected-illustration')}<h2>${esc(kind==='shield'?'Shield':kind==='raid'?'Raid card':'Sabotage card')}</h2><p>${kind==='shield'?'Ready · blocks one attack':kind==='raid'?'Take up to 3 Backpack gems':'Remove up to 2 Backpack gems'}</p></article>`;}).join('')}</div>`;
+}
+function cards(){const m=state.me,can=!state.paused&&['questions','finalPlay'].includes(state.phase)&&!m.usedAttack;return `<span class="eyebrow">Your satchel</span><h1>Cards & crews</h1>${collectedCards(m)}${m.usedAttack?'<p>You have used your attack for this question.</p>':''}${state.players.filter(c=>c.id!==m.id).map(c=>`<section class="rival"><h3>${esc(c.name)}</h3><p>Backpack ${c.bag} · Vault ${c.vault} · Shield ${c.shields}</p><div class="row">${['raid','sabotage'].map(card=>btn(card==='raid'?'Raid':'Sabotage','attack','',!can||!m.cards.includes(card)||c.bag<1,`data-card="${card}" data-target="${c.id}"`)).join('')}</div></section>`).join('')}<p class="rule-note">Vaults are always protected. Attacks cost the card, not an Action.</p>`;}
 function results(){return `<section class="panel results"><span class="eyebrow">${state.phase==='ended'?(host?'You ended this game':'Your teacher ended the voyage'):'Voyage complete'}</span><h1>${host?'Final class results':'Treasure safely home'}</h1><p>Only Vault gems count. Unbanked Backpack gems and remaining Actions score zero.</p><ol>${state.results.map(r=>`<li><span>${r.rank===1?'Winner · ':r.rank+'. '}${esc(r.name)}</span><b>${r.vault} gems</b></li>`).join('')}</ol><p class="rule-note">Equal Vault totals share a rank. This is the expedition score, not a reading attainment score.</p></section>`;}
 function studentView(){const body=screen==='read'?reader():screen==='notes'?`<section class="paper"><h1>Expedition notes</h1><ol class="notes">${content.items.map(q=>`<li>${esc(q.prompt)}</li>`).join('')}</ol>${btn('Back to answer','answer','gold wide')}</section>`:ended()?results():screen==='voyage'?voyage():screen==='cards'?cards():questionView();
   return `<div class="phone"><header><div class="brand">TREASURE RAID<small>${esc(state.me.name)}</small></div><div class="room-label">Room ${pin}</div></header>${resourceBar()}<div class="connection"></div><section class="scroll">${body}</section>${screen==='read'?readerControls():''}<nav aria-label="Game views">${['voyage','read','answer','cards'].map(s=>btn(({voyage:'Island',read:'Read',answer:ended()?'Results':'Answer',cards:'Cards'})[s],s,'',false,`aria-current="${s===screen?'page':'false'}"`)).join('')}</nav></div>`;

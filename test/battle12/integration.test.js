@@ -72,7 +72,7 @@ test('lost response retry and rapid double exploration cannot spend or reward tw
   const s=await setup(1),t=s.players[0].playerToken;await s.act(s.host.hostToken,'host:start');await accept(s);
   const v=(await s.view(t)).me.actionVersion,id=randomUUID(),body={expectedVersion:v,location:'cave'};
   s.db.failAfterCommit=true;await assert.rejects(s.act(t,'student:explore',body,id),/Lost response/);
-  const repeat=await s.act(t,'student:explore',body,id);assert.equal(repeat.replayed,true);assert.ok(!('weight' in repeat.result));
+  const repeat=await s.act(t,'student:explore',body,id);assert.equal(repeat.replayed,true);assert.ok(!('weight' in repeat.result));assert.equal(repeat.result.visual,'gems');
   const m=(await s.view(t)).me;assert.equal(m.actions,0);assert.ok([2,3].includes(m.bag));
   await assert.rejects(s.act(t,'student:explore',body),/resources changed/);
   assert.equal((await s.view(t)).me.bag,m.bag);
@@ -91,7 +91,7 @@ test('concurrent bank and attacks serialize; vault protection, shields, limits a
   await Promise.allSettled([playerAction(s,0,'student:attack',{targetId:target,card:'raid'}),playerAction(s,1,'student:bank'),playerAction(s,2,'student:attack',{targetId:target,card:'raid'})]);
   const r=s.db.room(s.host.pin);assert.equal(r.game.crews.reduce((n,c)=>n+c.bag+c.vault,0),14);assert.ok(r.game.crews.every(c=>c.bag>=0));assert.ok(r.game.crews[1].vault>=9);
   s.db.fixture(s.host.pin,r=>{const [a,b]=r.game.crews;a.cards=['raid','sabotage'];a.attacks={};b.bag=4;b.shields=1;});
-  await playerAction(s,0,'student:attack',{targetId:target,card:'raid'});const view=await s.view(s.players[1].playerToken);assert.equal(view.me.bag,4);assert.equal(view.me.shields,0);
+  const blocked=await playerAction(s,0,'student:attack',{targetId:target,card:'raid'});assert.equal(blocked.result.visual,'blocked');const view=await s.view(s.players[1].playerToken);assert.equal(view.me.bag,4);assert.equal(view.me.shields,0);
   await assert.rejects(playerAction(s,0,'student:attack',{targetId:target,card:'sabotage'}),/already used/);
   for(let seed=0;seed<300;seed++){const x=E.createState('fixture');E.start(x);const c=x.crews[0];c.actions=1;c.cards=['raid','sabotage'];c.shields=1;x.seed=seed*2347;const event=E.explore(x,c.id,'ruins');assert.equal(c.cards.length,2);assert.equal(c.shields,1);assert.equal(c.bag,1);assert.ok(event.title);}
 });
@@ -183,7 +183,18 @@ test('teacher map exposes actual committed destinations; blocked moves never mov
   assert.equal((await s.view(s.host.hostToken)).players[0].location,'cave');
   await s.act(s.host.hostToken,'host:advance',{questionId:'q01'});
   await s.act(t,'student:submit',{questionId:'q02',answer:'six',attempt:0});
-  await playerAction(s,0,'student:bank');
+  const banked=await playerAction(s,0,'student:bank');assert.equal(banked.result.visual,'bank');
   assert.equal((await s.view(s.host.hostToken)).players[0].location,'camp');
   assert.equal('location' in (await s.view(t)).players[0],false);
+});
+
+test('reward illustration metadata follows committed outcome without altering duplicate rewards',async()=>{
+  const s=await setup(1,true);await s.act(s.host.hostToken,'host:start');
+  for(let i=0;i<12;i++){
+    s.db.fixture(s.host.pin,r=>{const c=r.game.crews[0];c.actions=1;c.cards=['raid','sabotage'];c.shields=1;c.bag=0;});
+    const {result}=await playerAction(s,0,'student:explore',{location:'ruins'});
+    assert.equal(result.visual,result.kind==='gems'?'gems':'duplicate');
+    const me=(await s.view(s.players[0].playerToken)).me;
+    assert.equal(me.bag,1);assert.equal(me.cards.length,2);assert.equal(me.shields,1);assert.equal(me.actions,0);
+  }
 });

@@ -1,0 +1,31 @@
+{
+  "tool": "Built-in image_gen",
+  "transparent_background": true,
+  "style": "Use case: stylized-concept. Asset type: one standalone reward illustration for Treasure Raid, a school pirate-island reading game. Style: polished storybook adventure game painting with tactile layered paper-like shapes, rich painted wood and antique brass textures, soft dimensional shading, warm golden sunlight, teal accents and clean readable silhouette. Friendly, delightful, not frightening. Square composition, a single large centered subject occupying about 72% of the canvas with generous clear space around every edge. True transparent background. No words, letters, numbers, labels, frames, UI, logos, watermark, characters, or neighbouring objects cut off at an edge. This is an individual image, never an atlas or contact sheet.",
+  "briefs": [
+    [
+      "gems",
+      "A small open weathered leather treasure pouch overflowing with radiant faceted emerald, turquoise and amber gemstones. Precious stones gleam warmly; celebratory treasure discovery, strong central silhouette. No coins (the game awards gems)."
+    ],
+    [
+      "shield",
+      "One sturdy teal-painted wooden pirate shield with a thick antique brass rim and a raised golden compass-star emblem at its centre. Slight three-quarter view, intact and dependable, soft magical rim light suggesting protection."
+    ],
+    [
+      "raid",
+      "One illustrated pirate ability card: a tactile thick parchment card with brass corner fittings and deep teal trim, depicting a curved brass grappling hook wrapped in rope hooking a small open leather pouch of sparkling green gems. Clearly an illustrated object card, absolutely no text or letters."
+    ],
+    [
+      "sabotage",
+      "One illustrated pirate ability card: tactile thick parchment card with brass corner fittings and muted coral trim, depicting a loosened knot and snapped rope beside a tipped small leather gem pouch. A few gems tumble away. Mischievous nonviolent sabotage, no weapons, flames, skulls or text."
+    ],
+    [
+      "trap",
+      "A compact island mishap vignette: a worn wooden plank has broken over a shallow sandy pit, with a loose rope loop and a small tipped leather gem pouch beside it. A few green gems slipping into the pit. Friendly storybook obstacle, no people, spikes, injury, teeth, horror, or violence. The entire self-contained sandy base has clean complete edges."
+    ],
+    [
+      "vault",
+      "A beautiful closed walnut pirate treasure chest secured with a large polished brass padlock, teal enamel bands and a small gold compass-star medallion. Solid protected treasure, warm reassuring gleam, no coins or loose gems outside the locked chest."
+    ]
+  ]
+}
