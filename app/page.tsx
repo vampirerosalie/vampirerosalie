@@ -872,6 +872,17 @@ export default function Home() {
       const marketParams = new URLSearchParams(window.location.search);
       let treasureStudent: string | null = null;
       try { treasureStudent = window.sessionStorage.getItem('treasure-raid:student-route'); } catch {}
+      // An explicit return to an already-owned teacher room takes precedence
+      // over a student preview marker; a URL alone never grants room authority.
+      if (marketParams.get('battle') === '12' && marketParams.has('teacher') && !marketParams.has('join') && !marketParams.has('student') && !marketParams.has('room')) {
+        try {
+          const ownedRoom = window.localStorage.getItem('treasure-raid:host-room') || '';
+          if (/^\d{5}$/.test(ownedRoom) && window.localStorage.getItem('treasure-raid:host:' + ownedRoom)) {
+            window.location.replace('/battle12/?host=' + ownedRoom);
+            return;
+          }
+        } catch {}
+      }
       if (treasureStudent !== null || marketParams.get('battle') === '12') {
         let room = marketParams.get('join') || marketParams.get('room') || '';
         if (treasureStudent !== null && !room) { try { room = JSON.parse(treasureStudent)?.room || ''; } catch {} }
