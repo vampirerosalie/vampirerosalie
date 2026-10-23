@@ -844,6 +844,8 @@ export default function Home() {
   const [marketStatus, setMarketStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [lanternStatus, setLanternStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [museumStatus, setMuseumStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
+  const [treasureStatus, setTreasureStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
+  const [treasureFrameUrl, setTreasureFrameUrl] = useState('/battle12/?teacher=1&embedded=1');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState('');
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -872,22 +874,21 @@ export default function Home() {
       const marketParams = new URLSearchParams(window.location.search);
       let treasureStudent: string | null = null;
       try { treasureStudent = window.sessionStorage.getItem('treasure-raid:student-route'); } catch {}
-      // An explicit return to an already-owned teacher room takes precedence
-      // over a student preview marker; a URL alone never grants room authority.
-      if (marketParams.get('battle') === '12' && marketParams.has('teacher') && !marketParams.has('join') && !marketParams.has('student') && !marketParams.has('room')) {
-        try {
-          const ownedRoom = window.localStorage.getItem('treasure-raid:host-room') || '';
-          if (/^\d{5}$/.test(ownedRoom) && window.localStorage.getItem('treasure-raid:host:' + ownedRoom)) {
-            window.location.replace('/battle12/?host=' + ownedRoom);
-            return;
-          }
-        } catch {}
-      }
-      if (treasureStudent !== null || marketParams.get('battle') === '12') {
+      // Teacher navigation stays in this shell; students still go directly to
+      // their phone page. A preview marker cannot override an owned host room.
+      let treasureOwned = false, treasureSavedStudent = '';
+      const explicitStudent = marketParams.has('join') || marketParams.has('student') || marketParams.has('room');
+      try {
+        const ownedRoom = marketParams.get('host') || window.localStorage.getItem('treasure-raid:host-room') || '';
+        treasureOwned = !explicitStudent && marketParams.has('teacher') && /^\d{5}$/.test(ownedRoom) && !!window.localStorage.getItem('treasure-raid:host:' + ownedRoom);
+        treasureSavedStudent = window.localStorage.getItem('treasure-raid:student-room') || '';
+        if (marketParams.get('battle') === '12') setTreasureFrameUrl('/battle12/?teacher=1&embedded=1' + (treasureOwned ? '&host=' + ownedRoom : ''));
+      } catch {}
+      if (!treasureOwned && (treasureStudent !== null || (marketParams.get('battle') === '12' && (explicitStudent || treasureSavedStudent)))) {
         let room = marketParams.get('join') || marketParams.get('room') || '';
         if (treasureStudent !== null && !room) { try { room = JSON.parse(treasureStudent)?.room || ''; } catch {} }
-        const student = treasureStudent !== null || marketParams.has('join') || marketParams.has('student') || marketParams.has('room');
-        window.location.replace('/battle12/?' + (student ? (/^\d{5}$/.test(room) ? 'join=' + room : 'student=1') : 'teacher=1'));
+        if (!room && !explicitStudent) room = treasureSavedStudent;
+        window.location.replace('/battle12/?' + (/^\d{5}$/.test(room) ? 'join=' + room : 'student=1'));
         return;
       }
       let museumStudent: string | null = null;
@@ -983,6 +984,15 @@ export default function Home() {
       if (!/^\d{5}$/.test(pin) || !['lobby', 'active', 'ended'].includes(phase) || !Number.isInteger(onlineCount) || onlineCount < 0 || onlineCount > 40) return;
       setMuseumStatus(current => current.pin === pin && current.phase === phase && current.onlineCount === onlineCount ? current : { pin, phase, onlineCount });
     };
+    const syncTreasure = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || routeRef.current?.mode !== 'treasure' || event.data?.type !== 'treasure-raid:status') return;
+      const { pin, phase, onlineCount } = event.data;
+      if (!/^\d{5}$/.test(pin) || !['lobby', 'questions', 'finalPlay', 'finalBank', 'finished', 'ended'].includes(phase) || !Number.isInteger(onlineCount) || onlineCount < 0 || onlineCount > 40) return;
+      setTreasureStatus(current => current.pin === pin && current.phase === phase && current.onlineCount === onlineCount ? current : { pin, phase, onlineCount });
+      // New room creation happens inside the panel. Remember its PIN in the
+      // outer bookmark too, without reloading the iframe or exposing its key.
+      try { if (window.localStorage.getItem('treasure-raid:host:' + pin)) window.history.replaceState(window.history.state, '', '/?battle=12&teacher=1&host=' + pin); } catch {}
+    };
     // The initial render is deliberately neutral, so no teacher component mounts
     // before the tab's student intent has been checked.
     readRoute();
@@ -993,6 +1003,7 @@ export default function Home() {
     window.addEventListener('message', syncMarket);
     window.addEventListener('message', syncLantern);
     window.addEventListener('message', syncMuseum);
+    window.addEventListener('message', syncTreasure);
     return () => {
       window.removeEventListener('popstate', readRoute);
       window.removeEventListener('pageshow', readRoute);
@@ -1001,6 +1012,7 @@ export default function Home() {
       window.removeEventListener('message', syncMarket);
       window.removeEventListener('message', syncLantern);
       window.removeEventListener('message', syncMuseum);
+      window.removeEventListener('message', syncTreasure);
     };
   }, []);
 
@@ -1049,20 +1061,21 @@ export default function Home() {
   const isMarket = route.mode === 'market';
   const isLantern = route.mode === 'lantern';
   const isMuseum = route.mode === 'museum';
-  const standaloneStatus = isMuseum ? museumStatus : isLantern ? lanternStatus : isMarket ? marketStatus : demolitionStatus;
-  const standaloneBattle = isMuseum ? 11 : isLantern ? 10 : isMarket ? 9 : 8;
-  if (route.mode === 'demolition' || isMarket || isLantern || isMuseum) return <main className="game-shell host-shell" style={{ display: 'flex', flexDirection: 'column' }}>
+  const isTreasure = route.mode === 'treasure';
+  const standaloneStatus = isTreasure ? treasureStatus : isMuseum ? museumStatus : isLantern ? lanternStatus : isMarket ? marketStatus : demolitionStatus;
+  const standaloneBattle = isTreasure ? 12 : isMuseum ? 11 : isLantern ? 10 : isMarket ? 9 : 8;
+  if (route.mode === 'demolition' || isMarket || isLantern || isMuseum || isTreasure) return <main className="game-shell host-shell" style={{ display: 'flex', flexDirection: 'column' }}>
     <header className="host-topbar" style={{ flexShrink: 0 }}>
       <div className="game-logo"><span>★</span><strong>GRAMMAR</strong><em>BATTLE!</em></div>
-      <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{standaloneStatus.pin || '•••••'}</strong></div><div className="online-pill"><span />{standaloneStatus.onlineCount}{isLantern ? ' students online' : ' teams online'}</div><div className="connection-pill connected">{isMuseum ? 'BATTLE 11 · MUSEUM JEWEL' : isLantern ? 'BATTLE 10 · LANTERN KEEPER' : isMarket ? 'BATTLE 9 · ENGLISH BLACK MARKET' : 'BATTLE 8 · DEMOLITION DASH'}</div></div>
+      <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{standaloneStatus.pin || '•••••'}</strong></div><div className="online-pill"><span />{standaloneStatus.onlineCount}{isLantern || isTreasure ? ' students online' : ' teams online'}</div><div className="connection-pill connected">{isTreasure ? 'BATTLE 12 · TREASURE RAID' : isMuseum ? 'BATTLE 11 · MUSEUM JEWEL' : isLantern ? 'BATTLE 10 · LANTERN KEEPER' : isMarket ? 'BATTLE 9 · ENGLISH BLACK MARKET' : 'BATTLE 8 · DEMOLITION DASH'}</div></div>
       <button type="button" className="fullscreen-button" aria-pressed={isFullscreen} onClick={() => void toggleFullscreen()}><span aria-hidden="true">{isFullscreen ? '↙' : '⛶'}</span>{isFullscreen ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
     </header>
     {fullscreenError && <p role="status">{fullscreenError}</p>}
-    {(isMuseum || ['lobby', 'finished', 'ended'].includes(standaloneStatus.phase)) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
-      <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle}{isMuseum && standaloneStatus.phase === 'active' ? ' is in progress' : ' is ready'}</strong></div>
+    {(isTreasure || isMuseum || ['lobby', 'finished', 'ended'].includes(standaloneStatus.phase)) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
+      <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle}{(isMuseum && standaloneStatus.phase === 'active') || (isTreasure && ['questions', 'finalPlay', 'finalBank'].includes(standaloneStatus.phase)) ? ' is in progress' : ' is ready'}</strong></div>
       <BattleTabs selected={standaloneBattle} onSelect={battle => { if (battle !== standaloneBattle) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }} />
     </section>}
-    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow="fullscreen" style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />}
+    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isTreasure ? "Battle Twelve: Treasure Raid teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isTreasure ? treasureFrameUrl : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow="fullscreen" style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />}
   </main>;
 
   const teacher = route.role === 'teacher';

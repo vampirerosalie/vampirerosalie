@@ -46,6 +46,13 @@ Separate browser storage contexts: in-app browser teacher and Chrome student. La
 
 ## Publication check
 
+### Shared teacher shell — 2026-10-23
+
+- Battles 7–12: 294/294 regression tests passed, including shell routing, all-phase persistent menu, foreign-message rejection, student-only redirects, owned teacher preview recovery, and new-room URL refresh.
+- Production Cloudflare build passed.
+- Browser local UI: direct Battle 12 teacher bookmark opened the main shell; all twelve tabs and the outer fullscreen control were visible. Fullscreen entry/exit succeeded. Name-only student join remained standalone. Active room 15871 survived refresh and switching to Battle 1 and back. Ending that test room and creating room 37381 updated the outer URL; refresh restored the new room rather than the old one.
+- No gameplay engine, answer content, probabilities or other battles' game modules were changed. Live verification is reported separately after deployment.
+
 ### Reward artwork check — 2026-10-23
 
 - Battle 12: 32/32 automated tests passed; Battles 7–12 regression suite: 291/291 passed.

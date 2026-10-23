@@ -12,3 +12,10 @@ export function resolveTreasureRoute(search, get, marker = '') {
   if (!/^\d{5}$/.test(pin || '')) pin = '';
   return { pin, hostIntent, student: !hostIntent && (explicitStudent || !!marker || !!pin), token: get((hostIntent ? 'host:' : 'student:') + pin) };
 }
+
+// Direct teacher bookmarks use the classroom shell. Never redirect a student,
+// and never redirect an embedded panel back into itself.
+export function treasureTeacherShellUrl(route, embedded) {
+  if (embedded || !route.hostIntent || route.student) return null;
+  return '/?battle=12&teacher=1' + (/^\d{5}$/.test(route.pin || '') ? '&host=' + route.pin : '');
+}

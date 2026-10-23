@@ -51,6 +51,47 @@ test('shell mounts only the student iframe on join, root/back/pageshow and a fre
   assert.equal(reloaded.location.search, '?battle=7&join=12345');
 });
 
+test('Treasure Raid stays embedded with battle tabs and fullscreen throughout every phase', () => {
+  const h=harness({search:'?battle=12&teacher=1'});
+  assert.equal(h.topRedirects.length,0);
+  assert.equal(h.frame().props.src,'/battle12/?teacher=1&embedded=1');
+  assert.equal(h.frame().props.allow,'fullscreen');
+  for(const phase of ['lobby','questions','finalPlay','finalBank','finished','ended']){
+    h.message({type:'treasure-raid:status',pin:'54321',phase,onlineCount:2});
+    assert.equal(h.tabs().props.selected,12);
+    assert.match(JSON.stringify(h.tree),/54321/);
+    assert.match(JSON.stringify(h.tree),/FULL SCREEN/);
+    assert.equal(h.frame().props.src,'/battle12/?teacher=1&embedded=1');
+  }
+  h.message({type:'treasure-raid:status',pin:'99999',phase:'questions',onlineCount:2},{origin:'https://wrong.test'});
+  assert.doesNotMatch(JSON.stringify(h.tree),/99999/);
+});
+
+test('Treasure students cannot enter the main teacher shell and owned teacher previews still return safely',()=>{
+  const session=new Map([['treasure-raid:student-route',JSON.stringify({room:'67890'})]]);
+  const local=new Map([['treasure-raid:student-room','67890']]);
+  for(const search of ['?battle=12&teacher=1','?battle=12&join=67890&teacher=1','?battle=10&teacher=1','']){
+    const h=harness({search,session,local});
+    assert.equal(h.frame(),undefined);assert.equal(h.topRedirects[0],'/battle12/?join=67890');
+  }
+  const fresh=harness({search:'?battle=12&teacher=1',local});
+  assert.equal(fresh.topRedirects[0],'/battle12/?join=67890');
+  local.set('treasure-raid:host-room','12345');local.set('treasure-raid:host:12345','HOST');
+  const owner=harness({search:'?battle=12&teacher=1',session,local});
+  assert.equal(owner.topRedirects.length,0);assert.equal(owner.frame().props.src,'/battle12/?teacher=1&embedded=1&host=12345');
+  owner.go('?battle=10&teacher=1');assert.equal(owner.tabs().props.selected,10);
+  owner.go('?battle=12&teacher=1','pageshow');assert.equal(owner.tabs().props.selected,12);
+  local.set('treasure-raid:host:54321','NEW_HOST');
+  const before=owner.frame().props.src;
+  owner.message({type:'treasure-raid:status',pin:'54321',phase:'lobby',onlineCount:0});
+  assert.equal(owner.location.search,'?battle=12&teacher=1&host=54321');
+  assert.equal(owner.frame().props.src,before,'status does not remount the current room');
+  const reloaded=harness({search:owner.location.search,session,local});
+  assert.equal(reloaded.frame().props.src,'/battle12/?teacher=1&embedded=1&host=54321');
+  const joined=harness({search:'?battle=12&join=67890&teacher=1',session,local});
+  assert.equal(joined.topRedirects[0],'/battle12/?join=67890');
+});
+
 test('a teacher in an independent tab is unaffected by the student session marker', () => {
   const pupil = harness({ search: '?battle=7&join=12345' });
   const teacher = harness({ search: '?battle=7&teacher=1' });

@@ -47,6 +47,10 @@ Music: **Master of the Feast**, Kevin MacLeod (incompetech.com), [CC BY 4.0](htt
 
 ## Verification
 
+### Shared teacher shell
+
+Teacher entry is `/?battle=12&teacher=1`. Existing direct `/battle12/?teacher=1` or owned `?host=PIN` bookmarks return to that shell. Its persistent Battle 1–12 selector and fullscreen control surround the embedded teacher desk. The inner desk retains the map, inline marking, QR and illustrated reader. Student joins remain direct `/battle12/?join=PIN` links; no student-to-teacher redirect is added. Switching battles does not end a room. The current host PIN is reflected in the outer URL when creating a new room, without remounting the active panel.
+
 ### Illustrated discoveries
 
 Six individual transparent PNGs in `public/battle12/assets/rewards/`: `gems.png` (gem pouch), `shield.png` (protection), `raid.png` and `sabotage.png` (held cards), `trap.png` (island mishap), and `vault.png` (banked treasure). Generated separately with the built-in image generator; original prompts are preserved in `reward-art-prompts.json`. No sprite-sheet cropping. The fixed manifest is `public/battle12/reward-art.js`.

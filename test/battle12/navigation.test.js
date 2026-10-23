@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { resolveTreasureRoute } from '../../public/battle12/route.js';
+import { resolveTreasureRoute, treasureTeacherShellUrl } from '../../public/battle12/route.js';
 
 const storage = {'host-room':'12345','host:12345':'HOST','student-room':'67890','student:67890':'STUDENT'};
 const get = data => key => data[key] || '';
@@ -30,12 +30,24 @@ test('new teacher entry has create-room intent, not a student name form',()=>{
   assert.deepEqual(resolveTreasureRoute('?teacher=1',get({})),{pin:'',hostIntent:true,student:false,token:''});
 });
 
+test('direct teacher bookmarks return to the shared shell, embedded panels and student links do not',()=>{
+  const teacher=resolveTreasureRoute('?host=12345',get(storage),marker);
+  assert.equal(treasureTeacherShellUrl(teacher,false),'/?battle=12&teacher=1&host=12345');
+  assert.equal(treasureTeacherShellUrl(teacher,true),null);
+  assert.equal(treasureTeacherShellUrl(resolveTreasureRoute('?teacher=1',get({})),false),'/?battle=12&teacher=1');
+  for(const search of ['?join=67890','?join=67890&teacher=1','?teacher=1','?host=12345']) {
+    const student=resolveTreasureRoute(search,get({'student-room':'67890','student:67890':'STUDENT'}),marker);
+    assert.equal(treasureTeacherShellUrl(student,false),null);
+  }
+});
+
 const source=readFileSync(new URL('../../public/battle12/app.js',import.meta.url),'utf8');
 function render(name,overrides={}) {
   const start=source.indexOf('function '+name+'('), end=source.indexOf('\nfunction ',start+1);
   let code=source.slice(start,end<0?undefined:end);
   if(['teacherView','teacherQuestion','answerPanel','teacherMap'].includes(name))code=source.slice(source.indexOf('function teacherControls()'),source.indexOf('let music=null'));
   const ctx={host:true,pin:'12345',hideAnswers:false,screen:'answer',esc:String,locations:[['camp','Camp'],['cave','Crystal Cave']],btn:(label,action,cls,disabled)=>`<button data-action="${action}" ${disabled?'disabled':''}>${label}</button>`,ended:()=>false,qrContent:()=>'<img alt="Joining QR">',musicControls:()=>'',reader:()=>'',readerControls:()=>'',results:()=>'',state:{phase:'lobby',players:[],log:[],question:{id:'q01',number:1,group:'Expedition',prompt:'Name of ship'},results:[]},review:null,...overrides};
+  ctx.embedded=true;
   return vm.runInNewContext(code+';'+name+'()',ctx);
 }
 test('teacher dashboard contains QR in lobby AND while questions are running',()=>{

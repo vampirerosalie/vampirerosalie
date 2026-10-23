@@ -1,4 +1,4 @@
-import { resolveTreasureRoute } from './route.js?v=2';
+import { resolveTreasureRoute, treasureTeacherShellUrl } from './route.js?v=3';
 import { retireReviewSession } from './retire-review-session.js?v=1';
 import { REWARD_ART, rewardArt, artImage } from './reward-art.js?v=1';
 const $=s=>document.querySelector(s), app=$('#app'), dialog=$('#dialog');
@@ -15,6 +15,7 @@ try {
 } catch { /* Storage restrictions must not interrupt normal joining. */ }
 let marker='';try{marker=sessionStorage.getItem(PREFIX+'student-route')??'';}catch{}
 const route=resolveTreasureRoute(location.search,get,marker);
+const embedded=window.parent!==window;
 let {pin,token,hostIntent}=route;
 let host=false,state=null,content=null,review=null,busy=false,online=true,lastVersion=-1,screen='answer',readPage=0,readScroll=0;
 let clientId=get('client-id');if(!clientId){clientId=crypto.randomUUID();put('client-id',clientId);}
@@ -96,7 +97,7 @@ function studentView(){const body=screen==='read'?reader():screen==='notes'?`<se
   return `<div class="phone"><header><div class="brand">TREASURE RAID<small>${esc(state.me.name)}</small></div><div class="room-label">Room ${pin}</div></header>${resourceBar()}<div class="connection"></div><section class="scroll">${body}</section>${screen==='read'?readerControls():''}<nav aria-label="Game views">${['voyage','read','answer','cards'].map(s=>btn(({voyage:'Island',read:'Read',answer:ended()?'Results':'Answer',cards:'Cards'})[s],s,'',false,`aria-current="${s===screen?'page':'false'}"`)).join('')}</nav></div>`;
 }
 function qrContent(){return `<p>Scan to join this same room. Rejoining on the same browser restores your player.</p><img class="qr" src="/api/treasure/rooms/${pin}/qr.svg" alt="Room ${pin} joining QR code"><div class="pin">${pin}</div><p class="join-link"><a href="${esc(state.joinUrl)}" target="_blank" rel="noopener">${esc(state.joinUrl)}</a></p>`;}
-function teacherControls(){return `<div class="row">${btn('Read illustrated story','read')}${btn('Show joining QR','qr')}${btn('Full screen','fullscreen')}${btn(hideAnswers?'Show answers':'Hide answers for projector','privacy')}${!ended()?btn('End Game','end','danger'):btn('New room','create','gold')}</div><details><summary>Choose another battle</summary><div class="row">${Array.from({length:12},(_,i)=>`<a href="${i===4?'/grammar-room/battle5.html':'/?battle='+(i+1)+'&teacher=1'}">Battle ${i+1}</a>`).join('')}</div></details>`;}
+function teacherControls(){return `<div class="row">${btn('Read illustrated story','read')}${btn('Show joining QR','qr')}${embedded?'':btn('Full screen','fullscreen')}${btn(hideAnswers?'Show answers':'Hide answers for projector','privacy')}${!ended()?btn('End Game','end','danger'):btn('New room','create','gold')}</div>`;}
 function teacherQuestion(){
   const pendingCount=state.players.filter(p=>p.answerStatus==='submitted').length;
   if(state.phase==='lobby')return `<section class="paper question-control"><span class="eyebrow">Teacher lobby</span><h2>Ready to set sail?</h2><p>Students scan the QR and enter a name. Everyone starts at Camp.</p>${btn('Start question 1 →','start','gold wide',!state.joinedCount)}</section>`;
@@ -185,4 +186,6 @@ window.addEventListener('pagehide',()=>{saveDraft();rememberReader();music?.paus
 window.addEventListener('pageshow',()=>refresh(true));
 window.addEventListener('online',()=>refresh(true));
 window.addEventListener('popstate',()=>{if(!host){studentRoute();refresh(true);}});
-render();if(pin)refresh(true);setInterval(()=>{if(!busy&&!document.hidden)refresh();},1800);
+const shellUrl=treasureTeacherShellUrl(route,embedded);
+if(shellUrl)location.replace(shellUrl);
+else{render();if(pin)refresh(true);setInterval(()=>{if(!busy&&!document.hidden)refresh();},1800);}
