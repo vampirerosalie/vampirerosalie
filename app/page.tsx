@@ -870,6 +870,15 @@ export default function Home() {
     };
     const readRoute = () => {
       const marketParams = new URLSearchParams(window.location.search);
+      let treasureStudent: string | null = null;
+      try { treasureStudent = window.sessionStorage.getItem('treasure-raid:student-route'); } catch {}
+      if (treasureStudent !== null || marketParams.get('battle') === '12') {
+        let room = marketParams.get('join') || marketParams.get('room') || '';
+        if (treasureStudent !== null && !room) { try { room = JSON.parse(treasureStudent)?.room || ''; } catch {} }
+        const student = treasureStudent !== null || marketParams.has('join') || marketParams.has('student') || marketParams.has('room');
+        window.location.replace('/battle12/?' + (student ? (/^\d{5}$/.test(room) ? 'join=' + room : 'student=1') : 'teacher=1'));
+        return;
+      }
       let museumStudent: string | null = null;
       try { museumStudent = window.sessionStorage.getItem('museum-jewel:student-route'); } catch {}
       if (museumStudent !== null || (marketParams.get('battle') === '11' && (marketParams.has('join') || marketParams.has('student') || marketParams.has('room')))) {

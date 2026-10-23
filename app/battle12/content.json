@@ -1,0 +1,1132 @@
+{
+  "title": "Captain Mira’s Island Adventure",
+  "format": "Classroom adaptation of Form 3 UASA Part 3 information transfer; 18 items, not an official exam paper.",
+  "instructions": "Read the passage and complete the notes. Use no more than three words and/or a number from the passage for each answer.",
+  "teacherNote": "The three-word response limit is a prototype design choice, not a verified official exam requirement. Accept answers without regard to capitalisation. Suggested matches never award Actions automatically: the teacher makes the final decision. Review valid unlisted variants rather than automatically rejecting them.",
+  "passageParagraphs": [
+    "Captain Mira stood on the deck of the Silver Gull and looked towards the sea. Her crew consisted of six sailors, all eager to begin their first treasure hunt together. They had repaired the sails and cleaned the deck the day before. Although everyone was excited, Mira reminded them that staying together was more important than finding gold.",
+    "The adventure began with a map from Mira’s grandmother, a retired pirate who had explored many islands. Mira had discovered it inside a wooden box while tidying her cabin. Beside the map was a short message: ‘I have left something useful on this island. Find it, and think carefully about how to use it.’",
+    "The ship left the harbour at sunrise, when the sea was calm and the town was still quiet. Before leaving, the crew checked their food, tools and blankets. Mira made sure they carried extra drinking water because the island might not have a safe supply. She also asked Ben, her navigator, to keep the map dry.",
+    "After several hours, Ben spotted the island. A red flag flew above an empty hut, just as the map showed. It helped him recognise the correct place among several small islands nearby. They anchored the ship offshore and used a small boat to reach the island. The crew landed on the northern beach, where the waves were gentle. They pulled their boat onto the sand before looking for the path inland.",
+    "At first, the path was easy to follow. Then a fallen tree blocked their way. Its thick branches stretched across the narrow track, and moving it would take too long. Ben checked the map and found another route. The crew crossed an old bridge instead, testing each board carefully before taking the next step.",
+    "Beyond the bridge, they noticed blue shells placed along the edge of the path. Mira remembered the same marks on the map and followed them. Soon, the sound of rushing water grew louder. The trail ended beside a waterfall. Everyone stopped for a short rest in the cool shade while Ben studied the final part of the map.",
+    "The map showed a stone turtle near the water. The sailors searched the ground until one of them noticed the small statue behind some leaves. Mira lifted it gently. Underneath lay a silver key wrapped in cloth. She returned the statue to its place and carried the key towards a narrow opening in the rocks.",
+    "Inside the opening was a chest. The key fitted its lock, and Mira raised the lid. The chest held gold coins and another message from her grandmother. It asked Mira to help others with the treasure. Mira decided to give it to the village school, which needed books and a new roof after a recent storm.",
+    "The sailors carried the chest back along the same route, helping one another over the bridge. They rowed back to their ship before sunset, tired but pleased that nobody had been hurt. That evening, Mira wrote about the journey in her journal so she would remember every discovery. The crew agreed that their greatest success was completing the adventure together."
+  ],
+  "passageWordCount": 522,
+  "items": [
+    {
+      "id": "q01",
+      "number": 1,
+      "group": "The expedition",
+      "prompt": "Name of the ship: ______",
+      "modelAnswer": "Silver Gull",
+      "acceptedAnswers": [
+        "Silver Gull",
+        "the Silver Gull"
+      ],
+      "evidenceParagraph": 1,
+      "evidenceQuote": "Captain Mira stood on the deck of the Silver Gull and looked towards the sea.",
+      "markingNotes": "Take the ship’s name, not the captain’s name.",
+      "tests": [
+        {
+          "input": "Silver Gull",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the Silver Gull",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "SILVER GULL",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  silver  gull  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "Silver Gull.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not Silver Gull",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "Captain Mira",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "Silver Gull or Captain Mira",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        }
+      ]
+    },
+    {
+      "id": "q02",
+      "number": 2,
+      "group": "The expedition",
+      "prompt": "Number of sailors in Mira’s crew: ______",
+      "modelAnswer": "six",
+      "acceptedAnswers": [
+        "six",
+        "6",
+        "six sailors",
+        "6 sailors"
+      ],
+      "evidenceParagraph": 1,
+      "evidenceQuote": "Her crew consisted of six sailors, all eager to begin their first treasure hunt together.",
+      "markingNotes": "The crew count is six; the passage does not say seven sailors.",
+      "tests": [
+        {
+          "input": "six",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "6",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "six sailors",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "6 sailors",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "SIX",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  six  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "six.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not six",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "seven",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "six or seven",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        }
+      ]
+    },
+    {
+      "id": "q03",
+      "number": 3,
+      "group": "The map",
+      "prompt": "Person who provided the map: Mira’s ______",
+      "modelAnswer": "grandmother",
+      "acceptedAnswers": [
+        "grandmother"
+      ],
+      "evidenceParagraph": 2,
+      "evidenceQuote": "The adventure began with a map from Mira’s grandmother, a retired pirate who had explored many islands.",
+      "markingNotes": "The possessive is supplied in the note; only the relationship is needed.",
+      "tests": [
+        {
+          "input": "grandmother",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "GRANDMOTHER",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  grandmother  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "grandmother.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not grandmother",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "navigator",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "grandmother or navigator",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        }
+      ]
+    },
+    {
+      "id": "q04",
+      "number": 4,
+      "group": "The map",
+      "prompt": "Container in which Mira found the map: ______",
+      "modelAnswer": "wooden box",
+      "acceptedAnswers": [
+        "wooden box",
+        "a wooden box",
+        "box",
+        "a box",
+        "the box",
+        "the wooden box"
+      ],
+      "evidenceParagraph": 2,
+      "evidenceQuote": "Mira had discovered it inside a wooden box while tidying her cabin.",
+      "markingNotes": "Box alone identifies the container. Cabin is the location, not the container.",
+      "tests": [
+        {
+          "input": "wooden box",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a wooden box",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "WOODEN BOX",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  wooden  box  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "wooden box.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not wooden box",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "cabin",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "wooden box or cabin",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "box",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a box",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the box",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the wooden box",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q05",
+      "number": 5,
+      "group": "Getting ready",
+      "prompt": "Time of departure from the harbour: ______",
+      "modelAnswer": "sunrise",
+      "acceptedAnswers": [
+        "sunrise",
+        "at sunrise"
+      ],
+      "evidenceParagraph": 3,
+      "evidenceQuote": "The ship left the harbour at sunrise, when the sea was calm and the town was still quiet.",
+      "markingNotes": "Sunset refers to their return, not their departure.",
+      "tests": [
+        {
+          "input": "sunrise",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "at sunrise",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "SUNRISE",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  sunrise  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "sunrise.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not sunrise",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "sunset",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "sunrise or sunset",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        }
+      ]
+    },
+    {
+      "id": "q06",
+      "number": 6,
+      "group": "Getting ready",
+      "prompt": "Extra supply packed for drinking: ______",
+      "modelAnswer": "drinking water",
+      "acceptedAnswers": [
+        "drinking water",
+        "extra drinking water",
+        "water"
+      ],
+      "evidenceParagraph": 3,
+      "evidenceQuote": "Mira made sure they carried extra drinking water because the island might not have a safe supply.",
+      "markingNotes": "Water is sufficient in this context; food was not the extra supply specified.",
+      "tests": [
+        {
+          "input": "drinking water",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "extra drinking water",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "water",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "DRINKING WATER",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  drinking  water  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "drinking water.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not drinking water",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "blankets",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "drinking water or blankets",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        }
+      ]
+    },
+    {
+      "id": "q07",
+      "number": 7,
+      "group": "Arriving on the island",
+      "prompt": "Object above the hut that helped Ben identify the island: ______",
+      "modelAnswer": "red flag",
+      "acceptedAnswers": [
+        "red flag",
+        "a red flag",
+        "flag",
+        "a flag",
+        "the flag",
+        "the red flag"
+      ],
+      "evidenceParagraph": 4,
+      "evidenceQuote": "A red flag flew above an empty hut, just as the map showed.",
+      "markingNotes": "Flag alone identifies the object. A contradictory colour, such as blue flag, is not correct.",
+      "tests": [
+        {
+          "input": "red flag",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a red flag",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "RED FLAG",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  red  flag  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "red flag.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not red flag",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "blue flag",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "red flag or blue flag",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "flag",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a flag",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the flag",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the red flag",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q08",
+      "number": 8,
+      "group": "Arriving on the island",
+      "prompt": "Place where the crew came ashore: ______",
+      "modelAnswer": "northern beach",
+      "acceptedAnswers": [
+        "northern beach",
+        "the northern beach",
+        "beach",
+        "a beach",
+        "the beach"
+      ],
+      "evidenceParagraph": 4,
+      "evidenceQuote": "The crew landed on the northern beach, where the waves were gentle.",
+      "markingNotes": "Beach alone identifies the landing place. A contradictory direction, such as southern beach, is not correct.",
+      "tests": [
+        {
+          "input": "northern beach",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the northern beach",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "NORTHERN BEACH",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  northern  beach  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "northern beach.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not northern beach",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "southern beach",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "northern beach or southern beach",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "beach",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a beach",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the beach",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q09",
+      "number": 9,
+      "group": "The route inland",
+      "prompt": "Obstacle across the first path: ______",
+      "modelAnswer": "fallen tree",
+      "acceptedAnswers": [
+        "fallen tree",
+        "a fallen tree",
+        "tree",
+        "a tree",
+        "the tree",
+        "the fallen tree"
+      ],
+      "evidenceParagraph": 5,
+      "evidenceQuote": "Then a fallen tree blocked their way.",
+      "markingNotes": "Tree alone identifies the obstacle. The bridge was the alternative route.",
+      "tests": [
+        {
+          "input": "fallen tree",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a fallen tree",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "FALLEN TREE",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  fallen  tree  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "fallen tree.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not fallen tree",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "old bridge",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "fallen tree or old bridge",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "tree",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a tree",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the tree",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the fallen tree",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q10",
+      "number": 10,
+      "group": "The route inland",
+      "prompt": "Structure used on the alternative route: ______",
+      "modelAnswer": "old bridge",
+      "acceptedAnswers": [
+        "old bridge",
+        "an old bridge",
+        "bridge",
+        "the bridge",
+        "the old bridge"
+      ],
+      "evidenceParagraph": 5,
+      "evidenceQuote": "The crew crossed an old bridge instead, testing each board carefully before taking the next step.",
+      "markingNotes": "Bridge alone identifies the structure unambiguously.",
+      "tests": [
+        {
+          "input": "old bridge",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "an old bridge",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "bridge",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "OLD BRIDGE",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  old  bridge  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "old bridge.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not old bridge",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "boat",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "old bridge or boat",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "the bridge",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the old bridge",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q11",
+      "number": 11,
+      "group": "Following the clues",
+      "prompt": "Objects that marked the edge of the path: ______",
+      "modelAnswer": "blue shells",
+      "acceptedAnswers": [
+        "blue shells",
+        "shells",
+        "the shells",
+        "the blue shells"
+      ],
+      "evidenceParagraph": 6,
+      "evidenceQuote": "Beyond the bridge, they noticed blue shells placed along the edge of the path.",
+      "markingNotes": "Shells alone identifies the objects. A contradictory colour, such as red shells, is not correct.",
+      "tests": [
+        {
+          "input": "blue shells",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "BLUE SHELLS",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  blue  shells  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "blue shells.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not blue shells",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "red shells",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "blue shells or red shells",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "shells",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the shells",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the blue shells",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q12",
+      "number": 12,
+      "group": "Following the clues",
+      "prompt": "Natural feature beside the end of the trail: ______",
+      "modelAnswer": "waterfall",
+      "acceptedAnswers": [
+        "waterfall",
+        "a waterfall",
+        "the waterfall"
+      ],
+      "evidenceParagraph": 6,
+      "evidenceQuote": "The trail ended beside a waterfall.",
+      "markingNotes": "The waterfall marks the trail’s end, not the landing place.",
+      "tests": [
+        {
+          "input": "waterfall",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a waterfall",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "WATERFALL",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  waterfall  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "waterfall.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not waterfall",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "beach",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "waterfall or beach",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "the waterfall",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q13",
+      "number": 13,
+      "group": "Opening the treasure",
+      "prompt": "Statue shown on the map: ______",
+      "modelAnswer": "stone turtle",
+      "acceptedAnswers": [
+        "stone turtle",
+        "a stone turtle",
+        "turtle",
+        "a turtle",
+        "the turtle",
+        "the stone turtle"
+      ],
+      "evidenceParagraph": 7,
+      "evidenceQuote": "The map showed a stone turtle near the water.",
+      "markingNotes": "Turtle alone identifies the statue. A different animal is not correct.",
+      "tests": [
+        {
+          "input": "stone turtle",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a stone turtle",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "STONE TURTLE",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  stone  turtle  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "stone turtle.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not stone turtle",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "stone bird",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "stone turtle or stone bird",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "turtle",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a turtle",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the turtle",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the stone turtle",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q14",
+      "number": 14,
+      "group": "Opening the treasure",
+      "prompt": "Object found under the statue that unlocked the chest: ______",
+      "modelAnswer": "silver key",
+      "acceptedAnswers": [
+        "silver key",
+        "a silver key",
+        "key",
+        "a key",
+        "the key",
+        "the silver key"
+      ],
+      "evidenceParagraph": 7,
+      "evidenceQuote": "Underneath lay a silver key wrapped in cloth.",
+      "markingNotes": "Key alone identifies the object that unlocked the chest. Cloth was its wrapping, not the unlocking object.",
+      "tests": [
+        {
+          "input": "silver key",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a silver key",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "SILVER KEY",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  silver  key  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "silver key.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not silver key",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "gold key",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "silver key or gold key",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "key",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "a key",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the key",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the silver key",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q15",
+      "number": 15,
+      "group": "Using the discovery",
+      "prompt": "Valuable items inside the chest: ______",
+      "modelAnswer": "gold coins",
+      "acceptedAnswers": [
+        "gold coins",
+        "coins",
+        "the coins",
+        "the gold coins"
+      ],
+      "evidenceParagraph": 8,
+      "evidenceQuote": "The chest held gold coins and another message from her grandmother.",
+      "markingNotes": "Coins alone identifies the valuable items. A contradictory material, such as silver coins, is not correct.",
+      "tests": [
+        {
+          "input": "gold coins",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "GOLD COINS",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  gold  coins  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "gold coins.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not gold coins",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "silver coins",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "gold coins or silver coins",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "coins",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the coins",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the gold coins",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q16",
+      "number": 16,
+      "group": "Using the discovery",
+      "prompt": "Place Mira chose to help with the treasure: ______",
+      "modelAnswer": "village school",
+      "acceptedAnswers": [
+        "village school",
+        "the village school",
+        "school",
+        "the school"
+      ],
+      "evidenceParagraph": 8,
+      "evidenceQuote": "Mira decided to give it to the village school, which needed books and a new roof after a recent storm.",
+      "markingNotes": "School alone identifies the beneficiary unambiguously.",
+      "tests": [
+        {
+          "input": "village school",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "the village school",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "school",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "VILLAGE SCHOOL",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  village  school  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "village school.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not village school",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "harbour",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "village school or harbour",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        },
+        {
+          "input": "the school",
+          "expected": "suggest_accept"
+        }
+      ]
+    },
+    {
+      "id": "q17",
+      "number": 17,
+      "group": "Back on board",
+      "prompt": "The crew reached the ship before: ______",
+      "modelAnswer": "sunset",
+      "acceptedAnswers": [
+        "sunset"
+      ],
+      "evidenceParagraph": 9,
+      "evidenceQuote": "They rowed back to their ship before sunset, tired but pleased that nobody had been hurt.",
+      "markingNotes": "Do not accept sunrise, which belongs to their departure.",
+      "tests": [
+        {
+          "input": "sunset",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "SUNSET",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  sunset  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "sunset.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not sunset",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "sunrise",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "sunset or sunrise",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        }
+      ]
+    },
+    {
+      "id": "q18",
+      "number": 18,
+      "group": "Back on board",
+      "prompt": "Place where Mira recorded the adventure: her ______",
+      "modelAnswer": "journal",
+      "acceptedAnswers": [
+        "journal"
+      ],
+      "evidenceParagraph": 9,
+      "evidenceQuote": "That evening, Mira wrote about the journey in her journal so she would remember every discovery.",
+      "markingNotes": "The note supplies her; journal is the written record, not the map.",
+      "tests": [
+        {
+          "input": "journal",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "JOURNAL",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "  journal  ",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "journal.",
+          "expected": "suggest_accept"
+        },
+        {
+          "input": "not journal",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "map",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "journal or map",
+          "expected": "teacher_review"
+        },
+        {
+          "input": "",
+          "expected": "empty"
+        }
+      ]
+    }
+  ],
+  "markingPolicy": {
+    "caseSensitive": false,
+    "maxWords": 3,
+    "allowNumber": true,
+    "finalAuthority": "teacher",
+    "unmatchedResponse": "teacher_review",
+    "automaticAward": false,
+    "acceptedNumberVariants": "Written six and numeral 6 are equivalent for q02.",
+    "normalization": "NFKC; lowercase; trim; collapse whitespace; canonicalise curly apostrophes and dashes; remove only harmless outer punctuation; compare full strings, never substrings.",
+    "wordLimitPolicy": "Count whitespace-separated words after trimming outer punctuation; hyphenated words count as one. Answers longer than the stated limit are flagged for teacher review, not silently truncated."
+  }
+}

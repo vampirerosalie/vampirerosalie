@@ -1,0 +1,10 @@
+import { env } from 'cloudflare:workers';
+import { handleTreasureRequest } from '../../../battle12/http.js';
+export const dynamic = 'force-dynamic';
+const handle = (request: Request) => handleTreasureRequest(request, env.DB);
+export const GET=handle;
+export const POST=handle;
+export const PUT=handle;
+export const PATCH=handle;
+export const DELETE=handle;
+export const OPTIONS=handle;
