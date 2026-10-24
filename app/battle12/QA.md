@@ -72,3 +72,14 @@ Separate browser storage contexts: in-app browser teacher and Chrome student. La
 - Duplicate-card conversion and blocked-attack visuals are covered by server and mapping tests; random browser play is not claimed to have produced every outcome.
 
 The existing GitHub → Cloudflare workflow is used. Run `scripts/verify-battle12.mjs` against the live origin after deployment; it verifies the frontend SHA, performs the real backend flow with clearly labelled test participants and closes its own new room. Record the live result in the delivery message; successful local tests alone do not prove deployment.
+
+### Pirate-journal interface — 2026-10-24
+
+- New Battle 12-only presentation layer; no backend, question bank, answer normalization, game rules, or other battle files changed.
+- 300/300 repository tests passed (39 Battle 12), including live counter markup, labelled navigation, asset existence and a sub-500 KB budget for the six WebP UI images.
+- Production Cloudflare build passed. Local real-HTTP smoke tests passed in rooms 80355 and 54504 and closed them afterwards. The smoke script now also compares the deployed theme, teacher module, HTML and all nine UI assets against source.
+- Actual browser UI in separate teacher/student tabs, disposable local room 96301: name-only join; visible lobby QR; shared question; typed answer retained through reading navigation; automatic Accept suggestion hidden until Review; confirmation/finalization awards one Action; Next advances to Q2; refresh retains role and earned action; paid exploration reveals its illustrated result only after confirmation and moves the teacher marker to Crystal Cave. Joining QR opens during play. Confirmed End Game closes this test room; student refresh stays on its own results page. Student console error log empty.
+- Measured 390px and 360px student layouts: document scrollWidth equals viewport width; readable real input/buttons; no broken images. Teacher frame width/scrollWidth both 1214px with no broken images. Reviewed teacher question/map, response review, student question, reader and reward screenshots.
+- Compact header and direct Review Answers button keep the primary controls near the question. Long marking guidance is expandable; pending decisions still block finalization on the server. Status list and destinations remain scrollable for larger classes.
+- Sources, generation prompts and delivery details are in `artwork/battle12-ui/manifest.json`; optimized display assets live in `public/battle12/assets/ui/`. Original island map, all nine paragraph illustrations and existing outcome illustrations remain unchanged.
+- These are browser viewport and server tests, not physical-phone, keyboard, projector or camera-scanning tests. Existing real-world limitations above still apply.

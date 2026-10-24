@@ -1,0 +1,39 @@
+{
+  "created": "2026-10-24",
+  "method": "Built-in image_gen",
+  "purpose": "Battle 12 pirate-journal interface; backgrounds and inventory illustrations only. All controls, questions, values, QR codes and names remain HTML/server-rendered data.",
+  "sources": [
+    {
+      "name": "ship-deck",
+      "prompt": "Use case: illustration-story. Production background asset for Treasure Raid, an illustrated pirate-island classroom game. A richly hand-painted 2.5D adventure illustration, portrait 9:16 composition, full bleed. View from a sunlit wooden ship deck towards turquoise sea and a lush distant tropical island. Thin framing at edges with warm weathered timber railings, hanging brass lantern at upper left, rope and palm leaves at outer corners. Bottom quarter: beautiful warm timber deck, rolled parchment sea chart and compass tucked in lower left corner, tropical leaves in lower right. Central 70% must remain visually uncluttered ocean and soft calm open space, because real interface parchment panels will be layered over it. Top quarter is bright sky, sea and island, NOT empty black. Warm antique gold, honey brown, ocean teal, fresh green. Tactile storybook illustration, crisp handmade details, matches the approved pirate-journal concept. NO text, letters, numbers, logos, UI controls, panels, counters, labels or borders pretending to be buttons. NO people, skulls, weapons. This is solely a beautiful scene background, NOT a screenshot.",
+      "width": 941,
+      "height": 1672
+    },
+    {
+      "name": "timber",
+      "prompt": "Use case: stylized-concept. Production UI MATERIAL TEXTURE only, square format. Rich hand-painted warm dark walnut ship timber, three horizontal broad old wooden planks with fine beautiful horizontal grain, subtle carved depth, honey-brown highlights, deep chocolate edges and tiny wear marks. Flat straight-on evenly lit surface, fills every pixel edge to edge, no perspective, no frame, NO objects, NO lettering, NO metal, no rope. Cohesive illustrated 2.5D storybook pirate game style, not photorealistic. Calm low contrast so cream text can be legible on top. Texture should tile unobtrusively.",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "name": "parchment",
+      "prompt": "Use case: stylized-concept. Production UI MATERIAL TEXTURE only, square format. Flat scan of beautiful hand-painted light warm cream parchment, quiet nearly ivory centre occupying 85 percent, delicate paper fibres, faint soft warm golden weathering at outer edges. Full bleed paper to all four edges, no torn silhouette or surrounding background. Subtle handmade storybook illustration texture. Very LOW contrast and bright for dark readable paragraphs. NO writing, NO lines, no stains in centre, no icons, no objects, NO map, NO borders.",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "name": "compass",
+      "prompt": "A single ornate brass nautical compass medallion, slightly angled top-down, polished antique gold rim, dark navy face, cream and gold compass rose, no letters or numerals. Warm painterly 2.5D pirate adventure game inventory icon, crisp simple silhouette readable at 40 pixels, subtle dimensional shading. Isolated fully on transparent background. No extra objects. Entire compass contained with 12% transparent padding all around, no cutoff.",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "name": "backpack",
+      "prompt": "A single small warm chestnut leather explorer backpack with rounded flap and shiny brass buckle, small side pouches and straps, three-quarter front view. Warm painterly 2.5D pirate adventure game inventory icon, crisp simple silhouette readable at 40 pixels, subtle dimensional shading. Isolated fully on transparent background. No extra objects, no text, no characters. Entire backpack contained with 12% transparent padding all around, no cutoff.",
+      "width": 1254,
+      "height": 1254
+    }
+  ],
+  "delivery": "PNG originals in source/. WebP display versions in public/battle12/assets/ui/ resized proportionally, quality83. Compass/backpack preserve true alpha. Vault icon is a proportionally resized derivative of existing assets/rewards/vault.png. Book/notes/cards are hand-authored SVG navigation pictograms.",
+  "unchanged": "Original island.png, paragraph_01.png–paragraph_09.png, six outcome illustrations, all mechanics, routes and server API."
+}
