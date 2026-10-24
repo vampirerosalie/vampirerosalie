@@ -1,0 +1,26 @@
+{
+  "created": "2026-10-24",
+  "tool": "Built-in image_gen",
+  "reference": "public/battle11/assets/museum-hero.png",
+  "purpose": "Approved illustrated burgundy/gold Battle 11 interface; neutral art only, no story answers or UI text.",
+  "assets": [
+    {
+      "source": "phone-surround.png",
+      "runtime": "public/battle11/assets/ui/phone-surround.webp",
+      "prompt": "Production game illustration asset, NOT a mockup. Match reference handcrafted 2.5D layered paper-cut museum, deep burgundy velvet, dark walnut and antique gold brass with warm amber light, richly illustrated yet sleek. No text, no letters, no numbers, no UI/buttons, no watermark, no white or cream background. Reference used for style only. Tall portrait 9:19 seamless-feeling museum interior SURROUND for a phone app. Left and right outermost 12% narrow antique brass columns, dark carved wood and folded crimson velvet, restrained small warm wall lamps. Middle 76% largely calm deep wine red velvet wall with very subtle grain, uncluttered and dark, suitable behind solid interfacepanels. Top shallow arch withfinebrass trim, bottomdarkwood. No people or objects in center. No huge ornament, no brightglow. The architectural frame extends entireheight. Front-on symmetrical.",
+      "processing": "Proportional resize and WebP quality 84; no compositing or retouching."
+    },
+    {
+      "source": "teacher-surround.png",
+      "runtime": "public/battle11/assets/ui/teacher-surround.webp",
+      "prompt": "Production game illustration asset, NOT a mockup. Match reference handcrafted 2.5D layered paper-cut museum, deep burgundy velvet, dark walnut and antique gold brass with warm amber light, richly illustrated yet sleek. No text, no letters, no numbers, no UI/buttons, no watermark, no white or cream background. Reference used for style only. Wide 16:9 museum interior BACKDROP for teacher dashboard. Sideedges crimson curtains, brass lamps, wooden museumarchitecture, shallow goldarchtop, center75percent very dark calm deepburgundy wall withsubtle velvettactiletexture for overlaying liveUI. Lowforeground curatordesk edge darkwalnutbottomonly. No people, no frames or objects insidecenterspace, no empty whitepaper. Sleek cinematic dim museum ambiance, no screenpainting.",
+      "processing": "Proportional resize and WebP quality 84; no compositing or retouching."
+    },
+    {
+      "source": "station-emblems.png",
+      "runtime": "public/battle11/assets/ui/station-emblems.webp",
+      "prompt": "Production game illustration asset, NOT a mockup. Match reference handcrafted 2.5D layered paper-cut museum, deep burgundy velvet, dark walnut and antique gold brass with warm amber light, richly illustrated yet sleek. No text, no letters, no numbers, no UI/buttons, no watermark, no white or cream background. Reference used for style only. Production SPRITE SHEET exactly3equalcolumns by2equalrows. Six separate fullyillustrated neutral museum objects centeredonepercell on uniform solid deepburgundy #2b0d18 background. No dividers. Generous matching margins eachcell, objectsfill60%cell, consistent frontthreequarterperspective. Toprowleft emptygoldglassdisplaycabinet withredcushion; topmiddle brown leather deliverybag; topright closed small notebook withpencil. Bottomleft antique goldemptyphotoframe withabstract darkglass(no person); bottommiddle brasspocketwatch no readableclocknumbers; bottomright rolledreport tiedburgundyribbonwithwaxseal(no writing). No text anywhere, no treasure or answer clues, no extraobjects outsidecells. Overall3:2landscapeaspectratio, evenlyspacedgridthatcanbeusedwithCSSbackgroundposition.",
+      "processing": "Proportional resize and WebP quality 84; no compositing or retouching."
+    }
+  ]
+}

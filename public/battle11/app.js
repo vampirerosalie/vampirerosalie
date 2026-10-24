@@ -153,7 +153,7 @@ async function deliverAction() {
     if (action.type === 'student:scan' && (data.result.admitted || data.result.restored)) {
       stopCamera(); ui.screen = 'map'; ui.scanError = ''; ui.cameraError = '';
     }
-    if (action.type === 'student:save' || action.type === 'student:save-leave') { ui.notice = 'Answer saved on the server.'; if (data.result.left) ui.screen = 'map'; }
+    if (action.type === 'student:save' || action.type === 'student:save-leave') { ui.notice = ''; announce('Answer saved on the server.'); if (data.result.left) ui.screen = 'map'; }
     if (action.type === 'student:submit') { ui.modal = ''; ui.screen = 'overview'; }
     if (action.type === 'host:end' || action.type === 'host:reveal') ui.modal = '';
     applyState(data.state, true);
@@ -168,6 +168,12 @@ async function deliverAction() {
   } finally { actionInFlight = false; }
 }
 
+function stationEmblem(number) {
+  return `<span class="station-emblem emblem-${Number(number)}" aria-hidden="true"></span>`;
+}
+function caseVignette(number) {
+  return `<div class="case-vignette" aria-hidden="true">${stationEmblem(number)}</div>`;
+}
 function header() {
   return `<header class="topbar"><div class="brand"><span class="brand-mark">◆</span><span>The Missing Museum Jewel<small>BATTLE 11 · DETECTIVE STATIONS</small></span></div><div class="top-actions"><span class="chip ${ui.online ? 'good' : 'bad'}">${ui.online ? 'Connected' : 'Reconnecting…'}</span>${pin ? `<span class="chip">PIN <b>${pin}</b></span>` : ''}${mode === 'host' && state?.role === 'host' ? `${btn('Print Station Cards', 'cards', 'button ghost tiny')}${state.phase === 'active' ? btn('Show join QR', 'join-qr', 'button ghost tiny') : ''}${btn('⛶ Full screen', 'fullscreen', 'button ghost tiny')}` : ''}</div></header>`;
 }
@@ -176,7 +182,7 @@ function hostLobby() {
   return `${header()}<div class="lobby-grid"><section class="panel join-panel"><span class="eyebrow">ROOM ENTRANCE</span><h2>Scan to join</h2><img class="join-qr" src="${apiBase}/${pin}/qr.svg" alt="QR code for groups to join Battle 11"><p>Or enter the room PIN</p><div class="pin">${pin}</div>${btn('Copy group link', 'copy-link', 'button ghost wide')}</section><section class="panel lobby-main"><div class="hero"><div class="hero-title"><span class="eyebrow">A MUSEUM CASE AWAITS</span><h1>The Missing Museum Jewel</h1></div></div><h2>${groups.length} / 40 groups joined</h2><p>Six permanent station cards. Put them anywhere in the classroom: Station 1 always has Paragraph 1. Up to two groups can read at each station at a time.</p><div class="roster">${groups.length ? groups.map(g => `<div class="roster-row"><b>${esc(g.name)}</b><span>${g.online ? '● Online' : '○ Place saved'}</span></div>`).join('') : '<p>Waiting for groups to scan your joining QR code…</p>'}</div><div class="lobby-actions">${btn('Print the six reusable station cards', 'cards', 'button ghost wide')}${btn('Start Game →', 'start', 'button gold wide', ui.busy || !groups.length ? 'disabled' : '')}</div></section></div>`;
 }
 function stationTiles() {
-  return `<div class="station-grid">${state.stations.map(station => `<article class="station-tile ${station.count === 2 ? 'station-full' : ''}"><div class="station-file"><span class="file-number" aria-hidden="true">${String(station.number).padStart(2,'0')}</span><span class="eyebrow">STATION ${station.number} · PARAGRAPH ${station.number}</span><h3>${esc(station.title)}</h3></div><strong class="capacity ${station.count === 2 ? 'full' : ''}">${station.count === 2 ? 'FULL 2/2' : `${station.count}/2`}</strong><div class="occupants">${station.occupying.length ? station.occupying.map(g => `<div><b>${esc(g.name)}</b>${clockMarkup(g.visitEndsAt)}</div>`).join('') : '<span>Two places available</span>'}</div></article>`).join('')}</div>`;
+  return `<div class="station-grid">${state.stations.map(station => `<article class="station-tile ${station.count === 2 ? 'station-full' : ''}"><div class="station-file">${stationEmblem(station.number)}<span class="file-number" aria-hidden="true">${String(station.number).padStart(2,'0')}</span><span class="eyebrow">STATION ${station.number} · PARAGRAPH ${station.number}</span><h3>${esc(station.title)}</h3></div><strong class="capacity ${station.count === 2 ? 'full' : ''}">${station.count === 2 ? 'FULL 2/2' : `${station.count}/2`}</strong><div class="occupants">${station.occupying.length ? station.occupying.map(g => `<div><b>${esc(g.name)}</b>${clockMarkup(g.visitEndsAt)}</div>`).join('') : '<span>Two places available</span>'}</div></article>`).join('')}</div>`;
 }
 function groupTable() {
   return `<div class="group-table-wrap"><table class="group-table"><thead><tr><th>Group</th><th>Where now</th><th>Answers</th><th>Saved stations</th><th>Visit left</th><th>Status</th><th>Time</th></tr></thead><tbody>${state.groups.map(g => `<tr><td><b>${esc(g.name)}</b><small>${g.online ? 'Online' : 'Disconnected'}</small></td><td>${g.currentStation ? `Station ${g.currentStation}` : 'Looking for a station'}</td><td>${g.answeredCount}/6</td><td><span class="saved-indicators">${g.savedStations.map((saved, index) => `<span class="${saved ? 'saved' : ''}" title="Station ${index + 1}: ${saved ? 'answer saved' : 'not saved'}">${index + 1}</span>`).join('')}</span></td><td>${g.visitEndsAt ? clockMarkup(g.visitEndsAt) : '—'}</td><td>${g.submitted ? 'Final submitted' : g.reviewUnlocked ? 'Review' : esc(g.status)}${!g.online ? ' · Disconnected' : ''}</td><td>${g.submitted ? elapsedText(g.elapsedMs) : 'Not submitted'}</td></tr>`).join('')}</tbody></table></div>`;
@@ -194,16 +200,16 @@ function studentWaiting() {
 }
 function mapScreen() {
   const me = state.me;
-  return `<main class="phone-content"><div class="phone-page-head"><span class="eyebrow">ROOM ${pin} · ${esc(me.name)}</span><h1>${me.reviewUnlocked ? 'Review your route' : 'Choose your next station'}</h1><p>${me.reviewUnlocked ? 'All six stations answered! You may now revisit any station to check your choices. Submit your final answers when your group is ready.' : 'Find a printed station card and scan its QR code. The map shows space, but does not open a paragraph.'}</p></div><div class="progress-line"><strong>${me.answeredCount}/6 saved</strong><span>${me.reviewUnlocked ? 'Review Mode unlocked' : 'Exploration Mode'}</span><span>Overall time <time data-start-at="${state.startAt}">${formatTime(Date.now() + clockSkew - state.startAt)}</time></span></div><div class="map-grid">${state.stations.map(station => `<article class="map-card"><div class="map-card-top"><span class="station-stamp">${station.number}</span><div><span class="eyebrow">CASE FILE ${station.number}</span><h2>${esc(station.title)}</h2></div></div><div class="map-card-foot"><span>${station.count === 2 ? 'FULL 2/2' : `${station.count}/2 places used`}</span><span>${me.choices[station.number - 1] ? 'Answer saved' : 'Not answered'}</span></div></article>`).join('')}</div><div class="sticky-actions">${btn('Scan Station QR', 'scan', 'button gold wide')}${btn('My six answers', 'overview', 'button ghost wide')}</div></main>`;
+  return `<main class="phone-content route-page"><div class="route-workspace" data-scroll-key="station-map"><div class="route-art" role="img" aria-label="Aina in the museum beside the empty jewel cabinet"></div><div class="phone-page-head"><span class="eyebrow">ROOM ${pin} · ${esc(me.name)}</span><h1>${me.reviewUnlocked ? 'Review your route' : 'Choose your next station'}</h1><p>${me.reviewUnlocked ? 'All six stations answered! You may now revisit any station to check your choices. Submit your final answers when your group is ready.' : 'Find a printed station card and scan its QR code. The map shows space, but does not open a paragraph.'}</p></div><div class="progress-line"><strong>${me.answeredCount}/6 saved</strong><span>${me.reviewUnlocked ? 'Review Mode unlocked' : 'Exploration Mode'}</span><span>Overall time <time data-start-at="${state.startAt}">${formatTime(Date.now() + clockSkew - state.startAt)}</time></span></div><div class="map-grid">${state.stations.map(station => `<article class="map-card"><div class="map-card-top"><span class="station-stamp">${station.number}</span>${stationEmblem(station.number)}<div><span class="eyebrow">CASE FILE ${station.number}</span><h2>${esc(station.title)}</h2></div></div><div class="map-card-foot"><span class="${station.count === 2 ? 'full' : ''}">${station.count === 2 ? 'FULL 2/2' : `${station.count}/2 places used`}</span><span>${me.choices[station.number - 1] ? 'Answer saved' : 'Not answered'}</span></div></article>`).join('')}</div></div><div class="sticky-actions">${btn('Scan Station QR', 'scan', 'button gold wide')}${btn('My six answers', 'overview', 'button ghost wide')}</div></main>`;
 }
 function visitEndedScreen() {
   const last = state.me.lastVisitEnd;
   const text = last?.reason === 'expired' ? `Time’s up! ${last.hadSavedAnswer ? 'Your saved answer has been kept.' : 'No answer was saved.'} Choose another station.` :
     last?.reason === 'left' ? `Your answer for Station ${last.station} was saved. Choose another station.` : 'Your visit has ended. Choose another station.';
-  return `<main class="phone-content visit-end"><div class="case-stamp">${last?.station || '◆'}</div><section class="paper"><span class="eyebrow">STATION VISIT ENDED</span><h1>${last?.reason === 'expired' ? 'Time’s up!' : 'Case note saved'}</h1><p>${esc(text)}</p>${btn('Choose another station →', 'map', 'button gold wide')}${btn('My six answers', 'overview', 'button ghost wide')}</section></main>`;
+  return `<main class="phone-content visit-end">${caseVignette(last?.reason === 'expired' ? 5 : 6)}<div class="case-stamp">${last?.station || '◆'}</div><section class="paper"><span class="eyebrow">STATION VISIT ENDED</span><h1>${last?.reason === 'expired' ? 'Time’s up!' : 'Case note saved'}</h1><p>${esc(text)}</p>${btn('Choose another station →', 'map', 'button gold wide')}${btn('My six answers', 'overview', 'button ghost wide')}</section></main>`;
 }
 function scannerScreen() {
-  return `<main class="phone-content"><div class="phone-page-head"><span class="eyebrow">STATION SCANNER</span><h1>Scan a printed station QR</h1><p>Point your camera at one of the six museum station cards. The station opens here, inside the game, if a place is free.</p></div><div class="scanner"><video id="camera-video" autoplay playsinline muted aria-label="Rear camera for station QR scanning"></video><div class="scan-frame" aria-hidden="true"></div></div>${ui.scanError ? `<div class="alert" role="status">${esc(ui.scanError)}</div>` : ''}${ui.cameraError ? `<div class="alert" role="status">${esc(ui.cameraError)}</div>` : ''}<div class="scanner-actions">${!media ? btn('Retry camera', 'retry-camera', 'button gold') : btn('Close camera', 'close-camera', 'button ghost')}${btn('Back to map', 'map', 'button ghost')}</div><details class="backup"><summary>Camera not working? Use the code printed on the station card</summary><p>Type the eight-character backup code shown beside that station’s QR. You must be at the printed card.</p><label for="station-code">Station card code</label><input id="station-code" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="Eight-character code">${btn('Enter printed code', 'manual-scan', 'button ghost wide')}</details></main>`;
+  return `<main class="phone-content"><div class="phone-page-head"><span class="eyebrow">STATION SCANNER</span><h1>Scan a printed station QR</h1><p>Point your camera at one of the six museum station cards. The station opens here, inside the game, if a place is free.</p></div><div class="scanner"><video id="camera-video" autoplay playsinline muted aria-label="Rear camera for station QR scanning"></video><div class="scan-frame" aria-hidden="true"></div></div>${ui.scanError ? `<div class="alert" role="status">${esc(ui.scanError)}</div>` : ''}${ui.cameraError ? `<div class="alert" role="status">${esc(ui.cameraError)}</div>` : ''}<div class="scanner-actions">${!media ? btn('Retry camera', 'retry-camera', 'button gold') : btn('Close camera', 'close-camera', 'button ghost')}${btn('Back to map', 'map', 'button ghost')}</div><details class="backup" data-details-key="backup"><summary>Camera not working? Use the code printed on the station card</summary><p>Type the eight-character backup code shown beside that station’s QR. You must be at the printed card.</p><label for="station-code">Station card code</label><input id="station-code" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="Eight-character code">${btn('Enter printed code', 'manual-scan', 'button ghost wide')}</details></main>`;
 }
 function optionsList() {
   return `<div class="option-bank">${Object.entries(state.options).map(([letter, text]) => {
@@ -214,7 +220,7 @@ function optionsList() {
 function activeStation() {
   const me = state.me, visit = me.activeVisit, paragraph = state.paragraph, savedLetter = me.choices[visit.station - 1];
   const draftSaved = ui.draft && ui.draft === savedLetter;
-  return `<main class="phone-content active-station"><div class="station-heading"><div><span class="eyebrow">STATION ${visit.station} · PARAGRAPH ${visit.station}</span><h1>${esc(paragraph.title)}</h1></div><div class="visit-clock"><small>TIME LEFT</small>${clockMarkup(visit.expiresAt)}</div></div><img class="station-art" src="./assets/${esc(paragraph.image)}" alt="Museum scene for Station ${visit.station}"><section class="paper reading-panel"><span class="eyebrow">CASE FILE ${visit.station}</span><p>${esc(paragraph.before)} <span class="gap">[${visit.station}] ${ui.draft ? esc(state.options[ui.draft]) : '__________'}</span> ${esc(paragraph.after)}</p></section><details class="choices" open><summary>Choose one sentence A–H</summary>${optionsList()}</details><div class="answer-status ${draftSaved ? 'saved' : 'draft'}" role="status">${draftSaved ? `Sentence ${esc(ui.draft)} saved on the server.` : ui.draft ? `Sentence ${esc(ui.draft)} selected on this phone — not saved yet.` : savedLetter ? `Sentence ${esc(savedLetter)} saved. Choose another to revise.` : 'No answer saved yet.'}</div><div class="sticky-actions">${btn(ui.busy ? 'Saving…' : 'Save Answer', 'save', 'button gold wide', !ui.draft || ui.busy ? 'disabled' : '')}${btn(ui.busy ? 'Saving…' : 'Save & Leave Station', 'save-leave', 'button ghost wide', !ui.draft || ui.busy ? 'disabled' : '')}${btn('My six answers', 'overview', 'button subtle wide')}</div></main>`;
+  return `<main class="phone-content active-station"><div class="station-heading"><div><span class="eyebrow">STATION ${visit.station} · PARAGRAPH ${visit.station}</span><h1>${esc(paragraph.title)}</h1></div><div class="visit-clock"><small>TIME LEFT</small>${clockMarkup(visit.expiresAt)}</div></div><div class="station-workspace" data-scroll-key="station-reading"><img class="station-art" src="./assets/${esc(paragraph.image)}" alt="Museum scene for Station ${visit.station}"><section class="paper reading-panel"><span class="eyebrow">CASE FILE ${visit.station}</span><p>${esc(paragraph.before)} <span class="gap">[${visit.station}] ${ui.draft ? esc(state.options[ui.draft]) : '__________'}</span> ${esc(paragraph.after)}</p></section><details class="choices" data-details-key="options" open><summary>Choose one sentence A–H</summary>${optionsList()}</details></div><div class="station-actions"><div class="answer-status ${draftSaved ? 'saved' : 'draft'}" role="status">${draftSaved ? `Sentence ${esc(ui.draft)} saved on the server.` : ui.draft ? `Sentence ${esc(ui.draft)} selected on this phone — not saved yet.` : savedLetter ? `Sentence ${esc(savedLetter)} saved. Choose another to revise.` : 'No answer saved yet.'}</div><div class="station-buttons">${btn(ui.busy ? 'Saving…' : 'Save Answer', 'save', 'button gold wide', !ui.draft || ui.busy ? 'disabled' : '')}${btn(ui.busy ? 'Saving…' : 'Save & Leave', 'save-leave', 'button ghost wide', !ui.draft || ui.busy ? 'disabled' : '')}</div>${btn('My six answers', 'overview', 'button overview-link')}</div></main>`;
 }
 function overviewScreen() {
   const me = state.me;
@@ -222,7 +228,7 @@ function overviewScreen() {
 }
 function submittedScreen() {
   const me = state.me;
-  return `<main class="phone-content"><div class="phone-hero"><div><span class="eyebrow">CASE FILE LOCKED</span><h1>Final answers submitted</h1></div></div><section class="paper"><p>Your six saved choices are locked. Your completion time: <b>${elapsedText(me.elapsedMs)}</b>.</p><p>Wait for your teacher to release the results. Other groups can keep investigating.</p></section><div class="overview-list">${me.choices.map((letter, i) => `<article><div><b>Station ${i + 1}</b><small>${esc(state.stations[i].title)}</small></div><div><span class="choice-letter">${esc(letter)}</span><p>${esc(state.options[letter])}</p></div></article>`).join('')}</div></main>`;
+  return `<main class="phone-content"><div class="phone-hero"><div><span class="eyebrow">CASE FILE LOCKED</span><h1>Final answers submitted</h1></div></div><section class="paper">${caseVignette(6)}<p>Your six saved choices are locked. Your completion time: <b>${elapsedText(me.elapsedMs)}</b>.</p><p>Wait for your teacher to release the results. Other groups can keep investigating.</p></section><div class="overview-list">${me.choices.map((letter, i) => `<article><div><b>Station ${i + 1}</b><small>${esc(state.stations[i].title)}</small></div><div><span class="choice-letter">${esc(letter)}</span><p>${esc(state.options[letter])}</p></div></article>`).join('')}</div></main>`;
 }
 function resultsContent(teacher = false) {
   const ranking = state.ranking || [];
@@ -233,7 +239,7 @@ function studentContent() {
   if (!state || state.role !== 'student') return `${header()}<main class="phone-content"><section class="paper"><h1>Opening your saved group place…</h1></section></main>`;
   if (state.resultsReleased) return `${header()}<main class="phone-content">${state.me.submitted ? '<div class="phone-page-head"><h1>Your investigation is complete</h1></div>' : '<div class="phone-page-head"><h1>Results released</h1><p>Your group did not submit final answers.</p></div>'}${resultsContent()}</main>`;
   if (state.phase === 'lobby') return studentWaiting();
-  if (state.phase === 'ended') return `${header()}<main class="phone-content"><section class="paper"><h1>The museum room has closed</h1><p>Your saved answers remain recorded. ${state.me.submitted ? 'Your final choices are locked.' : 'Your group did not submit final answers.'}</p><p>Wait for your teacher to release the results.</p></section></main>`;
+  if (state.phase === 'ended') return `${header()}<main class="phone-content"><section class="paper">${caseVignette(1)}<h1>The museum room has closed</h1><p>Your saved answers remain recorded. ${state.me.submitted ? 'Your final choices are locked.' : 'Your group did not submit final answers.'}</p><p>Wait for your teacher to release the results.</p></section></main>`;
   if (state.me.submitted) return `${header()}${submittedScreen()}`;
   return `${header()}${state.me.activeVisit && ui.screen !== 'overview' ? activeStation() : ui.screen === 'scanner' ? scannerScreen() : ui.screen === 'overview' ? overviewScreen() : ui.screen === 'visit-ended' ? visitEndedScreen() : mapScreen()}`;
 }
@@ -245,13 +251,63 @@ function modal() {
   if (ui.modal === 'join-qr' && mode === 'host' && state?.role === 'host' && state.phase === 'active') return `<div class="modal-backdrop"><section class="modal join-modal"><div class="modal-head"><h2>Join this museum room</h2>${btn('Close', 'close-modal', 'button ghost tiny')}</div><p>Late groups can join the same room. Their competitive time still begins at the original Start Game time.</p><img class="join-qr" src="${apiBase}/${pin}/qr.svg" alt="QR code to join room ${pin}"><div class="pin">${pin}</div>${btn('Copy group link', 'copy-link', 'button ghost wide')}</section></div>`;
   return '';
 }
+// Remember positions, expanded sections and keyboard focus across live refreshes.
+// Only UI coordinates/flags are retained here, never paragraph text.
+const viewMemory = new Map();
+function rememberView() {
+  if (!app.dataset.viewKey) return;
+  viewMemory.set(app.dataset.viewKey, {
+    page: window.scrollY,
+    scroll: Array.from(app.querySelectorAll('[data-scroll-key]'), el => [el.dataset.scrollKey, el.scrollTop]),
+    details: Array.from(app.querySelectorAll('[data-details-key]'), el => [el.dataset.detailsKey, el.open]),
+    backupCode: document.getElementById('station-code')?.value || '',
+  });
+  if (viewMemory.size > 20) viewMemory.delete(viewMemory.keys().next().value);
+}
+function restoreView(key, focus) {
+  app.dataset.viewKey = key;
+  app.style.setProperty('--header-height', `${app.querySelector('.topbar')?.offsetHeight || 76}px`);
+  const remembered = viewMemory.get(key);
+  for (const el of app.querySelectorAll('[data-details-key]')) {
+    const item = remembered?.details.find(([name]) => name === el.dataset.detailsKey);
+    if (item) el.open = item[1];
+  }
+  for (const el of app.querySelectorAll('[data-scroll-key]')) {
+    el.scrollTop = remembered?.scroll.find(([name]) => name === el.dataset.scrollKey)?.[1] || 0;
+  }
+  const backup = document.getElementById('station-code');
+  if (backup && remembered) backup.value = remembered.backupCode;
+  window.scrollTo(0, remembered?.page || 0);
+  if (focus) {
+    const control = Array.from(app.querySelectorAll('button,input,summary')).find(el =>
+      focus.id ? el.id === focus.id : focus.action && el.dataset.action === focus.action && el.dataset.letter === focus.letter);
+    control?.focus({ preventScroll: true });
+    // Inserting a draft sentence into the gap changes the paragraph's height.
+    // Keep the option being chosen at the same visible position, not just the
+    // same numeric scroll offset further up the enlarged paragraph.
+    const reading = app.querySelector('.station-workspace');
+    if (control && reading && focus.action === 'choose') {
+      reading.scrollTop += control.getBoundingClientRect().top - focus.top;
+    }
+    if (control?.setSelectionRange && focus.selection !== null) {
+      try { control.setSelectionRange(focus.selection, focus.selection); } catch {}
+    }
+  }
+}
 function render() {
+  rememberView();
+  const key = [mode,pin,state?.phase,state?.resultsReleased,state?.me?.submitted,state?.me?.activeVisit?.id,ui.screen].join(':');
+  const focused = document.activeElement;
+  const focus = key === app.dataset.viewKey && focused && app.contains(focused) ? {
+    id: focused.id, action: focused.dataset.action, letter: focused.dataset.letter, selection: focused.selectionStart ?? null,
+    top: focused.getBoundingClientRect().top,
+  } : null;
   app.className = mode === 'host' ? 'shell teacher' : 'shell phone';
   const content = mode === 'host' ? state?.role === 'host' ? state.phase === 'lobby' ? hostLobby() : hostDashboard() : `${header()}<div class="panel"><h1>Opening teacher room…</h1></div>` :
-    mode === 'join' ? studentContent() : mode === 'student' ? `${header()}<main class="phone-content"><section class="paper"><h1>Join a museum room</h1><p>Scan your teacher’s joining QR or enter the five-digit PIN.</p><label for="entry-pin">Room PIN</label><input id="entry-pin" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="12345" value="${esc(ui.entryPin)}">${btn('Continue →', 'enter-pin', 'button gold wide')}</section></main>` : `${header()}<div class="panel"><h1>Opening your museum room…</h1>${btn('Retry', 'retry-create', 'button ghost')}</div>`;
+    mode === 'join' ? studentContent() : mode === 'student' ? `${header()}<main class="phone-content"><div class="route-art" role="img" aria-label="The red-and-gold museum"></div><section class="paper"><h1>Join a museum room</h1><p>Scan your teacher’s joining QR or enter the five-digit PIN.</p><label for="entry-pin">Room PIN</label><input id="entry-pin" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="12345" value="${esc(ui.entryPin)}">${btn('Continue →', 'enter-pin', 'button gold wide')}</section></main>` : `${header()}<div class="panel"><h1>Opening your museum room…</h1>${btn('Retry', 'retry-create', 'button ghost')}</div>`;
   app.innerHTML = content + (ui.error ? `<div class="toast error" role="alert">${esc(ui.error)} ${btn('Retry', 'retry', 'button ghost tiny')}</div>` : '') +
     (ui.notice ? `<div class="toast" role="status">${esc(ui.notice)}</div>` : '') + modal();
-  attachVideo(); updateClocks();
+  restoreView(key, focus); attachVideo(); updateClocks();
 }
 
 async function openCamera() {

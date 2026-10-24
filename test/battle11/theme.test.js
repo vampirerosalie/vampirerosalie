@@ -12,7 +12,7 @@ function render(name,state){
   const ctx={state,pin:state.pin,mode:'host',apiBase:'/api/museum/rooms',ui:{online:true,busy:false},
     esc:v=>String(v??'').replaceAll('<','&lt;'),btn:(text,action)=>`<button data-action="${action}">${text}</button>`,
     clockMarkup:end=>`<time data-ends-at="${end}">5:00</time>`,elapsedText:ms=>String(ms),resultsContent:()=>'<section>RELEASED_RESULTS</section>'};
-  return vm.runInNewContext(['header','stationTiles','groupTable',name].map(fn).join('\n')+`;${name}()`,ctx);
+  return vm.runInNewContext(['stationEmblem','header','stationTiles','groupTable',name].map(fn).join('\n')+`;${name}()`,ctx);
 }
 function fixture(){const game=new MuseumGame(),host=game.create();const player=game.join(host.pin,{clientId:randomUUID(),name:'TEST Detectives'});const act=(token,type,extra={})=>game.action(host.pin,token,{type,requestId:randomUUID(),...extra});return{game,host,player,act};}
 test('case desk keeps all six station identities, clocks, occupancy and progress without exposing answers',()=>{
@@ -34,9 +34,9 @@ test('lobby still has a large real joining QR and separate permanent station-car
 });
 test('museum theme uses existing art and local typography without changing printable cards or student admission',()=>{
   const html=readFileSync(new URL('index.html',root),'utf8'),css=readFileSync(new URL('museum-theme.css',root),'utf8');
-  assert.match(html,/museum-theme\.css\?v=1/);assert.match(css,/Georgia/);assert.match(css,/prefers-reduced-motion/);
+  assert.match(html,/museum-theme\.css\?v=3/);assert.match(css,/Georgia/);assert.match(css,/prefers-reduced-motion/);
   assert.doesNotMatch(readFileSync(new URL('styles.css',root),'utf8'),/fonts.googleapis/);
-  for(const file of ['museum','parchment'])assert.equal(readFileSync(new URL(`assets/ui/${file}.webp`,root)).toString('ascii',8,12),'WEBP');
+  for(const file of ['museum','parchment','phone-surround','teacher-surround','station-emblems'])assert.equal(readFileSync(new URL(`assets/ui/${file}.webp`,root)).toString('ascii',8,12),'WEBP');
   assert.doesNotMatch(fn('mapScreen'),/data-action="(?:open|visit|enter)-station"/);
   assert.doesNotMatch(readFileSync(new URL('cards.html',root),'utf8'),/museum-theme/);
 });

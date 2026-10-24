@@ -7,7 +7,7 @@ import {STATION_PAYLOADS} from '../app/battle11/core/game.js';
 const base=process.argv[2];
 if(!/^https?:\/\//.test(base||''))throw Error('Provide the existing site origin.');
 const hash=b=>createHash('sha256').update(b).digest('hex');
-for(const path of ['index.html','app.js','styles.css','museum-theme.css','assets/ui/museum.webp','assets/ui/parchment.webp']){
+for(const path of ['index.html','app.js','styles.css','museum-theme.css','assets/ui/museum.webp','assets/ui/parchment.webp','assets/ui/phone-surround.webp','assets/ui/teacher-surround.webp','assets/ui/station-emblems.webp']){
   const response=await fetch(base+'/battle11/'+path);assert.equal(response.status,200);
   const local=await readFile(new URL('../public/battle11/'+path,import.meta.url));
   if(path.endsWith('.webp'))assert.equal(hash(Buffer.from(await response.arrayBuffer())),hash(local));

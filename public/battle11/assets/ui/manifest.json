@@ -1,4 +1,16 @@
 {
+  "phone-surround.webp": {
+    "source": "artwork/battle11-ui/phone-surround.png",
+    "provenance": "Built-in image_gen, approved burgundy/gold museum framing. Full prompt in artwork/battle11-ui/manifest.json. Proportional WebP compression, quality 84."
+  },
+  "teacher-surround.webp": {
+    "source": "artwork/battle11-ui/teacher-surround.png",
+    "provenance": "Built-in image_gen. Separate wide museum interior, not a stretched phone background. Full prompt in artwork/battle11-ui/manifest.json."
+  },
+  "station-emblems.webp": {
+    "source": "artwork/battle11-ui/station-emblems.png",
+    "provenance": "Built-in image_gen. Neutral 3-by-2 sprite grid: cabinet, bag, notebook, frame, watch, report. No sentence text, hidden answers or QR patterns. Full prompt in artwork/battle11-ui/manifest.json."
+  },
   "museum.webp": {
     "source": "../museum-hero.png",
     "operation": "Existing Battle 11 illustration proportionally resized to 1280px and compressed to WebP, quality 83. No crop or new generation."
