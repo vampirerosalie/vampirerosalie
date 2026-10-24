@@ -87,6 +87,19 @@ test('teacher reader provides QR and return controls',()=>{
   }
 });
 
+test('embedded teacher view has its own game-only fullscreen button',()=>{
+  assert.match(render('teacherView'),/data-action="fullscreen"[^>]*>Game full screen/);
+  assert.match(source,/document\.documentElement\.requestFullscreen\(\)/);
+  assert.match(source,/document\.addEventListener\('fullscreenchange',syncGameFullscreen\)/);
+  const control={textContent:'',setAttribute(name,value){this[name]=value;}};
+  const start=source.indexOf('function syncGameFullscreen()'),end=source.indexOf('\nfunction ',start+1);
+  for(const fullscreen of [null,{},null]){
+    vm.runInNewContext(source.slice(start,end)+';syncGameFullscreen()',{app:{querySelector:()=>control},document:{fullscreenElement:fullscreen}});
+    assert.equal(control.textContent,fullscreen?'Exit game full screen':'Game full screen');
+    assert.equal(control['aria-pressed'],String(Boolean(fullscreen)));
+  }
+});
+
 test('kitchen-style desk hides answers until review, then Next appears only after finalize',()=>{
   const state={phase:'questions',pendingReviewCount:1,question:{id:'q01',number:1,prompt:'Ship name'},players:[{id:'p1',name:'TEST pupil',location:'cave',answerStatus:'submitted',online:true}],log:[]};
   const review={question:{id:'q01',acceptedAnswers:['Silver Gull']},entries:[{id:'p1',name:'TEST pupil',response:{value:'My answer',status:'submitted',attempts:1},suggestion:{status:'teacher_review'}}]};

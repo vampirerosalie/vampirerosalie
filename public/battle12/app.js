@@ -101,7 +101,7 @@ function studentView(){const body=screen==='read'?reader():screen==='notes'?`<se
   return `<div class="phone"><header><div class="brand">TREASURE RAID<small>${esc(state.me.name)}</small></div><div class="room-label">Room ${pin}</div></header>${resourceBar()}<div class="connection"></div><section class="scroll">${body}</section>${screen==='read'?readerControls():''}<nav aria-label="Game views">${['voyage','read','answer','cards'].map(s=>btn(`<img class="nav-art" src="/battle12/assets/ui/${({voyage:'compass.webp',read:'book.svg',answer:ended()?'vault.webp':'notes.svg',cards:'cards.svg'})[s]}" alt="" width="29" height="29"><span>${({voyage:'Island',read:'Read',answer:ended()?'Results':'Answer',cards:'Cards'})[s]}</span>`,s,'',false,`aria-current="${s===screen?'page':'false'}"`)).join('')}</nav></div>`;
 }
 function qrContent(){return `<p>Scan to join this same room. Rejoining on the same browser restores your player.</p><img class="qr" src="/api/treasure/rooms/${pin}/qr.svg" alt="Room ${pin} joining QR code"><div class="pin">${pin}</div><p class="join-link"><a href="${esc(state.joinUrl)}" target="_blank" rel="noopener">${esc(state.joinUrl)}</a></p>`;}
-function teacherControls(){return `<div class="row">${btn('Read illustrated story','read')}${btn('Show joining QR','qr')}${embedded?'':btn('Full screen','fullscreen')}${!ended()?btn('End Game','end','danger'):btn('New room','create','gold')}</div>`;}
+function teacherControls(){return `<div class="row">${btn('Read illustrated story','read')}${btn('Show joining QR','qr')}${btn('Game full screen','fullscreen')}${!ended()?btn('End Game','end','danger'):btn('New room','create','gold')}</div>`;}
 function lobbyDesk(){return `<section class="lobby-join panel"><span class="eyebrow">Join the adventure</span><h2>Scan to join Treasure Raid</h2>${qrContent()}<p>Enter your name. No group selection needed.</p>${btn('Start question 1 →','start','gold wide',!state.joinedCount)}<p>${state.joinedCount} joined · ${state.onlineCount} online</p></section><section class="panel"><h2>Ready crew</h2>${state.players.length?state.players.map(p=>`<div class="status-row"><b>${esc(p.name)}</b><span>${p.online?'Connected':'Reconnecting'}</span></div>`).join(''):'<p>Student names will appear here.</p>'}</section>`;}
 function showReview(){
   if(!reviewOpen||!host||review?.question?.id!==state.question.id)return;
@@ -131,9 +131,14 @@ function teacherView(){
 let music=null,musicOn=false,volume=.2;
 function musicControls(){return `<div class="music">${btn(musicOn?'Music: on ♫':'Music: off','music')}<label for="volume">Volume</label><input id="volume" type="range" min="0" max="0.6" step="0.01" value="${volume}" aria-label="Music volume"><small>Teacher only</small></div>`;}
 async function toggleMusic(){if(!host)return;if(!music){music=new Audio('/battle12/assets/master-of-the-feast.mp3');music.preload='none';music.addEventListener('ended',()=>{if(musicOn){music.currentTime=0;music.play().catch(()=>notice('Tap Music to resume playback.'));}});music.addEventListener('timeupdate',()=>{if(!Number.isFinite(music.duration))return;music.volume=volume*Math.min(1,music.currentTime/2,(music.duration-music.currentTime)/2);});}if(musicOn){music.pause();musicOn=false;}else{music.volume=volume;try{await music.play();musicOn=true;}catch{notice('Music could not start. Tap Music again.');}}render();}
+function syncGameFullscreen(){
+  const control=app.querySelector('[data-action="fullscreen"]');
+  if(control){control.textContent=document.fullscreenElement?'Exit game full screen':'Game full screen';control.setAttribute('aria-pressed',String(Boolean(document.fullscreenElement)));}
+}
 function render(){saveDraft();const active=document.activeElement,focus=active?.id,selection=active?.selectionStart,scroll=$('.scroll')?.scrollTop??0,joiningName=$('#name')?.value,joiningPin=$('#pin')?.value;
   const answerScroll=$('.answer-list')?.scrollTop??0,openedDetails=[...app.querySelectorAll('details[open]')].map(d=>d.querySelector('summary')?.textContent);
   app.innerHTML=token&&!state?'<p class="loading">Reconnecting to your saved voyage…</p>':!state||!token||state.role==='public'?joinView():host?teacherView():studentView();
+  syncGameFullscreen();
   if($('#name')&&joiningName!==undefined)$('#name').value=joiningName;
   if($('#pin')&&joiningPin!==undefined)$('#pin').value=joiningPin;
   for(const details of app.querySelectorAll('details'))if(openedDetails.includes(details.querySelector('summary')?.textContent))details.open=true;
@@ -199,6 +204,7 @@ document.addEventListener('click',async e=>{
   if(action==='attack'){const target=state.players.find(p=>p.id===button.dataset.target);return modal('Use '+button.dataset.card+'?',`<p>Target: ${esc(target.name)}. This uses your card and your one attack for this question. Their Vault stays protected.</p>`,'Use card',()=>send('student:attack',{targetId:target.id,card:button.dataset.card,expectedVersion:version}));}
 });
 window.addEventListener('pagehide',()=>{saveDraft();rememberReader();music?.pause();});
+document.addEventListener('fullscreenchange',syncGameFullscreen);
 window.addEventListener('pageshow',()=>refresh(true));
 window.addEventListener('online',()=>refresh(true));
 window.addEventListener('popstate',()=>{if(!host){studentRoute();refresh(true);}});
