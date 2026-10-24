@@ -2,6 +2,7 @@ import { resolveTreasureRoute, treasureTeacherShellUrl } from './route.js?v=3';
 import { retireReviewSession } from './retire-review-session.js?v=1';
 import { questionDesk, responseStatuses, reviewDialog } from './teacher-desk.js?v=2';
 import { REWARD_ART, rewardArt, artImage } from './reward-art.js?v=1';
+import { locationScene } from './location-scenes.js?v=1';
 const $=s=>document.querySelector(s), app=$('#app'), dialog=$('#dialog');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const PREFIX='treasure-raid:', params=new URLSearchParams(location.search);
@@ -190,7 +191,8 @@ document.addEventListener('click',async e=>{
   const version=state.me?.actionVersion;
   if(action==='place'){
     const location=button.dataset.place,[,name]=locations.find(l=>l[0]===location);
-    return modal(name,`<img src="/battle12/assets/island.png" alt="Treasure island"><p>${location==='camp'?'Bank':'Explore'} · <b>1 Action</b></p>${state.me.actions===1?'<p>This uses your last Action. Banking also costs 1 Action.</p>':''}`,location==='camp'?'Bank now':'Explore now',()=>send(location==='camp'?'student:bank':'student:explore',{location,expectedVersion:version}));
+    const scene=locationScene(location);
+    return modal(name,`<img class="location-illustration" src="${scene.src}" alt="${esc(scene.alt)}"><p class="location-hint">${esc(scene.hint)}</p><p>${location==='camp'?'Bank':'Explore'} · <b>1 Action</b></p>${state.me.actions===1?'<p>This uses your last Action. Banking also costs 1 Action.</p>':''}`,location==='camp'?'Bank now':'Explore now',()=>send(location==='camp'?'student:bank':'student:explore',{location,expectedVersion:version}));
   }
   if(action==='bank')return modal('Bank your Backpack?',`<p>Transfer ${state.me.bag} gems to your Vault for 1 Action.</p>`,'Bank · 1 Action',()=>send('student:bank',{expectedVersion:version}));
   if(action==='pass')return modal('Pass final banking?',`<p>Your remaining Backpack gems will not score. This decision cannot be undone.</p>`,'Pass',()=>send('student:pass',{expectedVersion:version}));

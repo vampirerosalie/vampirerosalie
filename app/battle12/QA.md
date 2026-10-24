@@ -83,3 +83,10 @@ The existing GitHub → Cloudflare workflow is used. Run `scripts/verify-battle1
 - Compact header and direct Review Answers button keep the primary controls near the question. Long marking guidance is expandable; pending decisions still block finalization on the server. Status list and destinations remain scrollable for larger classes.
 - Sources, generation prompts and delivery details are in `artwork/battle12-ui/manifest.json`; optimized display assets live in `public/battle12/assets/ui/`. Original island map, all nine paragraph illustrations and existing outcome illustrations remain unchanged.
 - These are browser viewport and server tests, not physical-phone, keyboard, projector or camera-scanning tests. Existing real-world limitations above still apply.
+# 2026-10-24 — Location illustrations, approved hints and full-width reader
+
+- Removed the student reader height cap: natural image proportions now fill the card width, with the paragraph in the existing scroll area and navigation accessible below.
+- Added six generated close-up location illustrations and the owner-approved qualitative strategy hints. No outcome amounts/probabilities are previewed; confirmation cost and server actions are unchanged. Source PNGs, prompts and provenance: `artwork/battle12-locations/manifest.json`.
+- Executed all repository tests: 302 passed, zero failed. `pnpm run build:cloudflare` passed.
+- Actual browser checks in disposable local room 57779: name-only join, reader navigation at 390/360px, all six location dialogs at 360px, unique loaded images, exact hints, Cancel and confirmation buttons, no horizontal overflow. Cancelled all six previews without exploring. Ended only this disposable test room.
+- Physical phones, mobile keyboards and printed QR camera scanning were not tested for this visual-only update.

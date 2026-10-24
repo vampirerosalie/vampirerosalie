@@ -1,0 +1,48 @@
+{
+  "tool": "Built-in image_gen",
+  "reference": "public/battle12/assets/island.png",
+  "assets": [
+    {
+      "id": "camp",
+      "prompt": "Use case: illustration-story. Asset type: landscape 3:2 location illustration for Treasure Raid classroom pirate game. Camp: close view of a red canvas pirate expedition tent on a sandy beach, a single closed sturdy brass-bound vault chest, barrels and palm shade. Match the reference island's vibrant painterly 2.5D storybook illustration, warm sunshine, lush foliage, tactile stone and wood, turquoise sea and antique gold accents. Render this ONE location as a detailed immersive close-up, not the whole island map. No people, text, UI, borders, numbers, cards, reward diagrams or piles of prizes. Reference image is style and geographical design guidance only.",
+      "source": "source/camp.png",
+      "web": "public/battle12/assets/locations/camp.webp",
+      "optimization": "Proportional resize to 960px wide; WebP quality 82. No cropping."
+    },
+    {
+      "id": "cave",
+      "prompt": "Use case: illustration-story. Asset type: landscape 3:2 location illustration for Treasure Raid classroom pirate game. Crystal Cave: close view entering a rocky tropical grotto with small blue and amber crystals embedded in walls, sunlit jungle mouth beyond, inviting and safe. Match the reference island's vibrant painterly 2.5D storybook illustration, warm sunshine, lush foliage, tactile stone and wood, turquoise sea and antique gold accents. Render this ONE location as a detailed immersive close-up, not the whole island map. No people, text, UI, borders, numbers, cards, reward diagrams or piles of prizes. Reference image is style and geographical design guidance only.",
+      "source": "source/cave.png",
+      "web": "public/battle12/assets/locations/cave.webp",
+      "optimization": "Proportional resize to 960px wide; WebP quality 82. No cropping."
+    },
+    {
+      "id": "bridge",
+      "prompt": "Use case: illustration-story. Asset type: landscape 3:2 location illustration for Treasure Raid classroom pirate game. Rope Bridge: close view of a weathered wooden rope suspension bridge over a lush tropical ravine and waterfall; an adventurous slightly precarious crossing. Match the reference island's vibrant painterly 2.5D storybook illustration, warm sunshine, lush foliage, tactile stone and wood, turquoise sea and antique gold accents. Render this ONE location as a detailed immersive close-up, not the whole island map. No people, text, UI, borders, numbers, cards, reward diagrams or piles of prizes. Reference image is style and geographical design guidance only.",
+      "source": "source/bridge.png",
+      "web": "public/battle12/assets/locations/bridge.webp",
+      "optimization": "Proportional resize to 960px wide; WebP quality 82. No cropping."
+    },
+    {
+      "id": "ruins",
+      "prompt": "Use case: illustration-story. Asset type: landscape 3:2 location illustration for Treasure Raid classroom pirate game. Old Ruins: close view of vine-covered ancient stone arches, mossy carved pillars and a mysterious sealed wooden equipment coffer in a sunny jungle clearing. Match the reference island's vibrant painterly 2.5D storybook illustration, warm sunshine, lush foliage, tactile stone and wood, turquoise sea and antique gold accents. Render this ONE location as a detailed immersive close-up, not the whole island map. No people, text, UI, borders, numbers, cards, reward diagrams or piles of prizes. Reference image is style and geographical design guidance only.",
+      "source": "source/ruins.png",
+      "web": "public/battle12/assets/locations/ruins.webp",
+      "optimization": "Proportional resize to 960px wide; WebP quality 82. No cropping."
+    },
+    {
+      "id": "temple",
+      "prompt": "Use case: illustration-story. Asset type: landscape 3:2 location illustration for Treasure Raid classroom pirate game. Sun Temple: close view looking up steep worn stone stairs to a grand ancient sun-carved temple doorway, warm gold shafts of light, imposing adventurous mystery. Match the reference island's vibrant painterly 2.5D storybook illustration, warm sunshine, lush foliage, tactile stone and wood, turquoise sea and antique gold accents. Render this ONE location as a detailed immersive close-up, not the whole island map. No people, text, UI, borders, numbers, cards, reward diagrams or piles of prizes. Reference image is style and geographical design guidance only.",
+      "source": "source/temple.png",
+      "web": "public/battle12/assets/locations/temple.webp",
+      "optimization": "Proportional resize to 960px wide; WebP quality 82. No cropping."
+    },
+    {
+      "id": "harbor",
+      "prompt": "Use case: illustration-story. Asset type: landscape 3:2 location illustration for Treasure Raid classroom pirate game. Hidden Harbor: close view of a sheltered turquoise cove, old wooden dock, moored cream-sailed pirate ship and closed cargo crates beneath palm trees. Match the reference island's vibrant painterly 2.5D storybook illustration, warm sunshine, lush foliage, tactile stone and wood, turquoise sea and antique gold accents. Render this ONE location as a detailed immersive close-up, not the whole island map. No people, text, UI, borders, numbers, cards, reward diagrams or piles of prizes. Reference image is style and geographical design guidance only.",
+      "source": "source/harbor.png",
+      "web": "public/battle12/assets/locations/harbor.webp",
+      "optimization": "Proportional resize to 960px wide; WebP quality 82. No cropping."
+    }
+  ]
+}

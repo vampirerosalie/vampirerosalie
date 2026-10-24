@@ -11,7 +11,7 @@ const log=message=>console.log('PASS: '+message);
 async function api(path,token,body,expected=200){const response=await fetch(base+'/api/treasure/'+path,{method:body?'POST':'GET',headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)});const data=await response.json();assert.equal(response.status,expected,JSON.stringify(data));return data;}
 const hash=b=>createHash('sha256').update(b).digest('hex');
 assert.equal(hash(Buffer.from(await (await fetch(base+'/battle12/app.js')).arrayBuffer())),hash(await readFile(new URL('../public/battle12/app.js',import.meta.url))));log('deployed frontend exactly matches the checked source');
-for(const file of ['pirate-theme.css','teacher-desk.js','index.html']){
+for(const file of ['pirate-theme.css','teacher-desk.js','location-scenes.js','index.html']){
   const response=await fetch(base+'/battle12/'+file);assert.equal(response.status,200);
   assert.equal((await response.text()).replace(/\r\n/g,'\n'),(await readFile(new URL('../public/battle12/'+file,import.meta.url),'utf8')).replace(/\r\n/g,'\n'));
 }
@@ -22,6 +22,12 @@ for(const file of ['ship-deck.webp','timber.webp','parchment.webp','compass.webp
   else assert.equal(hash(Buffer.from(await response.arrayBuffer())),hash(local));
 }
 log('pirate theme, teacher controls and all nine UI assets match the checked source');
+for(const id of ['camp','cave','bridge','ruins','temple','harbor']){
+  const path='assets/locations/'+id+'.webp',response=await fetch(base+'/battle12/'+path);
+  assert.equal(response.status,200);
+  assert.equal(hash(Buffer.from(await response.arrayBuffer())),hash(await readFile(new URL('../public/battle12/'+path,import.meta.url))));
+}
+log('all six distinct location illustrations and hints match the checked source');
 const h=await api('rooms','',{},201),root=`rooms/${h.pin}`;
 const act=(token,type,body={},requestId=randomUUID(),expected=200)=>api(root+'/action',token,{type,requestId,...body},expected);
 const finalize=async()=>{const st=await api(root+'/state',h.hostToken);return act(h.hostToken,'host:reveal',{questionId:st.question.id,reviewVersion:st.reviewVersion});};

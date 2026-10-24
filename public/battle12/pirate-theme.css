@@ -125,7 +125,9 @@ input:not([type=range]), select { color: #30281d; background: #fffcf2; border: 1
 .nav-art { width: 29px; height: 29px; object-fit: contain; filter: drop-shadow(0 1px 2px #0007); }
 .phone .book-heading { width: 100%; margin-bottom: 12px; }
 .phone .book-heading h1 { font-size: 21px; margin: 6px 0 10px; }
-.phone .book-illustration { height: clamp(160px,27dvh,230px); object-fit: contain; background: #e5c994; }
+.phone .book-illustration { display: block; width: 100%; height: auto; max-height: none; object-fit: contain; }
+.location-illustration { display: block; width: 100%; height: auto; object-fit: contain; }
+.location-hint { line-height: 1.5; color: #49321e; }
 .phone .book-text { padding: 20px 18px; }
 .phone .book-text p { font-size: 21px; color: #32281d; }
 .book-controls { background: #49321e var(--timber) center / 500px; border-color: #b79155; flex-shrink: 0; }
