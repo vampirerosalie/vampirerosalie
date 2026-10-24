@@ -1071,7 +1071,7 @@ export default function Home() {
       <button type="button" className="fullscreen-button" aria-pressed={isFullscreen} onClick={() => void toggleFullscreen()}><span aria-hidden="true">{isFullscreen ? '↙' : '⛶'}</span>{isFullscreen ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
     </header>
     {fullscreenError && <p role="status">{fullscreenError}</p>}
-    {(isTreasure || isMuseum || ['lobby', 'finished', 'ended'].includes(standaloneStatus.phase)) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
+    {!(isTreasure && isFullscreen) && (isTreasure || isMuseum || ['lobby', 'finished', 'ended'].includes(standaloneStatus.phase)) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
       <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle}{(isMuseum && standaloneStatus.phase === 'active') || (isTreasure && ['questions', 'finalPlay', 'finalBank'].includes(standaloneStatus.phase)) ? ' is in progress' : ' is ready'}</strong></div>
       <BattleTabs selected={standaloneBattle} onSelect={battle => { if (battle !== standaloneBattle) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }} />
     </section>}

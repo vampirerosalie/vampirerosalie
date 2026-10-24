@@ -43,6 +43,25 @@ test('direct teacher bookmarks return to the shared shell, embedded panels and s
 });
 
 const source=readFileSync(new URL('../../public/battle12/app.js',import.meta.url),'utf8');
+
+test('only Battle 12 hides battle selection in fullscreen and restores it on exit',()=>{
+  const shell=readFileSync(new URL('../../app/page.tsx',import.meta.url),'utf8');
+  const expression=shell.match(/\{([^\n]+) && <section className="battle-selector" aria-label="Choose grammar battle" style=\{\{ flexShrink: 0 \}\}>/g)
+    .find(line=>line.includes('isTreasure'))
+    .replace(/^\{/, '').split(' && <section')[0];
+  const visible=(isTreasure,isMuseum,phase,isFullscreen)=>vm.runInNewContext(expression,{isTreasure,isMuseum,standaloneStatus:{phase},isFullscreen});
+  for(const phase of ['lobby','questions','finalPlay','finalBank','finished','ended']) {
+    assert.equal(visible(true,false,phase,false),true);
+    assert.equal(visible(true,false,phase,true),false);
+    assert.equal(visible(true,false,phase,false),true);
+    assert.equal(visible(false,true,phase,true),visible(false,true,phase,false));
+    assert.equal(visible(false,false,phase,true),visible(false,false,phase,false));
+  }
+  assert.match(shell,/document\.addEventListener\('fullscreenchange', changed\)/);
+  assert.match(shell,/isFullscreen \? 'EXIT FULL SCREEN' : 'FULL SCREEN'/);
+  assert.match(shell,/key=\{standaloneBattle\}/); // Fullscreen must not change the iframe identity or room.
+});
+
 function render(name,overrides={}) {
   const start=source.indexOf('function '+name+'('), end=source.indexOf('\nfunction ',start+1);
   let code=source.slice(start,end<0?undefined:end);
