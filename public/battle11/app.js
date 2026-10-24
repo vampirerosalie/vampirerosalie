@@ -175,7 +175,7 @@ function caseVignette(number) {
   return `<div class="case-vignette" aria-hidden="true">${stationEmblem(number)}</div>`;
 }
 function header() {
-  return `<header class="topbar"><div class="brand"><span class="brand-mark">◆</span><span>The Missing Museum Jewel<small>BATTLE 11 · DETECTIVE STATIONS</small></span></div><div class="top-actions"><span class="chip ${ui.online ? 'good' : 'bad'}">${ui.online ? 'Connected' : 'Reconnecting…'}</span>${pin ? `<span class="chip">PIN <b>${pin}</b></span>` : ''}${mode === 'host' && state?.role === 'host' ? `${btn('Print Station Cards', 'cards', 'button ghost tiny')}${state.phase === 'active' ? btn('Show join QR', 'join-qr', 'button ghost tiny') : ''}${btn('⛶ Full screen', 'fullscreen', 'button ghost tiny')}` : ''}</div></header>`;
+  return `<header class="topbar"><div class="brand"><span class="brand-mark">◆</span><span>The Missing Museum Jewel<small>BATTLE 11 · DETECTIVE STATIONS</small></span></div><div class="top-actions"><span class="chip ${ui.online ? 'good' : 'bad'}">${ui.online ? 'Connected' : 'Reconnecting…'}</span>${pin ? `<span class="chip">PIN <b>${pin}</b></span>` : ''}${mode === 'host' && state?.role === 'host' ? `${btn('Print Station Cards', 'cards', 'button ghost tiny')}${state.phase === 'active' ? btn('Show join QR', 'join-qr', 'button ghost tiny') : ''}${btn('⛶ Full screen', 'fullscreen', 'button ghost tiny')}` : ''}</div></header>${mode === 'host' && state?.role === 'host' && state.phase !== 'ended' ? '<div id="teacher-music-slot"></div>' : ''}`;
 }
 function hostLobby() {
   const groups = state.groups || [];
@@ -308,6 +308,7 @@ function render() {
   app.innerHTML = content + (ui.error ? `<div class="toast error" role="alert">${esc(ui.error)} ${btn('Retry', 'retry', 'button ghost tiny')}</div>` : '') +
     (ui.notice ? `<div class="toast" role="status">${esc(ui.notice)}</div>` : '') + modal();
   restoreView(key, focus); attachVideo(); updateClocks();
+  try { window.MuseumMusic?.update({ teacher: mode === 'host' && state?.role === 'host', phase: state?.phase, pin, slot: document.getElementById('teacher-music-slot') }); } catch {}
 }
 
 async function openCamera() {

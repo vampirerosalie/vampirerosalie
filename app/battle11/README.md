@@ -35,6 +35,8 @@ Verification: all 305 repository tests passed; Cloudflare production build passe
 
 ## Approved dark illustrated redesign
 
+Teacher music: optional “Thinking Music” by Kevin MacLeod, enabled with Play music in the lobby/live teacher view. It loops at 18% volume by default, has pause and volume controls, survives UI refreshes without restarting, and stops on room closure or leaving the page. Students do not receive an audio player. The original artist MP3 and attribution are stored in `public/battle11/assets/thinking-music.mp3` and `public/battle11/MUSIC-CREDIT.txt` (CC BY 4.0).
+
 The revised theme uses burgundy panels and antique gold across the teacher dashboard and all student states. Only the paragraph reading surface uses muted parchment; QR codes retain their required white quiet margin. New illustrated phone/teacher surrounds and neutral station emblems have source PNGs and generation provenance in `artwork/battle11-ui/manifest.json`. The original story illustrations are unchanged.
 
 On phones the station map and active reading workspace scroll above separate action controls. All eight sentence options remain fully readable. Draft selection and server-saved status are distinct. UI-only scroll memory retains reading/option position when returning from the answer overview; it does not cache paragraph bodies or change admission rules.

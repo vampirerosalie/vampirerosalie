@@ -1,0 +1,9 @@
+.museum-music { display:flex; align-items:center; flex-wrap:wrap; gap:10px 18px; margin:0 0 18px; padding:12px 18px; border:1px solid #886538; border-radius:14px; background:linear-gradient(135deg,#421424,#260c17); color:#f5e5c9; }
+.museum-music-title { font-weight:750; font-size:14px; color:#e4bd75; }
+.museum-music-title small { display:block; font-size:12px; font-weight:400; color:#d7bc95; }
+.museum-music label { display:flex; align-items:center; gap:9px; font-size:13px; margin:0; }
+.museum-music input[type=range] { width:125px; min-height:32px; padding:0; accent-color:#d7ab59; background:transparent; border:0; cursor:pointer; }
+.museum-music-status { font-size:12px; color:#d7bc95; }
+.museum-music-credit { width:100%; font-size:11px; color:#d7bc95; }
+.museum-music-credit a { color:#e4bd75; text-decoration:underline; text-underline-offset:2px; }
+@media(max-width:600px) { .museum-music { gap:8px 12px; } .museum-music-status { width:100%; } }
