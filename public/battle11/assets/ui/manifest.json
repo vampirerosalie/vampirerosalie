@@ -1,0 +1,10 @@
+{
+  "museum.webp": {
+    "source": "../museum-hero.png",
+    "operation": "Existing Battle 11 illustration proportionally resized to 1280px and compressed to WebP, quality 83. No crop or new generation."
+  },
+  "parchment.webp": {
+    "source": "public/battle12/assets/ui/parchment.webp",
+    "provenance": "Existing generated parchment material, copied for an independent Battle 11 theme. Original and prompt are recorded in artwork/battle12-ui/manifest.json."
+  }
+}

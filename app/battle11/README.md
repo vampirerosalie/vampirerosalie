@@ -26,3 +26,9 @@ Normal teacher projection shows occupancy, connection and saved-answer indicator
 ## Artwork
 
 Seven original generated paper-cut illustrations are stored in `public/battle11/assets` and listed in `assets/manifest.json`. Text, answers, buttons and QR patterns are real HTML/SVG and are not baked into the artwork.
+
+## 2026-10-24 museum visual refresh
+
+Added `public/battle11/museum-theme.css`: local Georgia/system typography, red velvet and parchment materials, a prominent lobby QR, teacher case desk beside six numbered station tiles, and the full progress table below. Existing museum hero art is reused and compressed; material provenance is in `assets/ui/manifest.json`. No music installed pending the owner's selection. No changes to passages, options, scoring, admissions, timers, server code or permanent printed cards.
+
+Verification: all 305 repository tests passed; Cloudflare production build passed. Local HTTP smoke check (`node scripts/verify-battle11-theme.mjs http://localhost:3016`) passed in disposable room 13132, closed afterwards. Actual browser room 14046 tested lobby QR, name join, start, teacher layout at 1214px with no horizontal overflow, student typography at 390/360px, all eight options, station entry using the existing printed-code fallback, save-and-leave, refresh and late-joining QR. Closed only that test room. Physical camera scanning, phone hardware and projector appearance were not tested. The same smoke script can verify deployed file hashes, permanent QR payloads, privacy and the station lifecycle on the existing live origin.
