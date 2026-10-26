@@ -1,0 +1,35 @@
+{
+  "description": "Original generated Territory Wars artwork. No UI or answer text baked into images.",
+  "assets": [
+    {
+      "name": "phone-background",
+      "source": "source/phone-background.png",
+      "runtime": "/battle13/assets/phone-background.webp"
+    },
+    {
+      "name": "fortress",
+      "source": "source/fortress.png",
+      "runtime": "/battle13/assets/fortress.webp"
+    },
+    {
+      "name": "shield",
+      "source": "source/shield.png",
+      "runtime": "/battle13/assets/shield.webp"
+    },
+    {
+      "name": "rebellion",
+      "source": "source/rebellion.png",
+      "runtime": "/battle13/assets/rebellion.webp"
+    },
+    {
+      "name": "energy",
+      "source": "source/energy.png",
+      "runtime": "/battle13/assets/energy.webp"
+    },
+    {
+      "name": "trap",
+      "source": "source/trap.png",
+      "runtime": "/battle13/assets/trap.webp"
+    }
+  ]
+}

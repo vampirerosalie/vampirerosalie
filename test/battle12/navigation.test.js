@@ -49,7 +49,7 @@ test('only Battle 12 hides battle selection in fullscreen and restores it on exi
   const expression=shell.match(/\{([^\n]+) && <section className="battle-selector" aria-label="Choose grammar battle" style=\{\{ flexShrink: 0 \}\}>/g)
     .find(line=>line.includes('isTreasure'))
     .replace(/^\{/, '').split(' && <section')[0];
-  const visible=(isTreasure,isMuseum,phase,isFullscreen)=>vm.runInNewContext(expression,{isTreasure,isMuseum,standaloneStatus:{phase},isFullscreen});
+  const visible=(isTreasure,isMuseum,phase,isFullscreen)=>vm.runInNewContext(expression,{isTerritory:false,isTreasure,isMuseum,standaloneStatus:{phase},isFullscreen});
   for(const phase of ['lobby','questions','finalPlay','finalBank','finished','ended']) {
     assert.equal(visible(true,false,phase,false),true);
     assert.equal(visible(true,false,phase,true),false);

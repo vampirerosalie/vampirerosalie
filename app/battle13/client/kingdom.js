@@ -1,0 +1,67 @@
+import * as T from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {MAP} from '../../../public/battle13/map-data.js';
+
+// All territories are real meshes; ownership only changes their top surface.
+export class Kingdom{
+  constructor(element,onSelect){
+    this.element=element;this.onSelect=onSelect;this.scene=new T.Scene();this.scene.background=new T.Color('#102c39');this.scene.fog=new T.Fog('#102c39',38,80);
+    this.camera=new T.PerspectiveCamera(42,1,.1,120);this.renderer=new T.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.28;this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;
+    element.append(this.renderer.domElement);this.renderer.domElement.setAttribute('aria-label','Interactive 3D kingdom. Drag to pan, pinch or scroll to zoom, tap a territory.');
+    this.controls=new OrbitControls(this.camera,this.renderer.domElement);this.controls.enableDamping=false;this.controls.minDistance=5;this.controls.maxDistance=42;this.controls.minPolarAngle=.25;this.controls.maxPolarAngle=1.12;this.controls.maxTargetRadius=13;this.controls.mouseButtons={LEFT:T.MOUSE.PAN,MIDDLE:T.MOUSE.DOLLY,RIGHT:T.MOUSE.ROTATE};this.controls.touches={ONE:T.TOUCH.PAN,TWO:T.TOUCH.DOLLY_ROTATE};this.controls.addEventListener('change',()=>this.draw());
+    this.scene.add(new T.HemisphereLight('#d7efff','#4b3423',2.4));const sun=new T.DirectionalLight('#ffe2a1',3.4);sun.position.set(-10,20,8);sun.castShadow=true;Object.assign(sun.shadow.camera,{left:-15,right:15,top:15,bottom:-15,near:1,far:60});sun.shadow.mapSize.set(1024,1024);sun.shadow.bias=-.0015;this.scene.add(sun);const fill=new T.DirectionalLight('#86bdff',1.1);fill.position.set(12,8,-12);this.scene.add(fill);
+    this.materials=new Map();this.batches=new Map();this.hexes=new Map();this.markers=new Map();this.clouds=new Map();this.ray=new T.Raycaster();this.pointer=new T.Vector2();
+    this.geometry={hex:new T.CylinderGeometry(.94,.97,.18,6),base:new T.CylinderGeometry(.98,.9,.63,6),box:new T.BoxGeometry(1,1,1),sphere:new T.SphereGeometry(1,10,7),cone:new T.ConeGeometry(1,1,8),cyl:new T.CylinderGeometry(1,1,1,10),rock:new T.DodecahedronGeometry(1,0),roof:new T.ConeGeometry(1,1,4),ring:new T.TorusGeometry(1,.045,5,24)};
+    const water=new T.Mesh(new T.CylinderGeometry(13.4,13.2,.65,64),this.mat('#167f9f',.3,.25));water.position.y=-.82;water.receiveShadow=true;this.scene.add(water);
+    const table=new T.Mesh(new T.CylinderGeometry(14.3,14.7,.55,6),this.mat('#684123'));table.position.y=-1.47;table.rotation.y=Math.PI/6;table.receiveShadow=true;this.scene.add(table);
+    for(const [index,tile] of MAP.entries()){
+      this.add('base','#958c71',[tile.x,-.35,tile.z],[1,1,1]);
+      const top=new T.Mesh(this.geometry.hex,new T.MeshStandardMaterial({color:'#fff3d8',roughness:.84}));top.position.set(tile.x,.055,tile.z);top.userData.tile=tile.id;top.receiveShadow=true;top.castShadow=true;this.scene.add(top);this.hexes.set(tile.id,top);
+      // Small decoration clusters leave the majority of each tile clear for taps.
+      const seed=Math.abs(tile.q*73+tile.r*137),x=tile.x,z=tile.z;
+      if(tile.kind==='crown'){
+        const sizes=new Map([...this.batches].map(([k,v])=>[k,v.length]));this.castle(x,z,1);
+        for(const [k,geos]of this.batches)for(const g of geos.slice(sizes.get(k)??0))g.scale(1.75,1.55,1.75);
+      }
+      else if(tile.kind==='mystery'){this.ruins(x-.2,z+.1,.8);const group=new T.Group();for(let j=0;j<7;j++){const m=new T.Mesh(this.geometry.sphere,this.mat('#e5e3e9',.9,0));m.position.set(Math.sin(j*2.3)*.48,.5+j%2*.13,Math.cos(j*2.3)*.38);m.scale.set(.35,.25,.3);group.add(m);}const label=this.label('?', '#35214c');label.position.set(0,1.1,0);group.add(label);group.position.set(x,0,z);this.scene.add(group);this.clouds.set(tile.id,group);}
+      else if(seed%7===0)this.house(x+.13,z+.12,seed%2?'#be5934':'#326498');
+      else if(seed%11===0)this.tower(x+.2,z+.15,.8);
+      else if(seed%13===0)this.crystals(x,z);
+      else if(seed%17===0)this.ruins(x,z,.65);
+      if(tile.kind==='regular'&&seed%3===0)for(let j=0;j<3;j++)this.tree(x-.5+j*.19,z-.48+(j%2)*.15,.6+(seed%4)*.12);
+      if(index%4===0){this.add('sphere','#71954b',[x+.57,.16,z+.3],[.17,.08,.17]);this.add('sphere','#e4b173',[x+.59,.2,z+.3],[.04,.05,.04]);}
+      if(Math.max(Math.abs(tile.q),Math.abs(tile.r),Math.abs(tile.q+tile.r))>=5){for(let j=0;j<5;j++){this.add('rock',j%2?'#a8a595':'#6b7b77',[x+Math.sin(index+j)*.7,-.2,z+Math.cos(index+j)*.7],[.22,.43,.24]);}if(seed%2)this.tree(x-.55,z-.2,.8);}
+    }
+    this.mountains(-1,-9);this.rainbow(7,-7);
+    for(const row of [-3,2,4]){const tiles=MAP.filter(t=>t.r===row).sort((a,b)=>a.x-b.x);let pair=[tiles[0],tiles[1]];for(let i=1;i<tiles.length;i++)if(tiles[i].x-tiles[i-1].x>pair[1].x-pair[0].x)pair=[tiles[i-1],tiles[i]];this.bridge((pair[0].x+pair[1].x)/2,row*1.8,Math.PI/2);}
+    this.waterfall(-7.5,6);this.waterfall(8,-5);this.waterfall(1,10);
+    // Fine surface ripples, shoreline grasses and timber base detailing.
+    for(let i=0;i<55;i++){const a=i*2.399,r=11.7+(i%5)*.27;this.add('box','#59bad0',[Math.cos(a)*r,-.46,Math.sin(a)*r],[.12+(i%3)*.11,.008,.025],a);}
+    this.flush();this.reset();
+    this.down=e=>{this.press={x:e.clientX,y:e.clientY,id:e.pointerId};};this.up=e=>{if(!this.press||this.press.id!==e.pointerId||Math.hypot(e.clientX-this.press.x,e.clientY-this.press.y)>7)return;const box=this.renderer.domElement.getBoundingClientRect();this.pointer.set((e.clientX-box.left)/box.width*2-1,-(e.clientY-box.top)/box.height*2+1);this.ray.setFromCamera(this.pointer,this.camera);const hit=this.ray.intersectObjects([...this.hexes.values()])[0];if(hit){this.select(hit.object.userData.tile);this.onSelect(hit.object.userData.tile);}};
+    this.renderer.domElement.addEventListener('pointerdown',this.down);this.renderer.domElement.addEventListener('pointerup',this.up);this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(element);this.renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();this.element.dispatchEvent(new CustomEvent('maplost'));});this.renderer.domElement.addEventListener('webglcontextrestored',()=>this.draw());this.resize();
+  }
+  mat(color,roughness=.72,metalness=0){const key=color+roughness+metalness;if(!this.materials.has(key))this.materials.set(key,new T.MeshStandardMaterial({color,roughness,metalness}));return this.materials.get(key);}
+  add(shape,color,pos,scale,angle=0){const g=this.geometry[shape].clone(),m=new T.Matrix4().compose(new T.Vector3(...pos),new T.Quaternion().setFromEuler(new T.Euler(0,angle,0)),new T.Vector3(...scale));g.applyMatrix4(m);if(!this.batches.has(color))this.batches.set(color,[]);this.batches.get(color).push(g);}
+  flush(){for(const [color,geos]of this.batches){const g=mergeGeometries(geos,false),m=new T.Mesh(g,this.mat(color));m.castShadow=true;m.receiveShadow=true;this.scene.add(m);geos.forEach(g=>g.dispose());}this.batches.clear();}
+  tree(x,z,s=1){this.add('cyl','#795438',[x,.25*s,z],[.045*s,.5*s,.045*s]);for(let j=0;j<3;j++)this.add('cone',['#205f49','#38794a','#5b9758'][j],[x,(.4+j*.19)*s,z],[s*(.27-j*.035),.47*s,s*(.27-j*.035)]);}
+  house(x,z,color){this.add('box','#e6c994',[x,.36,z],[.55,.48,.45]);this.add('roof',color,[x,.72,z],[.46,.38,.4],Math.PI/4);this.add('box','#6c4634',[x,.27,z+.232],[.12,.25,.02]);for(const dx of [-.18,.18])this.add('box','#f6d98d',[x+dx,.45,z+.235],[.08,.1,.02]);this.add('box','#8b6542',[x+.14,.8,z-.1],[.08,.33,.09]);for(let j=0;j<3;j++)this.add('box','#aa8b56',[x-.35+j*.12,.15,z+.42],[.09,.04,.2]);}
+  tower(x,z,s=1){this.add('box','#a97538',[x,.51*s,z],[.32*s,.8*s,.32*s]);this.add('box','#4b3626',[x,.7*s,z+.17*s],[.19*s,.2*s,.015]);this.add('roof','#214b6b',[x,1.04*s,z],[.4*s,.35*s,.4*s],Math.PI/4);this.add('cyl','#d3a94a',[x,1.38*s,z],[.015, .45*s,.015]);this.add('box','#176ca0',[x+.12*s,1.52*s,z],[.24*s,.14*s,.025]);}
+  castle(x,z,s){this.add('cyl','#b7a387',[x,.22,z],[.75,.22,.75]);this.add('box','#ebdbb7',[x,.65,z],[.8,.85,.7]);this.add('roof','#19569b',[x,1.26,z],[.74,.5,.65],Math.PI/4);this.add('box','#332e30',[x,.55,z+.36],[.23,.46,.02]);for(let j=0;j<5;j++)this.add('box','#d2c4a1',[x,.16+j*.045,z+.76-j*.08],[.36,.07,.12]);for(const dx of [-.47,.47])for(const dz of [-.4,.4]){this.add('cyl','#f2e1b7',[x+dx,.7,z+dz],[.19,1.04,.19]);this.add('cone','#1755a2',[x+dx,1.4,z+dz],[.25,.55,.25]);this.add('sphere','#eab64a',[x+dx,1.7,z+dz],[.045,.055,.045]);this.add('box','#6a5638',[x+dx,.92,z+dz+.19],[.07,.14,.01]);}this.add('cyl','#e6cf98',[x,1.35,z],[.17,.85,.17]);this.add('cone','#1a57a6',[x,1.99,z],[.29,.55,.29]);for(let j=0;j<5;j++){const a=j/5*Math.PI*2;this.add('cone','#f4bd3e',[x+Math.cos(a)*.2,2.17,z+Math.sin(a)*.2],[.065,.3,.065]);}this.add('cyl','#e1a62a',[x,2.06,z],[.24,.12,.24]);this.add('cyl','#f4c551',[x,2.43,z],[.015,.5,.015]);this.add('box','#1669ac',[x+.15,2.57,z],[.3,.17,.025]);}
+  ruins(x,z,s){for(let j=0;j<3;j++){this.add('cyl','#c5b88c',[x+(j-1)*.27*s,.38*s,z],[.085*s,.55*s,.085*s]);this.add('box','#b7aa81',[x+(j-1)*.27*s,.71*s,z],[.21*s,.12*s,.21*s]);}this.add('box','#b9ad89',[x,.82*s,z],[.85*s,.12*s,.21*s]);}
+  crystals(x,z){this.add('rock','#6c657d',[x,.21,z],[.5,.18,.4]);for(let j=0;j<5;j++)this.add('cone',j%2?'#ad7ee5':'#697bd3',[x+(j-2)*.13,.43+(j%2)*.2,z+(j%2)*.15],[.13,.6+(j%2)*.3,.13]);}
+  mountains(x,z){for(let i=0;i<6;i++){const dx=x+(i%3)*.5,dz=z+Math.floor(i/3)*.5,h=1.4+(i%3)*.4;this.add('cone','#6d7f89',[dx,h/2,dz],[.8,h,.7]);this.add('cone','#eee9db',[dx,h*.85,dz],[.3,h*.35,.26]);}}
+  bridge(x,z,a){for(let j=0;j<9;j++){const d=(j-4)*.12;this.add('box','#b08a54',[x+Math.sin(a)*d,.24+Math.sin(j/8*Math.PI)*.14,z+Math.cos(a)*d],[.45,.07,.11],a);}for(const side of [-1,1])for(const d of [-.5,0,.5])this.add('box','#805535',[x+Math.cos(a)*.23*side+Math.sin(a)*d,.45,z-Math.sin(a)*.23*side+Math.cos(a)*d],[.045,.45,.045]);}
+  waterfall(x,z){for(let i=0;i<6;i++)this.add('box',i%2?'#b8e3e6':'#52b6d2',[x+i*.075,-.55,z],[.065,1.3,.07]);for(let i=0;i<6;i++)this.add('sphere','#d2e9db',[x+i*.09,-1.12,z],[.12,.08,.15]);}
+  rainbow(x,z){for(let k=0;k<5;k++)for(let j=0;j<20;j++){const a=j/19*Math.PI;this.add('sphere',['#ed8284','#ebbd62','#b8cd78','#6ac7c1','#a794d0'][k],[x+Math.cos(a)*(1.3-k*.07),.5+Math.sin(a)*(1.3-k*.07),z],[.12,.12,.06]);}for(let j=0;j<5;j++)this.add('sphere','#eeebd6',[x-1.2+j*.15,.45+(j%2)*.1,z],[.25,.2,.3]);}
+  label(text,color){const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;const ctx=canvas.getContext('2d');ctx.fillStyle=color;ctx.font='bold 100px Georgia';ctx.textAlign='center';ctx.fillText(text,64,100);const texture=new T.CanvasTexture(canvas);const sprite=new T.Sprite(new T.SpriteMaterial({map:texture,depthTest:false}));sprite.scale.set(.65,.65,1);return sprite;}
+  update(state){this.state=state;for(const tile of state.tiles){const top=this.hexes.get(tile.id),owner=state.players.find(p=>p.id===tile.owner);top.material.color.set(owner?.color??'#fff3d8');const old=this.markers.get(tile.id),key=`${tile.fortress}:${tile.shield}:${owner?.color}`;if(old?.userData.key!==key){if(old){this.scene.remove(old);old.traverse(o=>{if(o.material&&!this.materials.has(o.material)){};});}const g=new T.Group();g.userData.key=key;g.position.set(tile.x,.2,tile.z);if(tile.fortress){for(let i=0;i<4;i++){const m=new T.Mesh(this.geometry.cyl,this.mat('#d6bea0'));m.scale.set(.13,.55,.13);m.position.set((i%2-.5)*.6,.25,(Math.floor(i/2)-.5)*.6);g.add(m);}const label=this.label('F','#ffdb72');label.position.set(0,1.2,0);g.add(label);}if(tile.shield){const m=new T.Mesh(new T.SphereGeometry(.85,16,10),new T.MeshBasicMaterial({color:'#82dafa',transparent:true,opacity:.22,wireframe:true}));m.scale.y=.7;m.position.y=.3;g.add(m);}this.scene.add(g);this.markers.set(tile.id,g);}const cloud=this.clouds.get(tile.id);if(cloud)cloud.visible=!tile.resolved;}this.draw();}
+  select(id){if(this.selected)this.hexes.get(this.selected).material.emissive.set('#000000');this.selected=id;this.hexes.get(id)?.material.emissive.set('#725415');this.draw();}
+  focus(id){const tile=MAP.find(t=>t.id===id);if(!tile)return;this.select(id);const delta=new T.Vector3(tile.x,0,tile.z).sub(this.controls.target);this.camera.position.add(delta);this.controls.target.add(delta);this.controls.update();this.draw();}
+  reset(){const portrait=this.element.clientWidth<600;this.camera.position.set(12,18,20).multiplyScalar(portrait?1.25:1);this.controls.target.set(0,0,0);this.controls.update();this.draw();}
+  zoom(factor){this.camera.position.sub(this.controls.target).multiplyScalar(factor).add(this.controls.target);this.controls.update();this.draw();}
+  resize(){const w=this.element.clientWidth,h=this.element.clientHeight;if(!w||!h)return;this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.draw();}
+  draw(){if(this.renderer&&this.element.clientWidth)this.renderer.render(this.scene,this.camera);}
+  dispose(){this.observer.disconnect();this.controls.dispose();this.renderer.dispose();this.scene.traverse(o=>{o.geometry?.dispose();if(o.material){const m=Array.isArray(o.material)?o.material:[o.material];m.forEach(x=>{x.map?.dispose();x.dispose();});}});this.renderer.domElement.remove();}
+}

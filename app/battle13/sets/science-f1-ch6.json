@@ -1,0 +1,343 @@
+{
+  "id": "science-f1-ch6",
+  "title": "Set 1 — Form 1 Science, Chapter 6",
+  "subject": "Science",
+  "questions": [
+    {
+      "id": "q01",
+      "number": 1,
+      "type": "mcq",
+      "prompt": "What is the charge of an electron?",
+      "options": {
+        "A": "Positive",
+        "B": "No charge",
+        "C": "Negative",
+        "D": "Both positive and negative"
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "An electron has a negative charge.",
+      "week": 1
+    },
+    {
+      "id": "q02",
+      "number": 2,
+      "type": "mcq",
+      "prompt": "Which pair of particles is found in the nucleus of an atom?",
+      "options": {
+        "A": "Protons and neutrons",
+        "B": "Protons and electrons",
+        "C": "Neutrons and electrons",
+        "D": "Electrons only"
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "Protons and neutrons are in the nucleus; electrons are around it.",
+      "week": 1
+    },
+    {
+      "id": "q03",
+      "number": 3,
+      "type": "mcq",
+      "prompt": "A neutral atom contains 6 protons and 7 neutrons. How many electrons does it contain?",
+      "options": {
+        "A": "7",
+        "B": "6",
+        "C": "13",
+        "D": "1"
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "A neutral atom has equal numbers of protons and electrons. Neutrons have no charge.",
+      "week": 1
+    },
+    {
+      "id": "q04",
+      "number": 4,
+      "type": "mcq",
+      "prompt": "Two oxygen atoms are chemically joined. What do they form?",
+      "options": {
+        "A": "A compound of two elements",
+        "B": "Two separate atoms",
+        "C": "A single atom",
+        "D": "A molecule of an element"
+      },
+      "answer": "D",
+      "variants": [
+        "D"
+      ],
+      "explanation": "The atoms form a molecule, but both atoms are oxygen, so it is a molecule of an element.",
+      "week": 1
+    },
+    {
+      "id": "q05",
+      "number": 5,
+      "type": "mcq",
+      "prompt": "Water contains hydrogen and oxygen chemically combined. How is water classified?",
+      "options": {
+        "A": "Compound",
+        "B": "Element",
+        "C": "Metal",
+        "D": "Single atom"
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "A compound contains different elements chemically combined.",
+      "week": 1
+    },
+    {
+      "id": "q06",
+      "number": 6,
+      "type": "mcq",
+      "prompt": "What is the smallest particle of an element?",
+      "options": {
+        "A": "A compound",
+        "B": "A molecule",
+        "C": "An atom",
+        "D": "A metal"
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "An atom is the smallest particle of an element.",
+      "week": 1
+    },
+    {
+      "id": "q07",
+      "number": 7,
+      "type": "mcq",
+      "prompt": "Which value is used to arrange elements in increasing order in the Periodic Table?",
+      "options": {
+        "A": "Density",
+        "B": "Neutron number",
+        "C": "Melting point",
+        "D": "Proton number"
+      },
+      "answer": "D",
+      "variants": [
+        "D"
+      ],
+      "explanation": "The ordering principle taught in the notes is increasing proton number.",
+      "week": 1
+    },
+    {
+      "id": "q08",
+      "number": 8,
+      "type": "mcq",
+      "prompt": "Where are most metals found in the Periodic Table?",
+      "options": {
+        "A": "On the left and in the centre",
+        "B": "Only at the far right",
+        "C": "Only along the top row",
+        "D": "Only in the non-metal region"
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "Most metals occupy the left and central regions.",
+      "week": 1
+    },
+    {
+      "id": "q09",
+      "number": 9,
+      "type": "mcq",
+      "prompt": "Hydrogen is placed on the left of the Periodic Table. What type of element is it?",
+      "options": {
+        "A": "Metal",
+        "B": "Semi-metal",
+        "C": "Non-metal",
+        "D": "Inert gas"
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Hydrogen is a non-metal even though it is placed on the left.",
+      "week": 1
+    },
+    {
+      "id": "q10",
+      "number": 10,
+      "type": "mcq",
+      "prompt": "Why is a systematically arranged Periodic Table useful?",
+      "options": {
+        "A": "It makes every element behave in the same way.",
+        "B": "It helps us find and compare elements.",
+        "C": "It changes non-metals into metals.",
+        "D": "It shows only elements used in jewellery."
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "Systematic arrangement helps us locate elements and compare them.",
+      "week": 1
+    },
+    {
+      "id": "q11",
+      "number": 11,
+      "type": "mcq",
+      "prompt": "Which pair of properties makes copper suitable for electrical wires?",
+      "options": {
+        "A": "Brittle and low in density",
+        "B": "Dull and a poor electrical conductor",
+        "C": "Magnetic and easily broken",
+        "D": "Ductile and a good electrical conductor"
+      },
+      "answer": "D",
+      "variants": [
+        "D"
+      ],
+      "explanation": "Copper can be formed into wires and allows electricity to pass through it.",
+      "week": 2
+    },
+    {
+      "id": "q12",
+      "number": 12,
+      "type": "mcq",
+      "prompt": "In the conductivity test, the ammeter needle deflects when a carbon rod is connected. What does this show?",
+      "options": {
+        "A": "The carbon rod must be a metal.",
+        "B": "The carbon rod conducts electricity.",
+        "C": "Every non-metal conducts electricity.",
+        "D": "The carbon rod has become a metal."
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "Needle deflection indicates current. The carbon used in this experiment conducts electricity despite being a non-metal.",
+      "week": 2
+    },
+    {
+      "id": "q13",
+      "number": 13,
+      "type": "short",
+      "prompt": "What is the charge of a proton?",
+      "answer": "Positive",
+      "variants": [
+        "Positive",
+        "Positive charge",
+        "+",
+        "+1"
+      ],
+      "explanation": "A proton is positively charged.",
+      "week": 1
+    },
+    {
+      "id": "q14",
+      "number": 14,
+      "type": "short",
+      "prompt": "What is the charge of a neutron?",
+      "answer": "No charge",
+      "variants": [
+        "No charge",
+        "Neutral",
+        "Zero",
+        "0",
+        "Uncharged"
+      ],
+      "explanation": "A neutron has no electrical charge; it is not negatively charged.",
+      "week": 1
+    },
+    {
+      "id": "q15",
+      "number": 15,
+      "type": "short",
+      "prompt": "Which type of element is found in the far-right column of the Periodic Table?",
+      "answer": "Inert gases",
+      "variants": [
+        "Inert gases",
+        "Inert gas",
+        "Noble gases",
+        "Noble gas"
+      ],
+      "explanation": "The notes place inert gases, including helium, neon and argon, at the far right.",
+      "week": 1
+    },
+    {
+      "id": "q16",
+      "number": 16,
+      "type": "short",
+      "prompt": "Which two elements combine to form polythene?",
+      "answer": "Carbon and hydrogen",
+      "variants": [
+        "Carbon and hydrogen",
+        "Hydrogen and carbon",
+        "Carbon, hydrogen",
+        "Hydrogen, carbon",
+        "Carbon & hydrogen",
+        "Hydrogen & carbon"
+      ],
+      "explanation": "The approved notes list carbon and hydrogen as the elements in polythene.",
+      "week": 1
+    },
+    {
+      "id": "q17",
+      "number": 17,
+      "type": "short",
+      "prompt": "Silicon has characteristics of both metals and non-metals. How is silicon classified?",
+      "answer": "Semi-metal",
+      "variants": [
+        "Semi-metal",
+        "Semimetal",
+        "Semi metal",
+        "Metalloid"
+      ],
+      "explanation": "Silicon is a semi-metal, with characteristics of both metals and non-metals.",
+      "week": 1
+    },
+    {
+      "id": "q18",
+      "number": 18,
+      "type": "short",
+      "prompt": "Which element has the symbol Fe?",
+      "answer": "Iron",
+      "variants": [
+        "Iron"
+      ],
+      "explanation": "The notes give Fe as the chemical symbol for iron.",
+      "week": 1
+    },
+    {
+      "id": "q19",
+      "number": 19,
+      "type": "short",
+      "prompt": "What property allows a material to be hammered into sheets?",
+      "answer": "Malleability",
+      "variants": [
+        "Malleability",
+        "Malleable"
+      ],
+      "explanation": "Malleability means the ability to be hammered into sheets.",
+      "week": 2
+    },
+    {
+      "id": "q20",
+      "number": 20,
+      "type": "short",
+      "prompt": "In the electrical-conductivity test, what property of the rods should be kept the same?",
+      "answer": "Size",
+      "variants": [
+        "Size",
+        "Rod size",
+        "Size of rods",
+        "Size of material",
+        "Dimensions",
+        "Length and thickness"
+      ],
+      "explanation": "The type of material is changed, while the size of the material is kept constant.",
+      "week": 2
+    }
+  ]
+}
