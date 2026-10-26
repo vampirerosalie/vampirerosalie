@@ -21,7 +21,7 @@ const embedded=window.parent!==window;
 let {pin,token,hostIntent}=route;
 let host=false,state=null,content=null,review=null,busy=false,online=true,lastVersion=-1,screen='answer',readPage=0,readScroll=0;
 let clientId=get('client-id');if(!clientId){clientId=crypto.randomUUID();put('client-id',clientId);}
-let reviewOpen=false,serverOffset=0,pending=null;
+let reviewOpen=false,serverOffset=0,pending=null,roomUnavailable=false;
 try{pending=JSON.parse(get('pending:'+pin,'null'));}catch{}
 const drafts=()=>{try{return JSON.parse(get('drafts:'+pin,'{}'));}catch{return {};}};
 const draft=q=>drafts()[q]??'';
@@ -37,20 +37,24 @@ async function api(path,{method='GET',body,auth=token}={}){
 }
 async function refresh(force=false){
   if(!pin)return;
+  const requestedPin=pin;
   try{
-    const next=await api(`rooms/${pin}/state`);online=true;
+    const next=await api(`rooms/${requestedPin}/state`);
+    if(pin!==requestedPin)return;
+    online=true;
     if(state&&next.version<state.version)return;
     if(['ended','finished'].includes(next.phase)&&!ended()){rememberReader();screen='answer';dialog.close();music?.pause();musicOn=false;}
     if(token&&next.role==='host'){host=true;if(!content)content=await api(`rooms/${pin}/content`);}
     if(token&&next.role==='student'){studentRoute();if(!content)content=await api(`rooms/${pin}/content`);}
-    const change=force||next.version!==lastVersion||(host&&JSON.stringify(next.players)!==JSON.stringify(state?.players));
+    const change=roomUnavailable||force||next.version!==lastVersion||(host&&JSON.stringify(next.players)!==JSON.stringify(state?.players));
+    roomUnavailable=false;
     if(state?.question?.id!==next.question?.id){reviewOpen=false;if(dialog.classList.contains('answer-review'))dialog.close();}
     state=next;lastVersion=next.version;serverOffset=next.serverTime-Date.now();
     if(host&&reviewOpen)review=await api(`rooms/${pin}/review`);
     if(change&&!busy)render();
     updateConnection();
     if(host)parent.postMessage({type:'treasure-raid:status',pin,phase:state.phase,onlineCount:state.onlineCount},location.origin);
-  }catch(e){online=false;updateConnection();if(e.status===401){token='';host=false;render();notice('This device cannot open that room. Scan the joining QR again.');}else if(e.status===404){state=null;app.innerHTML=`<section class="join paper"><h1>Room unavailable</h1><p>${esc(e.message)}</p><p>Ask your teacher for the current QR code.</p></section>`;}else if(force)notice(e.message);}
+  }catch(e){if(pin!==requestedPin)return;online=false;updateConnection();if(e.status===401){token='';host=false;render();notice('This device cannot open that room. Scan the joining QR again.');}else if(e.status===404&&e.code==='ROOM_NOT_FOUND'){state=null;content=null;review=null;reviewOpen=false;dialog.close();music?.pause();musicOn=false;roomUnavailable=true;render();}else if(force)notice(e.message);}
 }
 function updateConnection(){const c=$('.connection');if(c){c.classList.toggle('offline',!online);c.textContent=online?'Connected · progress saved on the server':'Reconnecting… Your saved progress is safe.';}}
 async function send(type,extra={}){
@@ -80,6 +84,7 @@ const ended=()=>['ended','finished'].includes(state?.phase);
 const locations=[['camp','Camp'],['cave','Crystal Cave'],['bridge','Rope Bridge'],['ruins','Old Ruins'],['temple','Sun Temple'],['harbor','Hidden Harbor']];
 function resourceBar(){const m=state.me;return `<div class="resources"><div><img src="/battle12/assets/ui/compass.webp" alt="" width="39" height="39"><span>Actions</span><strong>${m.actions}</strong></div><div><img src="/battle12/assets/ui/backpack.webp" alt="" width="39" height="39"><span>Backpack</span><strong>${m.bag}</strong></div><div><img src="/battle12/assets/ui/vault.webp" alt="" width="39" height="39"><span>Vault</span><strong>${m.vault}</strong></div></div>`;}
 function rules(){return `<p>Read the story and answer your teacher’s question. Every accepted answer earns <b>1 Action</b>.</p><p>Explore for 1 Action, or bank at Camp for 1 Action. Backpack gems are vulnerable; Vault gems are safe. The highest Vault wins. Equal totals share the win.</p><p>Raid takes up to 3 Backpack gems; Sabotage removes up to 2. A Shield blocks one attack. You can use one offensive card per question. A duplicate card becomes 1 Backpack gem.</p><p>Keep an Action if you want to bank. Pausing stops game actions, but answers and teacher marking remain open.</p>`;}
+function unavailableView(){return `<section class="join"><span class="eyebrow">Battle 12 · Treasure Raid</span><h1>${hostIntent?'Start a fresh voyage':'Room unavailable'}</h1><img src="/battle12/assets/island.png" alt="Illustrated pirate island map"><section class="paper"><h2>Room ${esc(pin)} is no longer available</h2><p>This room may have expired. Rooms are available for 48 hours after creation.</p>${hostIntent?`<p>Create a new room to show a fresh joining QR. Your students can scan it and enter their names.</p>${btn('Create a new room','create','gold wide')}`:`<p>Ask your teacher for the current joining QR or room PIN.</p>${btn('Enter a different room PIN','change-room','gold wide')}`}${btn('Retry this room','refresh','quiet wide')}</section></section>`;}
 function joinView(){return `<section class="join"><span class="eyebrow">Battle 12 · reading expedition</span><h1>Treasure Raid</h1><img src="/battle12/assets/island.png" alt="Illustrated pirate island map"><section class="paper"><h2>${hostIntent?'Captain’s desk':'Join the adventure'}</h2>${hostIntent?`<p>Create a room, then let students scan its joining QR. They only need to enter a name.</p>${btn('Create a room','create','gold wide')}`:`<form id="join-form"><label for="pin">Room PIN</label><input id="pin" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" value="${esc(pin)}" required><label for="name">Your name</label><input id="name" autocomplete="nickname" maxlength="28" value="${esc(get('name'))}" required><p class="rule-note">One phone per player or crew. No group selection needed.</p><button class="gold wide">Join Treasure Raid →</button></form>`}</section></section>`;}
 function questionView(){const q=state.question,m=state.me,r=m.response;
   if(state.phase==='lobby')return `<img class="hero-map" src="/battle12/assets/island.png" alt="Treasure island"><section class="paper"><span class="eyebrow">Welcome aboard, ${esc(m.name)}</span><h1>Your voyage awaits</h1><p>Read Captain Mira’s story while your teacher gets ready.</p>${btn('Read the illustrated story','read','gold wide')}<div class="rules">${rules()}</div></section>`;
@@ -137,7 +142,7 @@ function syncGameFullscreen(){
 }
 function render(){saveDraft();const active=document.activeElement,focus=active?.id,selection=active?.selectionStart,scroll=$('.scroll')?.scrollTop??0,joiningName=$('#name')?.value,joiningPin=$('#pin')?.value;
   const answerScroll=$('.answer-list')?.scrollTop??0,openedDetails=[...app.querySelectorAll('details[open]')].map(d=>d.querySelector('summary')?.textContent);
-  app.innerHTML=token&&!state?'<p class="loading">Reconnecting to your saved voyage…</p>':!state||!token||state.role==='public'?joinView():host?teacherView():studentView();
+  app.innerHTML=roomUnavailable?unavailableView():token&&!state?'<p class="loading">Reconnecting to your saved voyage…</p>':!state||!token||state.role==='public'?joinView():host?teacherView():studentView();
   syncGameFullscreen();
   if($('#name')&&joiningName!==undefined)$('#name').value=joiningName;
   if($('#pin')&&joiningPin!==undefined)$('#pin').value=joiningPin;
@@ -145,7 +150,7 @@ function render(){saveDraft();const active=document.activeElement,focus=active?.
   if($('.answer-list'))$('.answer-list').scrollTop=answerScroll;
   if(screen==='read'&&$('.scroll'))$('.scroll').scrollTop=readScroll;else if($('.scroll'))$('.scroll').scrollTop=scroll;
   if(focus&&document.getElementById(focus)){document.getElementById(focus).focus({preventScroll:true});try{document.getElementById(focus).setSelectionRange(selection,selection);}catch{}}
-  if(pending){const bar=document.createElement('div');bar.className='panel';bar.innerHTML=`<p>A previous action needs confirmation from the server. Retry safely with the same receipt.</p>${btn('Retry saved action','retry','gold')}`;app.prepend(bar);}
+  if(pending&&!roomUnavailable){const bar=document.createElement('div');bar.className='panel';bar.innerHTML=`<p>A previous action needs confirmation from the server. Retry safely with the same receipt.</p>${btn('Retry saved action','retry','gold')}`;app.prepend(bar);}
   updateConnection();updateCountdown();showReview();
   $('#join-form')?.addEventListener('submit',join);
   $('#answer')?.addEventListener('input',saveDraft);
@@ -163,8 +168,9 @@ document.addEventListener('click',async e=>{
   if(action==='create'){
     if(get('student-room')&&!hostIntent&&!host)return notice('Use your teacher’s QR to join a room.');
     if(state&&!ended())return notice('End this room before creating another.');busy=true;
-    try{const result=await api('rooms',{method:'POST',body:{},auth:''});pin=result.pin;token=result.hostToken;host=true;hostIntent=true;put('host:'+pin,token);put('host-room',pin);history.replaceState(null,'','/battle12/?host='+pin);state=null;content=null;lastVersion=-1;pending=null;await refresh();}catch(error){notice(error.message);}finally{busy=false;render();}return;
+    try{const result=await api('rooms',{method:'POST',body:{},auth:''});pin=result.pin;token=result.hostToken;host=true;hostIntent=true;roomUnavailable=false;put('host:'+pin,token);put('host-room',pin);history.replaceState(null,'','/battle12/?host='+pin);state=null;content=null;lastVersion=-1;pending=null;await refresh();}catch(error){notice(error.message);}finally{busy=false;render();}return;
   }
+  if(action==='change-room'&&!hostIntent&&!host){pin='';token='';state=null;content=null;review=null;pending=null;roomUnavailable=false;lastVersion=-1;studentRoute();render();return;}
   if(action==='refresh')return refresh(true);
   if(action==='dashboard'&&host){screen='answer';history.replaceState(null,'','/battle12/?host='+pin);render();return;}
   if(action==='review-open'&&host){

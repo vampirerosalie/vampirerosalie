@@ -44,6 +44,38 @@ test('direct teacher bookmarks return to the shared shell, embedded panels and s
 
 const source=readFileSync(new URL('../../public/battle12/app.js',import.meta.url),'utf8');
 
+test('unavailable room offers illustrated teacher recovery and student-only PIN entry',()=>{
+  const teacher=render('unavailableView',{hostIntent:true});
+  assert.match(teacher,/Create a new room/);
+  assert.match(teacher,/data-action="create"/);
+  assert.match(teacher,/assets\/island.png/);
+  assert.match(teacher,/48 hours/);
+  const student=render('unavailableView',{hostIntent:false,host:false});
+  assert.match(student,/Enter a different room PIN/);
+  assert.doesNotMatch(student,/data-action="create"|Captain|teacher=1/);
+  for(const html of [teacher,student])assert.match(html,/Retry this room/);
+});
+
+test('only a missing-room response enters recovery; network failures preserve the room',async()=>{
+  const start=source.indexOf('async function refresh('),end=source.indexOf('\nfunction updateConnection',start);
+  for(const error of [{status:404,code:'ROOM_NOT_FOUND'},{status:503,code:'DATABASE_UNAVAILABLE'},{network:true},{status:404,code:'NOT_FOUND'}]){
+    const original={phase:'lobby',version:7};
+    const ctx={pin:'12345',state:original,online:true,roomUnavailable:false,content:{},review:{},reviewOpen:true,dialog:{close(){}},music:null,musicOn:false,api:async()=>{throw error;},updateConnection(){},render(){},notice(){}};
+    await vm.runInNewContext(source.slice(start,end)+';refresh(true)',ctx);
+    const missing=error.code==='ROOM_NOT_FOUND';
+    assert.equal(ctx.roomUnavailable,missing);
+    assert.equal(ctx.state,missing?null:original);
+    assert.equal(ctx.pin,'12345');
+  }
+});
+
+test('an old room response cannot replace a newly created room with the error screen',async()=>{
+  const start=source.indexOf('async function refresh('),end=source.indexOf('\nfunction updateConnection',start);
+  const ctx={pin:'12345',roomUnavailable:false,api:async()=>{ctx.pin='67890';throw {status:404,code:'ROOM_NOT_FOUND'};}};
+  await vm.runInNewContext(source.slice(start,end)+';refresh(true)',ctx);
+  assert.equal(ctx.roomUnavailable,false);assert.equal(ctx.pin,'67890');
+});
+
 test('only Battle 12 hides battle selection in fullscreen and restores it on exit',()=>{
   const shell=readFileSync(new URL('../../app/page.tsx',import.meta.url),'utf8');
   const expression=shell.match(/\{([^\n]+) && <section className="battle-selector" aria-label="Choose grammar battle" style=\{\{ flexShrink: 0 \}\}>/g)
