@@ -846,6 +846,7 @@ export default function Home() {
   const [museumStatus, setMuseumStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [treasureStatus, setTreasureStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [territoryStatus, setTerritoryStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
+  const [territoryFrameUrl, setTerritoryFrameUrl] = useState('/battle13/?teacher=1&embedded=1');
   const [treasureFrameUrl, setTreasureFrameUrl] = useState('/battle12/?teacher=1&embedded=1');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState('');
@@ -873,6 +874,10 @@ export default function Home() {
     };
     const readRoute = () => {
       const marketParams = new URLSearchParams(window.location.search);
+      if (marketParams.get('battle') === '13') {
+        const requestedRoom = marketParams.get('host') || '';
+        setTerritoryFrameUrl('/battle13/?teacher=1&embedded=1' + (/^\d{5}$/.test(requestedRoom) ? '&host=' + requestedRoom : ''));
+      }
       let territoryStudent = '';
       try { territoryStudent = window.sessionStorage.getItem('territory-wars:student-route') || ''; } catch {}
       if (territoryStudent || (marketParams.get('battle') === '13' && (marketParams.has('join') || marketParams.has('student') || marketParams.has('room')))) {
@@ -1093,7 +1098,7 @@ export default function Home() {
       <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle}{((isMuseum || isTerritory) && standaloneStatus.phase === 'active') || (isTreasure && ['questions', 'finalPlay', 'finalBank'].includes(standaloneStatus.phase)) ? ' is in progress' : ' is ready'}</strong></div>
       <BattleTabs selected={standaloneBattle} onSelect={battle => { if (battle !== standaloneBattle) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }} />
     </section>}
-    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isTerritory ? "Battle Thirteen: Territory Wars teacher game" : isTreasure ? "Battle Twelve: Treasure Raid teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isTerritory ? "/battle13/?teacher=1&embedded=1" : isTreasure ? treasureFrameUrl : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow="fullscreen" style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />}
+    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isTerritory ? "Battle Thirteen: Territory Wars teacher game" : isTreasure ? "Battle Twelve: Treasure Raid teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isTerritory ? territoryFrameUrl : isTreasure ? treasureFrameUrl : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow="fullscreen" style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />}
   </main>;
 
   const teacher = route.role === 'teacher';

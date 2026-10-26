@@ -2,7 +2,7 @@
 
 ## Executed locally
 
-- Full repository test run: **334 passed, 0 failed**. Includes 18 new Territory Wars SQLite/D1 tests and existing battle tests. Two old menu fixtures were extended for the additional thirteenth battle; their existing behaviour assertions remain.
+- Full repository test run: **336 passed, 0 failed**. Includes 20 new Territory Wars SQLite/D1 tests and existing battle tests. Two old menu fixtures were extended for the additional thirteenth battle; their existing behaviour assertions remain.
 - TypeScript: `pnpm exec tsc --noEmit --incremental false` passed.
 - Cloudflare production build passed using the existing Worker configuration and D1 binding.
 - Real local HTTP + separate Playwright Chrome contexts at **390 × 844 and 360 × 844** passed. Two phone browser sessions and ten further HTTP clients joined the same new labelled test room. Both screens had no horizontal overflow.
@@ -23,3 +23,9 @@ Actual screenshots were inspected for the illustrated lobby, teacher fullscreen 
 Not yet tested on actual student phones, actual projected QR scanning, mobile on-screen keyboards or older/low-memory GPUs. Chrome touch/portrait emulation and software WebGL are not proof of physical-phone performance. The renderer offers a labelled territory-list fallback if WebGL cannot start. Classroom Wi-Fi quality and real-room supervision remain to be reviewed by the teacher.
 
 The source includes `scripts/verify-territory-browser.mjs` for repeating the browser flow against local or deployed HTTPS. Screenshots and logs are in ignored `outputs/battle13/`.
+
+## Published-site verification
+
+The existing GitHub-to-Cloudflare workflow published Battle 13 at `https://grammartest.grammarclassroom.workers.dev/?battle=13&teacher=1`. The deployed application JS, HTML, map data and CSS were compared to the tested source and matched. The browser flow above also passed against the live HTTPS site using a new labelled test room, which was ended afterwards. Health endpoints for Kitchen, Demolition, Black Market, Lantern Keeper, Museum, Treasure Raid and Territory Wars returned HTTP 200.
+
+Additional follow-up checks passed locally for all 20 questions awarding exactly 20 Science points/Actions, rejection of invalid question-set keys, New Game opening a fresh room, and explicit teacher bookmarks restoring their requested room even when a newer room exists.
