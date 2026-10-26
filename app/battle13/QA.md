@@ -29,3 +29,13 @@ The source includes `scripts/verify-territory-browser.mjs` for repeating the bro
 The existing GitHub-to-Cloudflare workflow published Battle 13 at `https://grammartest.grammarclassroom.workers.dev/?battle=13&teacher=1`. The deployed application JS, HTML, map data and CSS were compared to the tested source and matched. The browser flow above also passed against the live HTTPS site using a new labelled test room, which was ended afterwards. Health endpoints for Kitchen, Demolition, Black Market, Lantern Keeper, Museum, Treasure Raid and Territory Wars returned HTTP 200.
 
 Additional follow-up checks passed locally for all 20 questions awarding exactly 20 Science points/Actions, rejection of invalid question-set keys, New Game opening a fresh room, and explicit teacher bookmarks restoring their requested room even when a newer room exists.
+
+## Royal phone presentation revision — 26 October 2026
+
+Student-only visual revision: royal leather/walnut plaques, parchment questions, illustrated counters and navigation, integrated Shield/Rebellion card faces, themed joining/waiting/results and action dialogs. The teacher layout, map renderer/data, question set and server rules are unchanged. Original material PNGs and the exact built-in image-generation prompts are in `artwork/battle13/`.
+
+- All 20 Battle 13 server/integration tests passed again.
+- Cloudflare production build passed.
+- `scripts/verify-territory-phone.mjs` passed 14 local visual states at 390px and 360px, plus a shortened 390 × 500 viewport. It uses the actual game engine in a local in-memory simulation; it does not prove live multiplayer or physical-phone keyboard behaviour.
+- Covered joining, waiting, MCQ, preserved MCQ selection, submitted status, empty/held cards, targeting, territory dialog, committed outcome, short answer, standings and final results. Checked no horizontal overflow, image loading, typed draft persistence through navigation/reload, reachable submit above fixed navigation, and no illustration overlapping the final-results heading.
+- Screenshots and the local simulation report are under ignored `outputs/battle13/royal-phone/`. Physical-phone review remains outstanding.

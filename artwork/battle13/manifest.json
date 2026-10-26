@@ -1,6 +1,10 @@
 {
   "description": "Original generated Territory Wars artwork. No UI or answer text baked into images.",
   "assets": [
+    {"name":"royal-timber","source":"source/ui/royal-timber.png","runtime":"/battle13/assets/ui/royal-timber.webp","prompt":"royal-phone-prompts.md#royal-timber"},
+    {"name":"royal-parchment","source":"source/ui/royal-parchment.png","runtime":"/battle13/assets/ui/royal-parchment.webp","prompt":"royal-phone-prompts.md#royal-parchment"},
+    {"name":"royal-icons","source":"source/ui/royal-icons.png","runtime":"/battle13/assets/ui/royal-icons.webp","prompt":"royal-phone-prompts.md#royal-icons","layout":"4 columns by 2 rows; transparent"},
+    {"name":"royal-leather","source":"source/ui/royal-leather.png","runtime":"/battle13/assets/ui/royal-leather.webp","prompt":"royal-phone-prompts.md#royal-leather"},
     {
       "name": "phone-background",
       "source": "source/phone-background.png",
