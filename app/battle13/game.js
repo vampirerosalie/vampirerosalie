@@ -11,7 +11,7 @@ export class TerritoryGame{
   create(setId='science-f1-ch6'){
     if(typeof setId!=='string'||!Object.hasOwn(SETS,setId))fail('Choose an available question set.','INVALID_SET',400);
     const pin=String(10000+this.random(90000)),hostToken=randomBytes(32).toString('hex');
-    const r={pin,setId,hostHash:hash(hostToken),createdAt:this.now(),expiresAt:this.now()+48*3600000,version:1,phase:'lobby',paused:false,questionIndex:0,startAt:null,endedAt:null,results:null,players:[],rounds:{},reviewVersion:0,receipts:{},log:[],tiles:MAP.map(t=>({...t,owner:null,fortress:false,shield:false,resolved:false,version:0}))};
+    const r={pin,setId,mysteryRules:2,hostHash:hash(hostToken),createdAt:this.now(),expiresAt:this.now()+48*3600000,version:1,phase:'lobby',paused:false,questionIndex:0,startAt:null,endedAt:null,results:null,players:[],rounds:{},reviewVersion:0,receipts:{},log:[],tiles:MAP.map(t=>({...t,owner:null,fortress:false,shield:false,resolved:false,version:0}))};
     this.rooms.set(pin,r);return {pin,hostToken};
   }
   room(pin){const r=this.rooms.get(String(pin));if(!r||r.expiresAt<=this.now())fail('This room is unavailable. Ask your teacher for the current joining QR.','ROOM_NOT_FOUND',404);return r;}
@@ -22,7 +22,7 @@ export class TerritoryGame{
     if(r.phase==='ended')fail('This game has ended.','JOIN_CLOSED');if(r.players.length>=12)fail('All 12 team places are filled.','ROOM_FULL');
     const safeName=name(rawName);if(!safeName)fail('Enter your team name.','NAME_REQUIRED',400);
     const token=this.studentToken(r,clientId),id=randomBytes(12).toString('hex'),color=COLORS.find(c=>!r.players.some(p=>p.color===c));
-    r.players.push({id,clientId,name:safeName,color,tokenHash:hash(token),balance:0,science:0,cards:[],responses:{},actionVersion:0,writingUntil:0});r.version++;r.reviewVersion++;
+    r.players.push({id,clientId,name:safeName,color,tokenHash:hash(token),balance:0,science:0,cards:[],explored:[],responses:{},actionVersion:0,writingUntil:0});r.version++;r.reviewVersion++;
     return {playerId:id,playerToken:token};
   }
   auth(r,token){if(!token)return {role:'public'};const digest=hash(token);if(equal(digest,r.hostHash))return {role:'host'};const player=r.players.find(p=>equal(digest,p.tokenHash));if(!player)fail('This device key is not valid for this room.','UNAUTHORIZED',401);this.lastSeen.set(`${r.pin}:${player.id}`,this.now());return {role:'student',player};}
@@ -30,12 +30,12 @@ export class TerritoryGame{
   round(r,q=this.question(r)){return r.rounds[q.id]??{};}
   isClosed(r,q=this.question(r)){const x=this.round(r,q);return r.phase!=='active'||!!x.closed||!!x.finalized||!!(x.deadline&&this.now()>=x.deadline);}
   standings(r,final=false){let prev='',rank=0;return r.players.map(p=>{const tiles=r.tiles.filter(t=>t.owner===p.id);return {id:p.id,name:p.name,color:p.color,territories:tiles.length,science:p.science,actions:Math.max(0,p.balance),debt:Math.max(0,-p.balance),fortresses:tiles.filter(t=>t.fortress).length,crown:tiles.some(t=>t.kind==='crown'),score:tiles.length+(final&&tiles.some(t=>t.kind==='crown')?RULES.crownBonus:0)};}).sort((a,b)=>b.score-a.score||b.science-a.science).map((p,i)=>{const key=p.score+':'+p.science;if(key!==prev)rank=i+1;prev=key;return {...p,rank};});}
-  view(r,a){const q=this.question(r),round=this.round(r),now=this.now();const base={pin:r.pin,role:a.role,version:r.version,set:{id:r.setId,title:SETS[r.setId].title},phase:r.phase,serverTime:now,onlineCount:r.players.filter(p=>(this.lastSeen.get(`${r.pin}:${p.id}`)??0)>now-25000).length,joinedCount:r.players.length};if(a.role==='public')return base;
+  view(r,a){const q=this.question(r),round=this.round(r),now=this.now();const base={pin:r.pin,role:a.role,version:r.version,mysteryRules:r.mysteryRules??1,set:{id:r.setId,title:SETS[r.setId].title},phase:r.phase,serverTime:now,onlineCount:r.players.filter(p=>(this.lastSeen.get(`${r.pin}:${p.id}`)??0)>now-25000).length,joinedCount:r.players.length};if(a.role==='public')return base;
     const players=this.standings(r).map(p=>{const raw=r.players.find(x=>x.id===p.id),res=raw.responses[q.id];return {...p,online:(this.lastSeen.get(`${r.pin}:${p.id}`)??0)>now-25000,answerStatus:res?(res.unanswered?'Unanswered':'Answered'):raw.writingUntil>now?'Writing':'Waiting'};});
-    const v={...base,players,tiles:r.tiles,question:publicQuestion(q),questionCount:SETS[r.setId].questions.length,paused:r.paused,answersClosed:this.isClosed(r),deadline:round.deadline??null,finalized:!!round.finalized,startedAt:r.startAt,endedAt:r.endedAt,log:r.log.slice(-30),...(r.results?{results:r.results}:{})};
+    const v={...base,players,tiles:r.tiles.map(t=>({...t,shield:t.owner===a.player?.id&&!!t.shield,...(r.mysteryRules===2&&t.kind==='mystery'?{explored:!!a.player?.explored?.includes(t.id)}:{})})),question:publicQuestion(q),questionCount:SETS[r.setId].questions.length,paused:r.paused,answersClosed:this.isClosed(r),deadline:round.deadline??null,finalized:!!round.finalized,startedAt:r.startAt,endedAt:r.endedAt,log:r.log.filter(e=>e.playerId===a.player?.id).slice(-30),...(r.results?{results:r.results}:{})};
     if(round.revealed)v.revealed={answer:q.answer,explanation:q.explanation,options:q.options};
     if(a.role==='host'){v.reviewVersion=r.reviewVersion;v.sets=setList();}
-    if(a.role==='student'){const p=a.player,res=p.responses[q.id];v.me={...players.find(x=>x.id===p.id),actionVersion:p.actionVersion,cards:p.cards,response:res?{answer:res.answer,unanswered:!!res.unanswered,finalized:res.finalized,decision:res.finalized?res.awarded?'accept':'reject':res.auto?'accept':'reject'}:null};}
+    if(a.role==='student'){const p=a.player,res=p.responses[q.id];v.me={...players.find(x=>x.id===p.id),actionVersion:p.actionVersion,cards:p.cards,explored:p.explored??[],response:res?{answer:res.answer,unanswered:!!res.unanswered,finalized:res.finalized,decision:res.finalized?res.awarded?'accept':'reject':res.auto?'accept':'reject'}:null};}
     return v;
   }
   state(pin,token){const r=this.room(pin);return this.view(r,this.auth(r,token));}
@@ -47,6 +47,34 @@ export class TerritoryGame{
   }
   log(r,type,playerId,details){r.log.push({time:this.now(),type,playerId,...details});}
   finalize(r,p,q){const res=p.responses[q.id];if(!res||res.unanswered)return;const award=res.decision==='accept',delta=Number(award)-Number(!!res.awarded);if(delta){p.science+=delta;p.balance+=delta;p.actionVersion++;this.log(r,'mark-adjustment',p.id,{questionId:q.id,delta,balance:p.balance});}res.awarded=award;res.finalized=true;}
+  explore(r,p,tile){
+    if(r.mysteryRules!==2||tile.kind!=='mystery')fail('Choose a permanent Mystery Land.');
+    if(p.explored?.includes(tile.id))fail('Your team has already explored this Mystery Land.');
+    if(p.balance<RULES.claim)fail('Not enough Actions. Answer more questions.');
+    p.balance-=RULES.claim;(p.explored??=[]).push(tile.id);p.actionVersion++;
+    const roll=this.random(100),[shieldChance,rebellionChance,stealChance]=RULES.exploration;
+    let result,target;
+    if(roll<shieldChance+rebellionChance){
+      const card=roll<shieldChance?'shield':'rebellion';p.cards.push(card);
+      result={art:card,title:card==='shield'?'Shield card discovered':'Rebellion card discovered',message:'A one-use card has been added to your private collection. This Mystery Land stays unclaimed.'};
+    }else{
+      const steal=roll<shieldChance+rebellionChance+stealChance;
+      // Fortresses resist a random steal, just as they resist Rebellion. Shields are
+      // included in the draw and block the selected effect without another draw.
+      const eligible=r.tiles.filter(t=>t.kind!=='mystery'&&t.owner&&(steal?t.owner!==p.id&&!t.fortress:t.owner===p.id));
+      target=eligible.length?eligible[this.random(eligible.length)]:null;
+      if(!target)result={art:steal?'claim':'trap',title:steal?'Mystery reward':'Mystery trap',message:'No land was affected: there was no eligible territory. Your 1 Action was spent; this visit is complete.'};
+      else{
+        const number=r.tiles.findIndex(t=>t.id===target.id)+1;
+        if(target.shield){target.shield=false;result={art:'shield',title:'Shield blocked the mystery',message:'The Shield on Territory '+number+' blocked the '+(steal?'steal':'land-loss trap')+' and was consumed. Ownership is unchanged.'};}
+        else if(steal){target.owner=p.id;target.fortress=false;result={art:'claim',title:'Mystery land reward',message:'Territory '+number+' is now yours. The Mystery Land itself stays unclaimed.'};}
+        else{target.owner=null;target.fortress=false;result={art:'trap',title:'A territory was lost',message:'Your Territory '+number+' returned to white, unclaimed land.'};}
+        target.version++;
+      }
+    }
+    this.log(r,'student:explore',p.id,{tileId:tile.id,cost:RULES.claim,art:result.art,...(target?{targetId:target.id,owner:target.owner}:{})});
+    return result;
+  }
   apply(r,a,b){const q=this.question(r),p=a.player;
     if(b.type==='host:end'){if(r.phase==='ended')return {ended:true};if(b.confirm!==true)fail('Confirm End Game first.');r.phase='ended';r.paused=true;r.endedAt=this.now();r.results=this.standings(r,true);this.log(r,'end',null,{});return {ended:true};}
     if(r.phase==='ended')fail('This game has ended. Results are locked.','GAME_ENDED');
@@ -70,15 +98,17 @@ export class TerritoryGame{
     if(b.type==='host:next'){if(!this.round(r).finalized)fail('Finalize answers before the next question.');if(r.questionIndex>=SETS[r.setId].questions.length-1)fail('All questions are complete. End Game when ready.');r.questionIndex++;r.reviewVersion++;for(const team of r.players)team.writingUntil=0;return;}
     if(b.type==='student:writing'){if(!this.isClosed(r)&&!p.responses[q.id])p.writingUntil=this.now()+9000;return;}
     if(b.type==='student:submit'){if(this.isClosed(r))fail('Submissions are closed.','ANSWER_TIME_UP');if(p.responses[q.id])fail('Your answer is already submitted.');if(typeof b.answer!=='string'||!b.answer.trim()||b.answer.length>200||(q.type==='mcq'&&!['A','B','C','D'].includes(b.answer)))fail('Enter a valid answer.','BAD_ANSWER',400);const auto=mark(q,b.answer);p.responses[q.id]={answer:b.answer,auto,decision:auto?'accept':'reject',finalized:false,awarded:false};p.writingUntil=0;r.reviewVersion++;return {submitted:true};}
-    if(['student:claim','student:fortify','student:rebellion','student:shield'].includes(b.type)){
+    if(['student:claim','student:explore','student:fortify','student:rebellion','student:shield'].includes(b.type)){
       if(r.paused)fail('Territory actions are paused by your teacher.','PAUSED');
       const tile=r.tiles.find(t=>t.id===b.tileId);if(!tile)fail('Choose a territory.');if(b.tileVersion!==tile.version||b.expectedVersion!==p.actionVersion)fail('This territory or your Actions changed. Check the new details and confirm again.','STALE_TARGET');
+      if(b.type==='student:explore')return this.explore(r,p,tile);
+      if(r.mysteryRules===2&&tile.kind==='mystery')fail('Mystery Lands stay unclaimed. Choose Explore instead.');
       const own=tile.owner===p.id;let cost=0,result;
       if(b.type==='student:claim'){if(own)fail('You already own this territory.');cost=!tile.owner?RULES.claim:tile.fortress?RULES.fortressCapture:RULES.capture;if(p.balance<cost)fail('Not enough Actions. Answer more questions.');if(tile.shield){tile.shield=false;result={art:'shield',title:'Shield blocked the capture',message:'The shield was consumed. No Actions were spent.'};}else{p.balance-=cost;tile.owner=p.id;tile.fortress=false;result={art:tile.kind==='crown'?'crown':'claim',title:'Territory claimed',message:`${cost} Action${cost===1?'':'s'} spent. This land is yours.`};if(tile.kind==='mystery'&&!tile.resolved){tile.resolved=true;const roll=this.random(100);if(roll<RULES.mystery[0]){p.balance++;result={art:'energy',title:'A spark of opportunity',message:'Mystery Land gave you 1 additional Action.'};}else if(roll<RULES.mystery[0]+RULES.mystery[1]){const card=RULES.cards[this.random(RULES.cards.length)];p.cards.push(card);result={art:card,title:`${card==='shield'?'Shield':'Rebellion'} card discovered`,message:'A one-use card has been added to your collection.'};}else{tile.owner=null;result={art:'trap',title:'The land slipped away',message:'This territory returned to neutral. Your claim Action was spent.'};}}}}
       if(b.type==='student:fortify'){if(!own||tile.fortress)fail('Choose your own unfortified land.');if(r.tiles.filter(t=>t.owner===p.id&&t.fortress).length>=RULES.maxFortresses)fail('You already have three active Fortresses.');cost=RULES.fortify;if(p.balance<cost)fail('Not enough Actions.');p.balance-=cost;tile.fortress=true;result={art:'fortress',title:'Fortress constructed',message:'Capturing this land now costs an opponent 3 Actions.'};}
-      if(b.type==='student:shield'){const i=p.cards.indexOf('shield');if(i<0)fail('You do not have a Shield card.');if(!own||tile.shield)fail('Choose your own unshielded land.');p.cards.splice(i,1);tile.shield=true;result={art:'shield',title:'Shield placed',message:'This land will block the next capture or rebellion.'};}
+      if(b.type==='student:shield'){const i=p.cards.indexOf('shield');if(i<0)fail('You do not have a Shield card.');if(!own||tile.shield)fail('Choose your own unshielded land.');p.cards.splice(i,1);tile.shield=true;result={art:'shield',title:'Shield placed',message:'Only your team can see this Shield. It blocks one capture, rebellion, mystery steal or land-loss trap.'};}
       if(b.type==='student:rebellion'){const i=p.cards.indexOf('rebellion');if(i<0)fail('You do not have a Rebellion card.');if(!tile.owner||own||tile.fortress)fail('Choose an enemy territory without a Fortress.');p.cards.splice(i,1);if(tile.shield){tile.shield=false;result={art:'shield',title:'Shield blocked the rebellion',message:'The Shield and your Rebellion card were consumed. No Actions were spent.'};}else{tile.owner=null;result={art:'rebellion',title:'Rebellion succeeded',message:'The enemy territory is now neutral.'};}}
-      tile.version++;p.actionVersion++;this.log(r,b.type,p.id,{tileId:tile.id,cost:result.title.startsWith('Shield blocked')?0:cost,owner:tile.owner,art:result.art});return result;
+      if(b.type!=='student:shield')tile.version++;p.actionVersion++;this.log(r,b.type,p.id,{tileId:tile.id,cost:result.title.startsWith('Shield blocked')?0:cost,owner:tile.owner,art:result.art});return result;
     }
     fail('Unknown action.','UNKNOWN_ACTION',400);
   }

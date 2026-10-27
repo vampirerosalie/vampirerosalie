@@ -8,6 +8,7 @@ import {handleTerritoryRequest} from '../../app/battle13/http.js';
 import {SETS,mark,normalize} from '../../app/battle13/sets.js';
 import {MAP} from '../../public/battle13/map-data.js';
 const BANK=SETS['science-f1-ch6'];
+const MYSTERIES=MAP.filter(t=>t.kind==='mystery'),LANDS=MAP.filter(t=>t.kind==='regular');
 class D1{
   constructor(){this.sql=new DatabaseSync(':memory:');this.conflicts=0;this.loseResponse=false;}
   prepare(sql){let args=[];const s={bind:(...a)=>{args=a;return s;},first:async()=>{await setImmediate();return this.sql.prepare(sql).get(...args)??null;},all:async()=>{await setImmediate();return {results:this.sql.prepare(sql).all(...args)};},run:async()=>{await setImmediate();const r=this.sql.prepare(sql).run(...args);if(sql.includes('UPDATE territory_rooms')){if(!r.changes)this.conflicts++;else if(this.loseResponse){this.loseResponse=false;throw Error('Response lost after commit');}}return {meta:{changes:Number(r.changes)}};}};return s;}
@@ -33,7 +34,7 @@ test('server countdown closes after exactly 10 seconds; writing expires and refr
 test('claim 1, capture anywhere 2, fortify 2, atomic fortified capture 3',async()=>{const s=await setup(3);await start(s);s.fixture(r=>r.players.forEach(p=>p.balance=20));const tile=MAP.find(t=>t.kind==='regular').id;await action(s,0,'student:claim',tile);await action(s,1,'student:claim',tile);assert.equal((await s.view(s.players[1].playerToken)).me.actions,18);await action(s,1,'student:fortify',tile);assert.equal((await s.view(s.players[1].playerToken)).me.actions,16);const a=await s.view(s.players[0].playerToken),b=await s.view(s.players[2].playerToken),version=a.tiles.find(t=>t.id===tile).version;const outcomes=await Promise.allSettled([s.act(s.players[0].playerToken,'student:claim',{tileId:tile,tileVersion:version,expectedVersion:a.me.actionVersion}),s.act(s.players[2].playerToken,'student:claim',{tileId:tile,tileVersion:version,expectedVersion:b.me.actionVersion})]);assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);const room=s.db.room(s.host.pin),t=room.tiles.find(t=>t.id===tile);assert.equal(t.fortress,false);assert.equal(room.players.reduce((n,p)=>n+p.balance,0),52);assert.equal(room.tiles.filter(t=>t.fortress).length,0);});
 test('three concurrent neutral claims: one owner and only one debit',async()=>{const s=await setup(3);await start(s);s.fixture(r=>r.players.forEach(p=>p.balance=5));const tile=MAP.find(t=>t.kind==='regular').id;const outcomes=await Promise.allSettled(s.players.map(p=>s.act(p.playerToken,'student:claim',{tileId:tile,tileVersion:0,expectedVersion:0})));assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);assert.equal(s.db.room(s.host.pin).players.reduce((n,p)=>n+p.balance,0),14);});
 test('maximum three Fortresses, lost Fortress frees count and Crown may be fortified',async()=>{const s=await setup();await start(s);s.fixture(r=>r.players.forEach(p=>p.balance=20));const ids=['hex:0:0',...MAP.filter(t=>t.kind==='regular').slice(0,3).map(t=>t.id)];for(const id of ids)await action(s,0,'student:claim',id);for(const id of ids.slice(0,3))await action(s,0,'student:fortify',id);await assert.rejects(action(s,0,'student:fortify',ids[3]),/three/);await action(s,1,'student:claim',ids[0]);await action(s,0,'student:fortify',ids[3]);assert.equal((await s.view(s.players[0].playerToken)).me.fortresses,3);});
-test('all mystery probability boundaries and once-per-room resolution',async()=>{for(const roll of [0,39,40,74,75,99]){const s=await setup(2,max=>max===100?roll:0);await start(s);s.fixture(r=>r.players.forEach(p=>p.balance=5));const tile=MAP.find(t=>t.kind==='mystery').id;await action(s,0,'student:claim',tile);const r=s.db.room(s.host.pin);assert.equal(r.tiles.find(t=>t.id===tile).resolved,true);assert.equal(r.players[0].balance,roll<40?5:4);assert.equal(r.players[0].cards.length,roll>=40&&roll<75?1:0);assert.equal(r.tiles.find(t=>t.id===tile).owner,roll>=75?null:s.players[0].playerId);await action(s,1,'student:claim',tile);assert.equal(s.db.room(s.host.pin).players[1].cards.length,0);assert.equal(s.db.room(s.host.pin).tiles.find(t=>t.id===tile).owner,s.players[1].playerId);}});
+test('legacy rooms retain original mystery probabilities and once-per-room resolution',async()=>{for(const roll of [0,39,40,74,75,99]){const s=await setup(2,max=>max===100?roll:0);s.fixture(r=>delete r.mysteryRules);await start(s);s.fixture(r=>r.players.forEach(p=>p.balance=5));const tile=MAP.find(t=>t.kind==='mystery').id;await action(s,0,'student:claim',tile);const r=s.db.room(s.host.pin);assert.equal(r.tiles.find(t=>t.id===tile).resolved,true);assert.equal(r.players[0].balance,roll<40?5:4);assert.equal(r.players[0].cards.length,roll>=40&&roll<75?1:0);assert.equal(r.tiles.find(t=>t.id===tile).owner,roll>=75?null:s.players[0].playerId);await action(s,1,'student:claim',tile);assert.equal(s.db.room(s.host.pin).players[1].cards.length,0);assert.equal(s.db.room(s.host.pin).tiles.find(t=>t.id===tile).owner,s.players[1].playerId);}});
 test('Shield blocks capture without spending AP; Rebellion neutralises only eligible land',async()=>{const s=await setup();await start(s);s.fixture(r=>{r.players.forEach(p=>p.balance=12);r.players[0].cards=['shield','shield'];r.players[1].cards=['rebellion','rebellion'];});const tile=MAP.find(t=>t.kind==='regular').id;await action(s,0,'student:claim',tile);await action(s,0,'student:shield',tile);await action(s,1,'student:claim',tile);assert.equal((await s.view(s.players[1].playerToken)).me.actions,12);await action(s,0,'student:shield',tile);await action(s,1,'student:rebellion',tile);assert.equal(s.db.room(s.host.pin).tiles.find(t=>t.id===tile).owner,s.players[0].playerId);assert.equal((await s.view(s.players[1].playerToken)).me.cards.length,1);await action(s,0,'student:fortify',tile);await assert.rejects(action(s,1,'student:rebellion',tile),/without a Fortress/);assert.equal((await s.view(s.players[1].playerToken)).me.cards.length,1);const tile2=MAP.filter(t=>t.kind==='regular')[1].id;await action(s,0,'student:claim',tile2);await action(s,1,'student:rebellion',tile2);assert.equal(s.db.room(s.host.pin).tiles.find(t=>t.id===tile2).owner,null);});
 test('Crown only gets +3 at End Game; Science breaks ties, equal results share rank',async()=>{const s=await setup(3);await start(s);s.fixture(r=>{r.players[0].science=10;r.players[1].science=8;r.players[2].science=8;const reg=r.tiles.filter(t=>t.kind==='regular');reg.slice(0,4).forEach(t=>t.owner=r.players[0].id);reg.slice(4,8).forEach(t=>t.owner=r.players[1].id);r.tiles.find(t=>t.kind==='crown').owner=r.players[2].id;});const live=await s.view(s.host.hostToken);assert.equal(live.players.find(p=>p.crown).score,1);await s.act(s.host.hostToken,'host:end',{confirm:true});const end=await s.view(s.host.hostToken);assert.deepEqual(end.results.map(p=>p.score),[4,4,4]);assert.deepEqual(end.results.map(p=>p.rank),[1,2,2]);assert.equal(end.results[0].science,10);});
 test('idempotency survives lost response, stale resources and repeated ending',async()=>{const s=await setup();await start(s);s.fixture(r=>r.players[0].balance=5);const tile=MAP.find(t=>t.kind==='regular').id,body={tileId:tile,tileVersion:0,expectedVersion:0},id=randomUUID();s.db.loseResponse=true;await assert.rejects(s.act(s.players[0].playerToken,'student:claim',body,id),/Response lost/);const replay=await s.act(s.players[0].playerToken,'student:claim',body,id);assert.equal(replay.replayed,true);assert.equal(replay.state.me.actions,4);await assert.rejects(s.act(s.players[0].playerToken,'student:claim',body),/changed/);await assert.rejects(s.act(s.players[0].playerToken,'student:fortify',body,id),/reused/);await s.act(s.host.hostToken,'host:end',{confirm:true});const r=await s.view(s.host.hostToken);s.tick(1000);await s.act(s.host.hostToken,'host:end',{confirm:true});assert.deepEqual((await s.view(s.host.hostToken)).results,r.results);assert.equal((await s.view(s.host.hostToken)).endedAt,r.endedAt);assert.deepEqual(await s.store().join(s.host.pin,s.clients[0]),s.players[0]);for(const type of ['student:claim','student:submit','student:shield'])await assert.rejects(s.act(s.players[0].playerToken,type),/ended/);});
@@ -42,3 +43,99 @@ test('HTTP role gates, safe joining QR, hidden keys, public state and default te
 test('team name/colour management, set validation, no game reset through student requests',async()=>{const s=await setup();const v=await s.view(s.host.hostToken),[a,b]=v.players;await s.act(s.host.hostToken,'host:team',{playerId:a.id,name:'Blue whales',color:b.color});const after=await s.view(s.host.hostToken);assert.equal(after.players.find(p=>p.id===a.id).color,b.color);assert.equal(after.players.find(p=>p.id===b.id).color,a.color);await assert.rejects(s.act(s.host.hostToken,'host:set',{setId:'unknown'}),/Unknown/);await start(s);await assert.rejects(s.act(s.host.hostToken,'host:set',{setId:BANK.id}),/before/);});
 test('all 25 questions complete with exactly 25 rewards; fresh room retains fixed map and clears progress',async()=>{const s=await setup();await start(s);for(const q of BANK.questions){assert.equal((await s.view(s.players[0].playerToken)).question.id,q.id);await submit(s,0,q.answer);await finalize(s);if(q.number<BANK.questions.length)await s.act(s.host.hostToken,'host:next',{questionId:q.id});}const final=await s.view(s.players[0].playerToken);assert.equal(final.me.actions,25);assert.equal(final.me.science,25);await assert.rejects(s.act(s.host.hostToken,'host:next',{questionId:'q25'}),/complete/);await s.act(s.host.hostToken,'host:end',{confirm:true});const fresh=await s.store().create();const next=await s.store().state(fresh.pin,fresh.hostToken);assert.equal(next.phase,'lobby');assert.equal(next.joinedCount,0);assert.ok(next.tiles.every(t=>!t.owner&&!t.fortress&&!t.resolved&&!t.shield));assert.deepEqual(next.tiles.map(t=>t.id),final.tiles.map(t=>t.id));});
 test('question-set registry rejects inherited object properties and never creates invalid rooms',async()=>{const s=await setup();for(const setId of ['__proto__','constructor','toString']){await assert.rejects(s.store().create(setId),/available question set/);await assert.rejects(s.act(s.host.hostToken,'host:set',{setId}),/Unknown/);}assert.equal(s.db.sql.prepare('SELECT COUNT(*) AS n FROM territory_rooms').get().n,1);});
+
+test('permanent mystery exact 30/30/20/20 boundaries, land counts and no ownership of mystery',async()=>{
+ for(const roll of [0,29,30,59,60,79,80,99]){
+  const s=await setup(2,max=>max===100?roll:0);await start(s);
+  s.fixture(r=>{r.players.forEach(p=>p.balance=3);r.tiles.find(t=>t.id===LANDS[0].id).owner=r.players[0].id;r.tiles.find(t=>t.id===LANDS[1].id).owner=r.players[1].id;});
+  await action(s,0,'student:explore',MYSTERIES[0].id);
+  const r=s.db.room(s.host.pin),p=r.players[0],v=await s.view(s.players[0].playerToken);
+  assert.equal(p.balance,2);assert.deepEqual(p.explored,[MYSTERIES[0].id]);assert.equal(v.me.territories,roll<60?1:roll<80?2:0);
+  assert.deepEqual(p.cards,roll<30?['shield']:roll<60?['rebellion']:[]);
+  assert.ok(r.tiles.filter(t=>t.kind==='mystery').every(t=>!t.owner&&!t.resolved&&!t.fortress&&!t.shield));
+  assert.equal(v.tiles.filter(t=>t.kind!=='mystery').length,112);
+ }
+});
+
+test('all 12 teams can explore the same eight mysteries once each; reconnect, duplicates and concurrency cannot farm',async()=>{
+ const s=await setup(12,()=>0);await start(s);s.fixture(r=>r.players.forEach(p=>p.balance=10));
+ await Promise.all(s.players.map((_,i)=>action(s,i,'student:explore',MYSTERIES[0].id)));
+ assert.ok(s.db.room(s.host.pin).players.every(p=>p.explored.length===1&&p.cards.length===1&&p.balance===9));
+ for(const t of MYSTERIES.slice(1))await action(s,0,'student:explore',t.id);
+ await assert.rejects(action(s,0,'student:explore',MYSTERIES[0].id),/already explored/);
+ await s.store().join(s.host.pin,s.clients[0]);assert.equal((await s.view(s.players[0].playerToken)).me.explored.length,8);
+ const view=await s.view(s.players[1].playerToken),body={tileId:MYSTERIES[1].id,tileVersion:0,expectedVersion:view.me.actionVersion},rid=randomUUID();
+ const requests=await Promise.allSettled([s.act(s.players[1].playerToken,'student:explore',body,rid),s.act(s.players[1].playerToken,'student:explore',body,rid),s.act(s.players[1].playerToken,'student:explore',body)]);
+ assert.ok(requests.filter(x=>x.status==='fulfilled').length>=2);
+ const p=s.db.room(s.host.pin).players[1];assert.equal(p.balance,8);assert.equal(p.cards.length,2);assert.equal(p.explored.length,2);
+ const newRoom=await new TerritoryD1Store(s.db,{now:s.options.now,sleep:async()=>{}}).create();const fresh=await s.store().join(newRoom.pin,s.clients[0]);assert.deepEqual((await s.store().state(newRoom.pin,fresh.playerToken)).me.explored,[]);
+});
+
+test('permanent mysteries reject claiming, fortifying, shielding, rebellion and invalid exploration without spending',async()=>{
+ const s=await setup(2,()=>0);await start(s);s.fixture(r=>r.players[0].balance=4);
+ for(const type of ['student:claim','student:fortify','student:shield','student:rebellion'])await assert.rejects(action(s,0,type,MYSTERIES[0].id),/stay unclaimed/);
+ await assert.rejects(action(s,0,'student:explore',LANDS[0].id),/permanent Mystery/);
+ await s.act(s.host.hostToken,'host:pause',{paused:true});await assert.rejects(action(s,0,'student:explore',MYSTERIES[0].id),/paused/);
+ await s.act(s.host.hostToken,'host:pause',{paused:false});await assert.rejects(action(s,1,'student:explore',MYSTERIES[0].id),/Not enough/);
+ assert.equal((await s.view(s.players[0].playerToken)).me.actions,4);
+ await s.act(s.host.hostToken,'host:end',{confirm:true});await assert.rejects(action(s,0,'student:explore',MYSTERIES[0].id),/ended/);
+});
+
+test('empty random outcomes consume visit/action without reroll; random steal skips Fortresses',async()=>{
+ for(const roll of [60,80]){
+  let draws=0;const s=await setup(2,max=>{if(max===100){draws++;return roll;}return 0;});await start(s);
+  s.fixture(r=>{r.players[0].balance=2;const t=r.tiles.find(t=>t.id===LANDS[0].id);t.owner=r.players[1].id;t.fortress=true;});
+  const result=await action(s,0,'student:explore',MYSTERIES[0].id);
+  assert.match(result.result.message,/No land was affected/);assert.equal(draws,1);assert.equal(result.state.me.actions,1);assert.equal(result.state.me.explored.length,1);
+  assert.equal(result.state.tiles.find(t=>t.id===LANDS[0].id).owner,s.players[1].playerId);
+ }
+});
+
+test('secret Shields and inventories stay private in state, HTTP, logs, tile versions and projected host view',async()=>{
+ const s=await setup(2,()=>0);await start(s);s.fixture(r=>r.players.forEach(p=>p.balance=5));
+ await action(s,0,'student:claim',LANDS[0].id);
+ const before=await s.view(s.players[1].playerToken);
+ await action(s,0,'student:explore',MYSTERIES[0].id);
+ const collected=await s.view(s.players[1].playerToken);assert.deepEqual(collected.log,before.log);assert.deepEqual(collected.me.cards,[]);
+ assert.ok(collected.players.every(p=>!Object.hasOwn(p,'cards')&&!Object.hasOwn(p,'explored')));
+ assert.equal(collected.tiles.find(t=>t.id===MYSTERIES[0].id).explored,false);
+ await action(s,0,'student:shield',LANDS[0].id);
+ const own=await s.view(s.players[0].playerToken);assert.equal(own.tiles.find(t=>t.id===LANDS[0].id).shield,true);
+ for(const token of [s.players[1].playerToken,s.host.hostToken]){
+  const v=await(await http(s,`rooms/${s.host.pin}/state`,token)).json();assert.equal(v.tiles.find(t=>t.id===LANDS[0].id).shield,false);
+  assert.equal(v.tiles.find(t=>t.id===LANDS[0].id).version,before.tiles.find(t=>t.id===LANDS[0].id).version);
+  assert.ok(!v.log.some(e=>e.type==='student:shield'||e.type==='student:explore'));
+ }
+ await action(s,1,'student:claim',LANDS[0].id);assert.equal((await s.view(s.players[0].playerToken)).tiles.find(t=>t.id===LANDS[0].id).shield,false);
+ assert.equal((await s.view(s.players[1].playerToken)).me.actions,5);
+});
+
+test('Shield blocks exactly one random steal or trap, including Crown; no redraw; final scoring uses actual ownership',async()=>{
+ for(const roll of [60,80]){
+  const s=await setup(2,max=>max===100?roll:0);await start(s);const victim=roll===60?1:0;
+  s.fixture(r=>{r.players.forEach(p=>p.balance=5);const crown=r.tiles.find(t=>t.kind==='crown');crown.owner=r.players[victim].id;crown.shield=true;});
+  let result=await action(s,0,'student:explore',MYSTERIES[0].id);assert.match(result.result.title,/Shield blocked/);
+  const blocked=s.db.room(s.host.pin).tiles.find(t=>t.kind==='crown');assert.equal(blocked.owner,s.players[victim].playerId);assert.equal(blocked.shield,false);
+  result=await action(s,0,'student:explore',MYSTERIES[1].id);
+  const crown=s.db.room(s.host.pin).tiles.find(t=>t.kind==='crown');assert.equal(crown.owner,roll===60?s.players[0].playerId:null);
+  await s.act(s.host.hostToken,'host:end',{confirm:true});const results=(await s.view(s.host.hostToken)).results;
+  assert.equal(results.find(p=>p.id===s.players[0].playerId).score,roll===60?4:0);
+ }
+});
+
+test('simultaneous random steals and normal capture serialize ownership without duplicate debit; stale confirmation rejected',async()=>{
+ const s=await setup(3,max=>max===100?60:0);await start(s);
+ s.fixture(r=>{r.players.forEach(p=>p.balance=5);r.tiles.find(t=>t.id===LANDS[0].id).owner=r.players[2].id;});
+ const stale=await s.view(s.players[2].playerToken);
+ await Promise.all([action(s,0,'student:explore',MYSTERIES[0].id),action(s,1,'student:explore',MYSTERIES[0].id)]);
+ const r=s.db.room(s.host.pin);assert.equal(r.players[0].balance,4);assert.equal(r.players[1].balance,4);assert.equal(r.tiles.filter(t=>t.owner).length,1);
+ await assert.rejects(s.act(s.players[2].playerToken,'student:fortify',{tileId:LANDS[0].id,tileVersion:stale.tiles.find(t=>t.id===LANDS[0].id).version,expectedVersion:stale.me.actionVersion}),/changed/);
+});
+
+test('lost exploration response retries the stored outcome without a second roll or debit',async()=>{
+ let draws=0;const s=await setup(2,max=>{if(max===100)draws++;return 0;});await start(s);s.fixture(r=>r.players[0].balance=2);
+ const rid=randomUUID(),body={tileId:MYSTERIES[0].id,tileVersion:0,expectedVersion:0};s.db.loseResponse=true;
+ await assert.rejects(s.act(s.players[0].playerToken,'student:explore',body,rid),/Response lost/);
+ const retry=await s.act(s.players[0].playerToken,'student:explore',body,rid);assert.equal(retry.replayed,true);assert.equal(draws,1);
+ assert.equal(retry.state.me.actions,1);assert.deepEqual(retry.state.me.cards,['shield']);assert.deepEqual(retry.state.me.explored,[MYSTERIES[0].id]);
+});
