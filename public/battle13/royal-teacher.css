@@ -1,0 +1,126 @@
+/* Teacher presentation: reuse the illustrated kingdom materials, with fixed-size
+   carved corners so wide desktop panels do not stretch the ornamentation. */
+.kingdom-teacher {
+  --royal-timber:url('./assets/ui/royal-timber.webp');
+  --royal-paper:url('./assets/ui/royal-parchment.webp');
+  --royal-leather:url('./assets/ui/royal-leather.webp');
+  color:#fff0cf;
+  background-color:#182b36;
+}
+.kingdom-teacher:before {background:linear-gradient(90deg,#07142755,#07142710 50%,#07142755)}
+.kingdom-teacher .teacher {padding:18px 20px 30px;max-width:1900px}
+.kingdom-teacher .teacher .layout {grid-template-columns:minmax(350px,.92fr) minmax(0,1.7fr);gap:20px}
+.kingdom-teacher #desk,.kingdom-teacher #kingdom-panel {min-width:0}
+.kingdom-teacher #header {
+  border:22px solid #805628;border-image:var(--royal-timber) 80 fill / 22px;
+  border-radius:0;background:none;padding:0 8px;gap:14px;
+  box-shadow:0 7px 18px #0007;
+}
+.kingdom-teacher .header-crest {width:64px;height:64px}
+.kingdom-teacher #header .header-title {min-width:190px}
+.kingdom-teacher #header h1 {font-size:clamp(28px,2.6vw,42px);color:#ffe9b8;text-shadow:0 2px 3px #170b04;margin:0 0 4px}
+.kingdom-teacher #header p {color:#f3dfb8;font-size:12px}
+.kingdom-teacher #header .eyebrow {color:#efd09a;font-size:10px;margin-bottom:3px}
+.kingdom-teacher #header .room {padding:4px 14px;border-left:1px solid #e9c27b88;border-right:1px solid #e9c27b88}
+.kingdom-teacher #header .buttons {gap:8px;justify-content:flex-end}
+.kingdom-teacher #header button {font-size:12px;padding:6px 9px}
+.kingdom-teacher #connection {display:table;margin:12px 0;padding:6px 12px;color:#f6e2bf;background:#192b30e8;border:1px solid #b79151;border-radius:4px;font-size:11px}
+.kingdom-teacher button {
+  border:8px solid #b68b4b;border-image:var(--royal-leather) 65 fill / 8px;
+  border-radius:0;background:none;box-shadow:0 3px 5px #24170c66;
+  color:#fff0d0;min-height:44px;padding:6px 10px;font-weight:650;text-shadow:0 1px 2px #08172a;
+}
+.kingdom-teacher button.gold {
+  border-image-source:var(--royal-paper);border-image-slice:80 fill;
+  color:#3c2913;text-shadow:0 1px #fff0bb;background:none;font-weight:800;
+}
+.kingdom-teacher button.danger {border-image-source:var(--royal-timber);color:#ffe1b5;box-shadow:inset 0 0 0 2px #ae5349,0 3px 5px #24170c66}
+.kingdom-teacher button:disabled {opacity:.6;filter:saturate(.3);box-shadow:none}
+.kingdom-teacher :is(button,input,textarea,select,a):focus-visible {outline:3px solid #38a6da;outline-offset:3px}
+.kingdom-teacher :is(input,textarea,select) {background:#fff1d3;color:#372a1a;border:1px solid #987343;border-radius:5px;box-shadow:inset 0 2px 5px #66432125;line-height:1.5}
+.kingdom-teacher .panel:not(.kingdom-panel),.kingdom-teacher dialog {
+  border:24px solid #b18c50;border-image:var(--royal-paper) 110 fill / 24px;
+  background:none;border-radius:0;padding:8px 5px;color:#352719;
+  box-shadow:0 8px 24px #09132366;
+}
+.kingdom-teacher :is(.panel:not(.kingdom-panel),dialog) :is(h1,h2,h3) {color:#39291a;text-shadow:0 1px #fff2d2}
+.kingdom-teacher :is(.panel:not(.kingdom-panel),dialog) .eyebrow {color:#7b5021;font-size:11px}
+.kingdom-teacher .question>.eyebrow {display:table;border-bottom:2px solid #ac8244;padding:0 0 8px;margin-bottom:14px}
+.kingdom-teacher .question h2 {font-size:clamp(23px,1.9vw,31px);line-height:1.28}
+.kingdom-teacher .question .options {gap:6px;margin:14px 0}
+.kingdom-teacher .question .options p {display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid #95714444;font-size:14px;line-height:1.4}
+.kingdom-teacher .question .options b {display:grid;place-items:center;flex:0 0 26px;height:29px;border:1px solid #b98d42;border-radius:4px 4px 10px 10px;background:#264460;color:#ffe6b6;font-family:Georgia,serif}
+.kingdom-teacher #clock {display:table;padding:5px 12px;border:1px solid #ad864b;border-radius:4px;background:#e0be8066;font-size:13px;font-weight:700}
+.kingdom-teacher .question>.buttons {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.kingdom-teacher .question>.buttons button {font-size:12px;line-height:1.4;padding:7px 3px}
+.kingdom-teacher .next {margin-top:9px}
+.kingdom-teacher .next .gold {font-family:Georgia,serif;font-size:20px;min-height:50px}
+.kingdom-teacher .hint {color:#6d5434;font-size:12px;line-height:1.5}
+.kingdom-teacher .team-list {margin-top:16px}
+.kingdom-teacher .team-row {border-color:#98764055;padding:10px 2px}
+.kingdom-teacher .team-row small {color:#71593b;font-size:11px}
+.kingdom-teacher .team-row b {font-size:14px}
+.kingdom-teacher .team-row strong {color:#6b471e;font-size:13px}
+.kingdom-teacher .action-state,.kingdom-teacher .reveal {background:#dec29466;border:1px solid #ab854d;border-left:4px solid #87602d;font-size:12px;padding:12px;color:#49331b}
+.kingdom-teacher .kingdom-panel {
+  border:20px solid #8f6835;border-image:var(--royal-timber) 80 fill / 20px;
+  background:none;border-radius:0;padding:0 2px 4px;box-shadow:0 8px 24px #09132366;
+}
+.kingdom-teacher .map-heading {padding:2px 4px 12px}
+.kingdom-teacher .map-heading h2 {color:#ffe9bd;font-size:25px;text-shadow:0 2px 3px #1c0e05}
+.kingdom-teacher .map-heading .eyebrow {color:#eac487;font-size:10px;margin-bottom:4px}
+.kingdom-teacher .map-heading .royal-icon {width:36px;height:36px;margin-right:9px}
+.kingdom-teacher .map-heading>div {display:grid;grid-template-columns:auto 1fr;align-items:center}
+.kingdom-teacher .map-heading .royal-icon {grid-row:1/3}
+.kingdom-teacher #map {border:2px solid #d1a861;border-radius:4px;box-shadow:0 3px 10px #0d080566}
+.kingdom-teacher .map-tools {padding:12px 3px 0;gap:8px}
+.kingdom-teacher .map-hint {color:#eed2a3;margin:10px 4px 16px}
+.kingdom-teacher .scoreboard {
+  border:16px solid #b18c50;border-image:var(--royal-leather) 80 fill / 16px;
+  background:none;padding:4px 10px;color:#f8e7c6;box-shadow:0 3px 8px #1d100955;
+}
+.kingdom-teacher .scoreboard h3 {display:flex;align-items:center;gap:8px;color:#ffe2a7;font-size:22px;margin:2px 0 12px}
+.kingdom-teacher .scoreboard h3 .royal-icon {width:34px;height:34px}
+.kingdom-teacher .score-row {border-color:#dfbd7a44}
+.kingdom-teacher .score-row.labels {color:#e9cb95}
+.kingdom-teacher .score-row b {font-family:Georgia,serif;font-size:21px;color:#ffe2a7}
+.kingdom-teacher .lobby .qr {width:min(100%,285px);box-shadow:0 4px 12px #51381455}
+.kingdom-teacher .pin-large {color:#573b1b}
+.kingdom-teacher .lobby h2 {font-size:34px}
+.kingdom-teacher .welcome {padding:18px 12px;max-width:580px;margin:4vh auto;text-align:center}
+.kingdom-teacher .welcome p,.kingdom-teacher summary {color:#62482a}
+.kingdom-teacher .welcome-crest .royal-icon {width:88px;height:88px}
+.kingdom-teacher .welcome h1 {font-size:42px}
+.kingdom-teacher .welcome :is(label,details) {text-align:left}
+.kingdom-teacher .teacher-results .small-art {width:100%;height:220px;object-fit:cover;object-position:50% 38%;border:2px solid #b58d48;border-radius:4px;box-shadow:0 3px 8px #4c301644}
+.kingdom-teacher .results li {background:#cfac7040;color:#39291b;border-bottom:1px solid #ab844e55;border-radius:4px}
+.kingdom-teacher .results small {color:#79521d;font-weight:800;margin-top:5px}
+.kingdom-teacher dialog {padding:10px;max-height:90dvh}
+.kingdom-teacher dialog::backdrop {background:#07111cbb;backdrop-filter:blur(4px)}
+.kingdom-teacher dialog .close {border:0;border-image:none;background:none;color:#52381e;text-shadow:none;box-shadow:none;margin:-8px -8px 0 8px}
+.kingdom-teacher dialog a {color:#634319;text-decoration-thickness:2px}
+.kingdom-teacher dialog .privacy {background:#80552b;color:#fff0ce}
+.kingdom-teacher .review-entries article {background:#d7b78033;border:1px solid #ae8749;padding:18px}
+.kingdom-teacher .review-entries blockquote {background:#fff1d3;border-left:4px solid #91642e;color:#302315}
+.kingdom-teacher .review-bottom {background:#e5c68f;border-top:1px solid #a47a3d;bottom:-10px;padding:16px 6px;box-shadow:0 -4px 9px #5c3c1b22}
+.kingdom-teacher dialog .event-art,.kingdom-teacher dialog .tile-art {object-fit:cover;background:none;border:2px solid #b78f4d;border-radius:4px}
+.kingdom-teacher dialog .warning {color:#893917;font-weight:700}
+@media(max-width:1150px) {
+  .kingdom-teacher #header {flex-wrap:wrap}
+  .kingdom-teacher #header>.buttons {width:100%;justify-content:flex-start}
+  .kingdom-teacher .teacher .layout {grid-template-columns:minmax(320px,.95fr) minmax(0,1.3fr);gap:14px}
+  .kingdom-teacher .teacher {padding:12px}
+  .kingdom-teacher .map-heading h2 {font-size:21px}
+}
+@media(max-width:760px) {
+  .kingdom-teacher .teacher .layout {display:block}
+  .kingdom-teacher #header {gap:8px;padding:0}
+  .kingdom-teacher #header .header-title {min-width:0;flex:1}
+  .kingdom-teacher #header h1 {font-size:26px}
+  .kingdom-teacher .header-crest {width:44px;height:44px}
+  .kingdom-teacher #header .room {padding:4px 8px;margin-left:0}
+  .kingdom-teacher #header .room strong {font-size:22px}
+  .kingdom-teacher .map-heading {flex-wrap:wrap}
+  .kingdom-teacher .teacher .panel {padding:8px 2px}
+  .kingdom-teacher .scoreboard {padding:4px 0}
+}
