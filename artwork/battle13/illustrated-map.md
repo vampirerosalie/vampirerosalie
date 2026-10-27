@@ -1,35 +1,51 @@
-# Battle 13 illustrated map — 26 October 2026
+# Battle 13 — exact 120-territory illustrated board
 
-Approved fixed-view 2.5D illustration integrated with the real multiplayer game. No backend rules, questions, scoring, map IDs or Mystery Land probabilities changed.
+Approved for integration and publication, 27 October 2026. The checks below describe the local verification performed before release.
 
-## Asset manifest
+## Design and geometry
 
-- `map-source/kingdom.png`: original approved 1536×1024 illustration; runtime `public/battle13/assets/map/kingdom.webp`.
-- `map-source/mist.png`: transparent painted mist; runtime `public/battle13/assets/map/mist.webp`, resized to 384px wide, alpha preserved.
-- Both created with the built-in `image_gen.imagegen` tool. No CLI fallback. The first was a new opaque illustration; the second a new transparent sprite. No input reference attached to these calls.
-- Original generated files retained in `C:\Users\HUAWEI\.codex\generated_images\01a01939-3b63-78c0-b629-b21f759e139a\exec-289d8eb4-8c40-4dd1-b38c-b043a4a346b7.png` and `exec-6f7ef9d7-efe4-414e-815c-b9c93eb47021.png`.
+The map uses the approved contiguous warm-white hex-board concept, with a rainbow, wooded coast, village, waterfalls and carved frame. Selectable land stays clear of scenery. There are exactly **119 ordinary/mystery territories plus one Crown = 120**, using every original server ID, number and kind. Eight existing mystery IDs remain unchanged.
 
-## Geometry and visual state
+`app/battle13/client/illustrated-layout.js` builds one connected axial hex grid. Shared vertices near the centre expand the Crown to 128% linear size; its neighbouring edges adapt without overlaps or gaps. The other tiles remain complete six-sided territories. All hit areas and state colours are real SVG, not painted approximations. Backend data, rules, questions and scoring are unchanged.
 
-`app/battle13/client/illustrated-layout.js` partitions the ten existing illustrated terraces into 119 stone territories. The central castle is the remaining Crown territory. All 120 original backend IDs and numbers remain unchanged; the eight existing mysteries are distributed among eight terraces. Rendering coordinates are separate from authoritative game data.
+Initial territory surfaces are warm ivory. A reusable opaque patch of painted paving ensures peripheral scenery cannot show through a playable tile. Team colours are separate server-driven overlays; no flags. The transparent castle sprite leaves a visible ownership-coloured apron. Mist is an independent layer that disappears only when the server reports that exact mystery resolved.
 
-`illustrated-kingdom.js` renders SVG hit areas above the illustration. Ownership changes the stone colour without adding flags. Castle ownership changes its base line and small gate seal, preserving the original roofs and architecture. The background's decorative painted castle banners are static scenery, not team-ownership markers. Fortress/shield symbols remain visible. Mist is an independent painted layer, hidden only when server state marks that exact territory resolved. Clicking or zooming does not clear it.
+Phones show the complete map without top/bottom letterboxing or district shortcut buttons. Small targets zoom on first tap. Drag, pinch, wheel, keyboard, reduced motion, reset, focus and Choose territory remain supported. This is fixed-view 2.5D raster scenery with vector hit areas, not free-rotation 3D; deep zoom will soften illustration detail.
 
-Small targets first zoom their terrace; another tap opens the ordinary territory confirmation. Terrace shortcuts and Choose territory remain available on phones. Wheel/pinch zoom, drag pan, keyboard selection, reduced motion, poll updates, resize and disposal are supported. The map uses ordinary image/SVG rendering and does not require WebGL.
+## Assets
 
-The 1536px landscape is fixed-view raster art, so deep zoom is inherently softer than vector overlays. Focus zoom is capped; numbered hit areas and controls remain live SVG/HTML. No free 3D rotation is provided. Physical phones and real classroom conditions are not established by browser simulation.
+Built-in image_gen was used, not the fallback CLI. Original generated outputs retained outside the repo; source copies are here:
 
-## Checks
+- `map-source/kingdom-board-v2.png` → `public/battle13/assets/map/kingdom-board-v2.webp` (1536 × 1024). Generated from a code-defined board-footprint guide and the approved concept as style reference. Runtime paving texture is sampled from a clear area of this asset using SVG pattern placement.
+- `map-source/crown-castle-v2.png` → `public/battle13/assets/map/crown-castle-v2.png` (600 px wide, genuine alpha preserved). Separate illustrated ivory/cobalt/gold castle, no ownership flags.
+- Existing `map-source/mist.png` → `public/battle13/assets/map/mist.webp`, unchanged.
 
-- `node --test test/battle13/*.test.js`: engine/security/concurrency rules and exact layout coverage.
-- `node scripts/verify-territory-map.mjs`: isolated engine/browser simulation, all 120 hit targets, eight mist states, claim-only reveal, refresh, all twelve colours, Crown, shield/fortress, keyboard, pan/zoom and 360/390px layouts. Fixtures exist only inside this test script.
-- `node scripts/verify-territory-phone.mjs`: existing full illustrated phone flows.
-- `node scripts/verify-territory-browser.mjs <base-url>`: separate teacher/student sessions, 12 teams, decodable QR, marking, claims, question navigation, draft preservation, End/New Game, refresh and teacher bookmarks. Results are stored in ignored `outputs/battle13/`.
+The older `kingdom.png`/`kingdom.webp` are retained as historical assets; the renderer uses the new versioned assets. Generated images were format-converted/resized for delivery. Geometry is established by code, never by counting generated artwork.
 
-## Kingdom illustration prompt
+## Prompt specifications
 
-Use case: stylized-concept. Asset: a gorgeous production-quality illustrated 2.5D fixed-view kingdom game board background, landscape 3:2 composition. Create a lavish sunlit miniature fantasy kingdom seen from an elevated isometric three-quarter camera. A detailed ivory stone royal castle with many elegant cobalt blue shingled turrets, antique gold finials, bright banners, a broad stairway and arched gate sits on a central island. Surrounding it is a connected board of about 19 large clearly separated ivory limestone hexagonal territory platforms on lush layered cliffs above vivid sapphire-to-turquoise water. Keep about 8 of the hexagonal tops visibly clear, smooth warm ivory stone for interactive territory selection overlays, distributed left, right and foreground; do not put tall objects on all tiles. Thin engraved gold edges, moss at the margins. Fill the remaining territories and edges with beautifully detailed miniature timber villages with terracotta roofs, mixed emerald fir trees and delicate deciduous trees, warm stone arched bridges, a small harbour and sailboat at right, purple crystal grotto at left, two cascades with white foam, a small golden temple at lower right. This should look like a premium lovingly hand-crafted illustrated boardgame diorama, very detailed and richly painted, not low-poly or primitive geometry. Lively saturated natural colour, warm afternoon sun, cool shadow pockets, intricate hand-painted textures, foliage variety, gold highlights. Castle silhouette elegant and crisp. Whole island board visible with breathing room all around, irregular scenic shoreline, turquoise water surrounding it and a dark carved walnut table visible at all four edges. No UI, no words, no lettering, no numbers, no logos, no labels, no question marks, no controls baked into image. Avoid flat pastel washed-out appearance, uniform ball trees, conical trees, simplistic cuboid houses, plastic look or very large blank areas. Fixed viewpoint designed for real HTML overlays on the clear territories. The finished scene should feel like a beautiful richly coloured fantasy miniature brought to life, with readable board geometry. Highest visual polish, landscape image.
+Background: exact placement guide for central ivory island; premium painted 2.5D miniature kingdom; turquoise/sapphire sea, carved walnut/gold frame, rich forest upper left, red-roof village and rainbow upper right, harbour and waterfall lower right. Central area empty warm-white fine stone texture, no grid, castle, fog, ownership colours, text or objects. All scenery outside playable region. Approved concept supplies visual style.
 
-## Mist sprite prompt
+Castle: isolated transparent sprite matching the approved central castle; ivory towers, cobalt steep roofs, gold finials, compact foundation, elevated three-quarter view, polished miniature storybook painting. No scene, tile, text, flags or opaque background.
 
-Use case: stylized-concept. Production game sprite on genuinely transparent background. An isolated low bank of beautifully hand-painted magical white and cool pale lavender mist, seen from an elevated isometric camera, roughly oval and horizontal, with softly curling wisps and layered volumetric cloud puffs. Dense opaque white-grey mist in the middle completely conceals what is beneath it, thinner delicate translucent wisps at the edges. Refined storybook miniature kingdom illustration, warm light at upper left, cool soft shadows within, charming mysterious atmosphere, not stormy. No buildings, no land, no sky, no letters, no question marks, no shadows outside the cloud, no rectangular backdrop, no flag. Wide horizontal cloud sprite with transparent margins on every side. This will be layered over individual mystery territories on a beautiful richly painted fantasy boardgame map. Crisp detailed painted forms, no blur, not photoreal weather.
+## Verification
+
+- `node --test test/battle13/*.test.js`: 25 passed, including exact count, preserved IDs/kinds, convex six-vertex polygons, shared Crown edges, zero overlapping interiors and a connected board.
+- `node scripts/verify-territory-map.mjs`: all 120 centres select their original ID; eight mysteries, server-only reveal and refresh persistence; 12 team colours, Crown apron, fortress/shield state; zoom/pan/reset, keyboard, reduced motion; 360/390px layouts without horizontal overflow or letterboxing; no district buttons.
+- `node scripts/verify-territory-browser.mjs http://localhost:3013`: isolated local teacher and student browser contexts plus 10 additional teams; QR decoding, private marking/finalization, claims, question progression, reconnection and draft preservation, fullscreen, late QR, End/New Game and explicit teacher bookmarks. No uncaught browser errors.
+
+These are automated local-browser checks, not physical-phone or classroom tests. Release verification is performed separately after publishing. Preview: http://localhost:3416/ while the local preview process is running.
+
+## Coastline alignment repair — 27 October 2026
+
+The upper board edge previously cut across trees/buildings because the illustrated footprint differed from the actual hex silhouette. Added `map-source/kingdom-board-v3.png` and runtime `public/battle13/assets/map/kingdom-board-v3.webp`. The renderer now uses v3 for scenery; v2 remains the paving texture source. No territory geometry, IDs or state behavior changed.
+
+Built-in image_gen edit, using the exact current footprint as placement reference and v2 as art reference. Prompt: preserve 1536×1024 composition, rainbow, forest, village, harbour and sea; match the ivory footprint and place a narrow low moss/flower/rock verge outside it; move tall trees and buildings back from the playable edge; no extra hexes, grid lines, castle, mist or text in the background. Source output: `exec-299d95f7-a677-49b7-93c9-9e87fff48aa7.png`. Runtime format conversion only.
+
+Rebuilt renderer and reran `scripts/verify-territory-map.mjs`: all 120 hit targets, eight mysteries, server-only reveal, owner colours, zoom/pan, 360/390px fit, reduced motion and keyboard checks passed. Inspected the actual composite screenshot, including upper-left/top/upper-right edges. Local review only; not deployed.
+
+### Four small edge repairs
+
+Added `map-source/coastal-verge.png` and runtime `public/battle13/assets/map/coastal-verge.webp`, generated with built-in image_gen: seamless finely painted emerald/olive moss, low groundcover, tiny limestone gravel and sparse small wildflowers; no trees, buildings, paths or grid. Source: `exec-ec50bd7e-15f1-43d0-845b-b64948810d46.png`.
+
+`BOARD_BOUNDARY` is derived from the 120 polygons' exterior edges. A non-interactive, masked illustrated grass/stone strip follows that exact boundary only in the four user-marked areas, with feathered transitions. It does not change any territory position or hit target. All other scenery remains visible. Added a test proving the boundary encloses exactly the summed territory area. Five geometry tests and the complete map browser check passed after repair; inspected the composited map screenshot. Local preview only.

@@ -1,2 +1,52 @@
-#map.illustrated-kingdom{display:flex;flex-direction:column;height:auto;min-height:0;border:2px solid #bd975a;border-radius:13px;background:#152e35 url('/battle13/assets/ui/royal-timber.webp') center/550px;box-shadow:0 8px 22px #0005;isolation:isolate}.kingdom-viewport{position:relative;overflow:hidden;width:100%;height:clamp(340px,57vh,700px);background:#063849;touch-action:none;cursor:grab}.kingdom-viewport.is-dragging{cursor:grabbing}.kingdom-board{position:absolute;width:1536px;height:1024px;transform-origin:0 0;will-change:transform;user-select:none}.kingdom-landscape{display:block;width:1536px;height:1024px;pointer-events:none}.kingdom-territories{position:absolute;inset:0;width:1536px;height:1024px;overflow:visible}.kingdom-land{cursor:pointer;--owner:#f3e5c3}.land-stone{fill:#f4e5c329;stroke:#9c723d;stroke-width:.8;stroke-linejoin:round;paint-order:fill stroke;transition:fill .2s,stroke .2s}.kingdom-land.is-owned .land-stone{fill:var(--owner);fill-opacity:.68;stroke:var(--owner);stroke-width:1.3;mix-blend-mode:multiply}.kingdom-land:hover .land-stone,.kingdom-land:focus-visible .land-stone,.kingdom-land.is-selected .land-stone{stroke:#fff3ae;stroke-width:2;filter:drop-shadow(0 0 1.5px #b98124)}.kingdom-land:focus{outline:none}.land-number{font:700 7px Georgia,serif;text-anchor:middle;dominant-baseline:central;fill:#422d1a;stroke:#fff1cb;stroke-width:.3;paint-order:stroke fill;pointer-events:none;opacity:0}.map-detail .land-number{opacity:1}.is-owned .land-number{fill:#fff9de;stroke:#252224;stroke-width:.75}.land-mist{pointer-events:none;opacity:1;transition:opacity .65s ease}.is-resolved .land-mist{opacity:0}.mystery-symbol{font:700 14px Georgia,serif;fill:#4b3b64;text-anchor:middle;dominant-baseline:central;stroke:#fff7df;stroke-width:.6;paint-order:stroke fill}.mist-paint{animation:kingdom-mist-breathe 5s ease-in-out infinite;transform-box:fill-box;transform-origin:center}.is-resolved .mist-paint{animation:none}.fortress-marker,.shield-marker{display:none;pointer-events:none}.is-fortress .fortress-marker{display:block;fill:#d4b665;stroke:#513c21;stroke-width:1}.is-fortress .land-number{transform:translateY(9px);font-size:5px}.is-shielded .shield-marker{display:block;fill:#326d95;stroke:#ffe6a0;stroke-width:1}.shield-check{fill:none;stroke:#fff5d5;stroke-width:1.4}.crown-land .land-stone{fill:transparent!important;stroke:transparent;mix-blend-mode:normal!important}.crown-land:hover .land-stone,.crown-land:focus-visible .land-stone,.crown-land.is-selected .land-stone{stroke:#ffe6a2;stroke-width:2;fill:#fff1a20a!important}.crown-plinth{fill:none;stroke:#dbbc76;stroke-width:5;stroke-linejoin:round;filter:drop-shadow(0 1px 1px #38220d)}.crown-owner-seal{fill:#efd99e;stroke:#946c34;stroke-width:1.5}.is-owned .crown-plinth{stroke:var(--owner);stroke-width:8}.is-owned .crown-owner-seal{fill:var(--owner);stroke:#ffe1a1}.crown-label{font:700 13px Georgia,serif;fill:#ffecb0;text-anchor:middle;stroke:#342317;stroke-width:3;paint-order:stroke fill;pointer-events:none}.kingdom-map-status{font-size:12px!important;color:#ffe7b5!important;margin:0!important;padding:9px 12px!important;border-top:1px solid #ae8750;min-height:36px;background:#182f36c9}.kingdom-terraces{display:flex;position:static!important;gap:6px;padding:8px!important;overflow-x:auto;max-width:100%;background:none!important;border:0!important;border-radius:0!important;scrollbar-width:thin}.kingdom-terraces button{flex:0 0 auto;min-height:44px;font-size:12px!important;padding:7px 12px!important;white-space:nowrap;background:#53331d url('/battle13/assets/ui/royal-timber.webp') center/350px!important;color:#ffedc7!important;border:1px solid #b89353!important}.kingdom-terraces button:first-child{background:linear-gradient(#f1d18d,#bd8d3e)!important;color:#392815!important}.kingdom-viewport:focus-visible{outline:3px solid #ffe6ab;outline-offset:-4px}@keyframes kingdom-mist-breathe{50%{transform:scale(1.06) translateY(-1px)}}@media(max-width:650px){.student .kingdom-viewport{height:clamp(300px,49dvh,470px)}.kingdom-map-status{font-size:11px!important}.kingdom-terraces button{font-size:11px!important}}@media(prefers-reduced-motion:reduce){.land-stone,.land-mist{transition:none}.mist-paint{animation:none}}
-#map .kingdom-land.crown-land .land-stone{stroke:none!important;fill:transparent!important;filter:none}.crown-land.is-selected .crown-plinth,.crown-land:focus-visible .crown-plinth{filter:drop-shadow(0 0 3px #ffe9a4)}
+/* The illustrated landscape and its 120 full hexagons are one map surface. */
+#map.illustrated-kingdom,
+.kingdom-phone .student #map.illustrated-kingdom {
+ display:flex;flex-direction:column;height:auto;min-height:0;
+ border:2px solid #bd975a;border-radius:10px;background:#163d47;
+ box-shadow:0 6px 18px #0005;isolation:isolate;
+}
+#map .kingdom-viewport {
+ position:relative;overflow:hidden;width:100%;height:auto;min-height:0;
+ aspect-ratio:3/2;background:#08738c;touch-action:none;cursor:grab;
+}
+.kingdom-viewport.is-dragging{cursor:grabbing}
+.kingdom-board{position:absolute;transform-origin:0 0;will-change:transform;user-select:none}
+.kingdom-landscape{display:block;pointer-events:none}
+.kingdom-territories{position:absolute;inset:0;overflow:visible}
+.kingdom-land{cursor:pointer;--owner:#f3e5c3}
+.land-stone{fill:url(#kingdom-ivory-stone);stroke:#bb8f40;stroke-width:1.7;stroke-linejoin:round;paint-order:fill stroke;transition:stroke .2s}
+.land-owner{fill:var(--owner);opacity:0;pointer-events:none;mix-blend-mode:multiply;transition:opacity .2s}
+.kingdom-land.is-owned .land-stone{stroke:var(--owner);stroke-width:2.5}
+.kingdom-land.is-owned .land-owner{opacity:.68}
+.kingdom-land:hover .land-stone,.kingdom-land:focus-visible .land-stone,.kingdom-land.is-selected .land-stone{stroke:#fff3ae;stroke-width:2;filter:drop-shadow(0 0 1.5px #805315)}
+.kingdom-land:focus{outline:none}
+.land-number{font:700 12px Georgia,serif;text-anchor:middle;dominant-baseline:central;fill:#6b5439;stroke:#fff1cb;stroke-width:.4;paint-order:stroke fill;pointer-events:none;opacity:0}
+.map-detail .land-number{opacity:1}
+.is-owned .land-number{fill:#fff9de;stroke:#252224;stroke-width:.8}
+.land-mist{pointer-events:none;opacity:1;transition:opacity .65s ease}
+.is-resolved .land-mist{opacity:0}
+.mystery-symbol{font:700 22px Georgia,serif;fill:#62557f;text-anchor:middle;dominant-baseline:central;stroke:#fff7df;stroke-width:.6;paint-order:stroke fill}
+.mist-paint{animation:kingdom-mist-breathe 5s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.is-resolved .mist-paint{animation:none}
+.fortress-marker,.shield-marker{display:none;pointer-events:none}
+.is-fortress .fortress-marker{display:block;fill:#d4b665;stroke:#513c21;stroke-width:1}
+.is-fortress .land-number{transform:translateY(10px);font-size:6px}
+.is-shielded .shield-marker{display:block;fill:#326d95;stroke:#ffe6a0;stroke-width:1}
+.shield-check{fill:none;stroke:#fff5d5;stroke-width:1.4}
+.crown-land .land-stone{stroke:#ab7624;stroke-width:3}
+.crown-castle{pointer-events:none;filter:drop-shadow(0 2px 2px #49321855)}
+.crown-label{font:700 9px Georgia,serif;letter-spacing:1px;fill:#6c471c;text-anchor:middle;dominant-baseline:central;stroke:#fff1cd;stroke-width:.7;paint-order:stroke fill;pointer-events:none}
+.kingdom-map-status{font-size:11px!important;line-height:1.4!important;color:#ffe7b5!important;margin:0!important;padding:6px 10px!important;border-top:1px solid #ae8750;background:#182f36ed}
+.kingdom-viewport:focus-visible{outline:3px solid #ffe6ab;outline-offset:-4px}
+.kingdom-phone .student #kingdom-panel.panel{padding:10px 6px}
+.kingdom-phone .student .map-heading{padding:2px 5px 8px}
+.kingdom-phone .student .map-heading h2{font-size:19px}
+.kingdom-phone .student .map-heading .eyebrow{display:none}
+.kingdom-phone .student #map-wallet .stats{margin-bottom:10px}
+.map-tools{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;padding:8px 0 0}
+.kingdom-phone .map-tools button,.map-tools button{min-height:44px;padding:6px 9px;font-size:12px;line-height:1.25}
+.map-tools button:nth-child(-n+2){flex:0 0 44px;font-size:20px}
+.map-tools button:nth-child(n+3){flex:1}
+.map-hint{font-size:11px;margin:8px 0 12px}
+@keyframes kingdom-mist-breathe{50%{transform:scale(1.06) translateY(-1px)}}
+@media(prefers-reduced-motion:reduce){.land-stone,.land-owner,.land-mist{transition:none}.mist-paint{animation:none}}
