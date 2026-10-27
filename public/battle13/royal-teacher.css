@@ -25,6 +25,16 @@
 .kingdom-teacher #header .buttons {gap:8px;justify-content:flex-end}
 .kingdom-teacher #header button {font-size:12px;padding:6px 9px}
 .kingdom-teacher #connection {display:table;margin:12px 0;padding:6px 12px;color:#f6e2bf;background:#192b30e8;border:1px solid #b79151;border-radius:4px;font-size:11px}
+#teacher-music-slot:empty {display:none}
+.kingdom-teacher .kingdom-music {display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;margin:0 0 16px;padding:8px 14px;border:12px solid #98713d;border-image:var(--royal-timber) 80 fill / 12px;color:#ffedc7}
+.kingdom-music-title {font:700 16px Georgia,serif}
+.kingdom-music-title small {font:12px system-ui,sans-serif;margin-top:3px}
+.kingdom-teacher .kingdom-music button {font-size:12px}
+.kingdom-teacher .kingdom-music label {display:flex;align-items:center;gap:10px;margin:0;font-size:12px}
+.kingdom-teacher .kingdom-music input[type=range] {width:120px;min-height:32px;padding:0;accent-color:#e2b461;background:transparent;border:0;box-shadow:none;cursor:pointer}
+.kingdom-music-status {font-size:11px;color:#f1d8a9}
+.kingdom-music-credit {margin-left:auto;font-size:11px;color:#edd1a1}
+.kingdom-music-credit a {color:#ffe1a1;text-decoration:underline;text-underline-offset:3px}
 .kingdom-teacher button {
   border:8px solid #b68b4b;border-image:var(--royal-leather) 65 fill / 8px;
   border-radius:0;background:none;box-shadow:0 3px 5px #24170c66;
