@@ -31,7 +31,7 @@ Full action history is retained on the server and available in authenticated tea
 - Special cards split the 35% card outcome equally between Shield and Rebellion.
 - A Shield blocks a Rebellion by consuming both cards; no Action points are spent.
 - Explicit early End Game also applies the one-time final Crown bonus. The confirmation explains this, and unfinalised answers earn nothing.
-- The mandatory first bank has 20 questions. Future banks may have their own count; labels and Science maximum derive from the selected set.
+- Set 1 has 25 questions, including five additional Chapter 6 · Lesson 2 questions (21–25). Future banks may have their own count; labels and Science maximum derive from the selected set.
 - Rooms expire after 48 hours, following the existing room pattern. Reconnection is possible until expiry.
 
 ## Artwork and 3D

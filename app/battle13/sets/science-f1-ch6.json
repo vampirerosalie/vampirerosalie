@@ -338,6 +338,74 @@
       ],
       "explanation": "The type of material is changed, while the size of the material is kept constant.",
       "week": 2
+    },
+    {
+      "id": "q21",
+      "number": 21,
+      "type": "mcq",
+      "prompt": "A manufacturer needs a lightweight cooking pot that transfers heat efficiently. Which combination of properties is most suitable?",
+      "options": {
+        "A": "High density and poor heat conductivity",
+        "B": "Low density and good heat conductivity",
+        "C": "Low density and poor heat conductivity",
+        "D": "High density and good heat conductivity"
+      },
+      "answer": "B",
+      "variants": ["B"],
+      "explanation": "Low density keeps the pot lightweight, while good heat conductivity allows heat to transfer efficiently.",
+      "week": 2
+    },
+    {
+      "id": "q22",
+      "number": 22,
+      "type": "mcq",
+      "prompt": "A solid element is not attracted to a magnet. A pupil concludes that it must be a non-metal. Which statement best evaluates this conclusion?",
+      "options": {
+        "A": "It is reliable because magnetism distinguishes every metal from every non-metal.",
+        "B": "It is reliable if the same result is obtained three times.",
+        "C": "It is unreliable because some metals, such as aluminium, are non-magnetic.",
+        "D": "It is unreliable only because the sample’s mass was not measured."
+      },
+      "answer": "C",
+      "variants": ["C"],
+      "explanation": "Some metals, including aluminium, are non-magnetic. A lack of magnetic attraction does not establish that an element is a non-metal.",
+      "week": 2
+    },
+    {
+      "id": "q23",
+      "number": 23,
+      "type": "mcq",
+      "prompt": "Three rods of equal length and thickness are heated separately under the same conditions. Identical thumbtacks are attached at the same distance from the heated ends using equal amounts of wax.\n\nTime taken for each thumbtack to fall:\nP: 20 seconds\nQ: 45 seconds\nR: 75 seconds\n\nWhich conclusion is supported by the results?",
+      "options": {
+        "A": "P transfers heat to the wax fastest.",
+        "B": "R is the best heat conductor.",
+        "C": "P has the lowest melting point.",
+        "D": "All three rods conduct heat equally well because their dimensions are identical."
+      },
+      "answer": "A",
+      "variants": ["A"],
+      "explanation": "The thumbtack on P falls first, showing that heat reaches and melts its wax fastest under the same test conditions.",
+      "week": 2
+    },
+    {
+      "id": "q24",
+      "number": 24,
+      "type": "short",
+      "prompt": "A metal wire must support a heavy load without breaking. Which property is most important?",
+      "answer": "Tensile strength",
+      "variants": ["Tensile strength"],
+      "explanation": "Tensile strength describes a material’s ability to withstand a pulling force without breaking.",
+      "week": 2
+    },
+    {
+      "id": "q25",
+      "number": 25,
+      "type": "short",
+      "prompt": "A pupil compares the melting points of two substances. What quantity should she measure when each substance melts?",
+      "answer": "Temperature",
+      "variants": ["Temperature"],
+      "explanation": "A melting point is the temperature at which a substance melts.",
+      "week": 2
     }
   ]
 }
