@@ -31,7 +31,7 @@ try{
   for(const page of phones){
    const heading=page.locator('.question h2');await heading.filter({hasText:q.prompt.slice(0,45)}).waitFor();assert.equal(await heading.textContent(),q.prompt);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
-   if(q.number===23){assert.equal(await heading.evaluate(e=>getComputedStyle(e).whiteSpace),'pre-line');assert.equal(await heading.evaluate(e=>getComputedStyle(e).fontSize),'20px');await mkdir('outputs/battle13',{recursive:true});await page.screenshot({path:`outputs/battle13/lesson2-q23-${page.viewportSize().width}.png`,fullPage:true});}
+   if(q.number===23){await page.waitForFunction(()=>{const h=document.querySelector('.question.long-question h2');return h&&getComputedStyle(h).whiteSpace==='pre-line'&&getComputedStyle(h).fontSize==='20px';});await mkdir('outputs/battle13',{recursive:true});await page.screenshot({path:`outputs/battle13/lesson2-q23-${page.viewportSize().width}.png`,fullPage:true});}
    if(q.type==='mcq')await page.getByRole('button',{name:q.answer+' '+q.options[q.answer],exact:true}).click();else await page.locator('#answer').fill(q.answer);
    await page.getByRole('button',{name:'Submit answer',exact:true}).click();await page.getByText('Submitted · automatic ACCEPT suggestion').waitFor();
   }
