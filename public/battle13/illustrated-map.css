@@ -22,6 +22,9 @@
 .kingdom-land:focus{outline:none}
 .land-number{font:700 12px Georgia,serif;text-anchor:middle;dominant-baseline:central;fill:#6b5439;stroke:#fff1cb;stroke-width:.4;paint-order:stroke fill;pointer-events:none;opacity:0}
 .map-detail .land-number{opacity:1}
+.kingdom-land.is-blocked .land-stone{fill:url(#kingdom-grass);stroke:#a58c48;stroke-width:1.7}
+.kingdom-land.is-blocked .land-number,.kingdom-land.is-blocked .land-owner{display:none}
+.kingdom-land.is-blocked:hover .land-stone,.kingdom-land.is-blocked:focus-visible .land-stone,.kingdom-land.is-blocked.is-selected .land-stone{stroke:#ffe4a0;stroke-width:2}
 .is-owned .land-number{fill:#fff9de;stroke:#252224;stroke-width:.8}
 .land-mist{pointer-events:none;opacity:1;transition:opacity .65s ease}
 .is-resolved .land-mist{opacity:0}

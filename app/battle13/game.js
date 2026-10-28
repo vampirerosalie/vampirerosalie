@@ -1,4 +1,5 @@
 import {createHash,createHmac,randomBytes,randomInt,timingSafeEqual} from 'node:crypto';
+import {lockBoard} from './board.js';
 import {SETS,publicQuestion,mark,setList} from './sets.js';
 import {MAP,COLORS,COLOR_NAMES,RULES} from '../../public/battle13/map-data.js';
 export class GameError extends Error{constructor(message,code='INVALID_ACTION',status=409){super(message);this.code=code;this.status=status;}}
@@ -11,7 +12,7 @@ export class TerritoryGame{
   create(setId='science-f1-ch6'){
     if(typeof setId!=='string'||!Object.hasOwn(SETS,setId))fail('Choose an available question set.','INVALID_SET',400);
     const pin=String(10000+this.random(90000)),hostToken=randomBytes(32).toString('hex');
-    const r={pin,setId,mysteryRules:2,hostHash:hash(hostToken),createdAt:this.now(),expiresAt:this.now()+48*3600000,version:1,phase:'lobby',paused:false,questionIndex:0,startAt:null,endedAt:null,results:null,players:[],rounds:{},reviewVersion:0,receipts:{},log:[],tiles:MAP.map(t=>({...t,owner:null,fortress:false,shield:false,resolved:false,version:0}))};
+    const r={pin,setId,mysteryRules:2,boardRules:1,hostHash:hash(hostToken),createdAt:this.now(),expiresAt:this.now()+48*3600000,version:1,phase:'lobby',paused:false,questionIndex:0,startAt:null,endedAt:null,results:null,players:[],rounds:{},reviewVersion:0,receipts:{},log:[],tiles:MAP.map(t=>({...t,owner:null,fortress:false,shield:false,resolved:false,version:0}))};
     this.rooms.set(pin,r);return {pin,hostToken};
   }
   room(pin){const r=this.rooms.get(String(pin));if(!r||r.expiresAt<=this.now())fail('This room is unavailable. Ask your teacher for the current joining QR.','ROOM_NOT_FOUND',404);return r;}
@@ -30,7 +31,7 @@ export class TerritoryGame{
   round(r,q=this.question(r)){return r.rounds[q.id]??{};}
   isClosed(r,q=this.question(r)){const x=this.round(r,q);return r.phase!=='active'||!!x.closed||!!x.finalized||!!(x.deadline&&this.now()>=x.deadline);}
   standings(r,final=false){let prev='',rank=0;return r.players.map(p=>{const tiles=r.tiles.filter(t=>t.owner===p.id);return {id:p.id,name:p.name,color:p.color,territories:tiles.length,science:p.science,actions:Math.max(0,p.balance),debt:Math.max(0,-p.balance),fortresses:tiles.filter(t=>t.fortress).length,crown:tiles.some(t=>t.kind==='crown'),score:tiles.length+(final&&tiles.some(t=>t.kind==='crown')?RULES.crownBonus:0)};}).sort((a,b)=>b.score-a.score||b.science-a.science).map((p,i)=>{const key=p.score+':'+p.science;if(key!==prev)rank=i+1;prev=key;return {...p,rank};});}
-  view(r,a){const q=this.question(r),round=this.round(r),now=this.now();const base={pin:r.pin,role:a.role,version:r.version,mysteryRules:r.mysteryRules??1,set:{id:r.setId,title:SETS[r.setId].title},phase:r.phase,serverTime:now,onlineCount:r.players.filter(p=>(this.lastSeen.get(`${r.pin}:${p.id}`)??0)>now-25000).length,joinedCount:r.players.length};if(a.role==='public')return base;
+  view(r,a){const q=this.question(r),round=this.round(r),now=this.now();const base={pin:r.pin,role:a.role,version:r.version,mysteryRules:r.mysteryRules??1,boardRules:r.boardRules??0,board:r.board??null,set:{id:r.setId,title:SETS[r.setId].title},phase:r.phase,serverTime:now,onlineCount:r.players.filter(p=>(this.lastSeen.get(`${r.pin}:${p.id}`)??0)>now-25000).length,joinedCount:r.players.length};if(a.role==='public')return base;
     const players=this.standings(r).map(p=>{const raw=r.players.find(x=>x.id===p.id),res=raw.responses[q.id];return {...p,online:(this.lastSeen.get(`${r.pin}:${p.id}`)??0)>now-25000,answerStatus:res?(res.unanswered?'Unanswered':'Answered'):raw.writingUntil>now?'Writing':'Waiting'};});
     const v={...base,players,tiles:r.tiles.map(t=>({...t,shield:t.owner===a.player?.id&&!!t.shield,...(r.mysteryRules===2&&t.kind==='mystery'?{explored:!!a.player?.explored?.includes(t.id)}:{})})),question:publicQuestion(q),questionCount:SETS[r.setId].questions.length,paused:r.paused,answersClosed:this.isClosed(r),deadline:round.deadline??null,finalized:!!round.finalized,startedAt:r.startAt,endedAt:r.endedAt,log:r.log.filter(e=>e.playerId===a.player?.id).slice(-30),...(r.results?{results:r.results}:{})};
     if(round.revealed)v.revealed={answer:q.answer,explanation:q.explanation,options:q.options};
@@ -61,7 +62,7 @@ export class TerritoryGame{
       const steal=roll<shieldChance+rebellionChance+stealChance;
       // Fortresses resist a random steal, just as they resist Rebellion. Shields are
       // included in the draw and block the selected effect without another draw.
-      const eligible=r.tiles.filter(t=>t.kind!=='mystery'&&t.owner&&(steal?t.owner!==p.id&&!t.fortress:t.owner===p.id));
+      const eligible=r.tiles.filter(t=>!t.blocked&&t.kind!=='mystery'&&t.owner&&(steal?t.owner!==p.id&&!t.fortress:t.owner===p.id));
       target=eligible.length?eligible[this.random(eligible.length)]:null;
       if(!target)result={art:steal?'claim':'trap',title:steal?'Mystery reward':'Mystery trap',message:'No land was affected: there was no eligible territory. Your 1 Action was spent; this visit is complete.'};
       else{
@@ -80,7 +81,7 @@ export class TerritoryGame{
     if(r.phase==='ended')fail('This game has ended. Results are locked.','GAME_ENDED');
     if(b.type==='host:set'){if(r.phase!=='lobby')fail('Choose the set before starting.');if(typeof b.setId!=='string'||!Object.hasOwn(SETS,b.setId))fail('Unknown question set.');r.setId=b.setId;return;}
     if(b.type==='host:team'){const team=r.players.find(x=>x.id===b.playerId);if(!team)fail('Team not found.');const safeName=name(b.name);if(!safeName)fail('Enter a team name.');if(!COLORS.includes(b.color))fail('Choose a team colour.');const other=r.players.find(x=>x.id!==team.id&&x.color===b.color);if(other)other.color=team.color;team.name=safeName;team.color=b.color;return;}
-    if(b.type==='host:start'){if(r.phase!=='lobby')fail('Game already started.');if(r.players.length<2)fail('At least two teams must join.');r.phase='active';r.startAt=this.now();return;}
+    if(b.type==='host:start'){if(r.phase!=='lobby')fail('Game already started.');if(r.players.length<2)fail('At least two teams must join.');lockBoard(r);r.phase='active';r.startAt=this.now();return;}
     if(b.type==='host:pause'){if(typeof b.paused!=='boolean')fail('Choose pause or resume.');r.paused=b.paused;return;}
     if(r.phase!=='active')fail('Wait for your teacher to start.','NOT_STARTED');
     if(['host:countdown','host:close','host:finalize-all','host:reveal','host:next','student:submit','student:writing'].includes(b.type)&&b.questionId!==q.id)fail('The question changed. Check the current question.','STALE_QUESTION');
@@ -100,7 +101,7 @@ export class TerritoryGame{
     if(b.type==='student:submit'){if(this.isClosed(r))fail('Submissions are closed.','ANSWER_TIME_UP');if(p.responses[q.id])fail('Your answer is already submitted.');if(typeof b.answer!=='string'||!b.answer.trim()||b.answer.length>200||(q.type==='mcq'&&!['A','B','C','D'].includes(b.answer)))fail('Enter a valid answer.','BAD_ANSWER',400);const auto=mark(q,b.answer);p.responses[q.id]={answer:b.answer,auto,decision:auto?'accept':'reject',finalized:false,awarded:false};p.writingUntil=0;r.reviewVersion++;return {submitted:true};}
     if(['student:claim','student:explore','student:fortify','student:rebellion','student:shield'].includes(b.type)){
       if(r.paused)fail('Territory actions are paused by your teacher.','PAUSED');
-      const tile=r.tiles.find(t=>t.id===b.tileId);if(!tile)fail('Choose a territory.');if(b.tileVersion!==tile.version||b.expectedVersion!==p.actionVersion)fail('This territory or your Actions changed. Check the new details and confirm again.','STALE_TARGET');
+      const tile=r.tiles.find(t=>t.id===b.tileId);if(!tile)fail('Choose a territory.');if(tile.blocked)fail('Not playable in this round. Grass spaces cannot be claimed or targeted.','BLOCKED_TERRITORY');if(b.tileVersion!==tile.version||b.expectedVersion!==p.actionVersion)fail('This territory or your Actions changed. Check the new details and confirm again.','STALE_TARGET');
       if(b.type==='student:explore')return this.explore(r,p,tile);
       if(r.mysteryRules===2&&tile.kind==='mystery')fail('Mystery Lands stay unclaimed. Choose Explore instead.');
       const own=tile.owner===p.id;let cost=0,result;

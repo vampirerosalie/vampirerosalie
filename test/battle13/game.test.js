@@ -16,8 +16,66 @@ class D1{
   room(pin){return JSON.parse(this.sql.prepare('SELECT state_json FROM territory_rooms WHERE pin=?').get(pin).state_json);}
   fixture(pin,fn){const r=this.room(pin);fn(r);this.sql.prepare('UPDATE territory_rooms SET state_json=? WHERE pin=?').run(JSON.stringify(r),pin);}
 }
-async function setup(n=2,random){const db=new D1();let now=100000;const options={now:()=>now,sleep:async()=>{},...(random?{random}:{})},store=()=>new TerritoryD1Store(db,options),host=await store().create();const clients=Array.from({length:n},(_,i)=>({clientId:randomUUID(),name:'TEST '+(i+1)}));const players=await Promise.all(clients.map(c=>store().join(host.pin,c)));const act=(token,type,extra={},requestId=randomUUID())=>store().action(host.pin,token,{type,requestId,...extra});const view=t=>store().state(host.pin,t);return {db,options,store,host,clients,players,act,view,tick:ms=>now+=ms,fixture:fn=>db.fixture(host.pin,fn)};}
+// Existing mechanics regression cases also cover rooms created before adaptive boards.
+// Adaptive-board cases below opt in explicitly and exercise the new create/start path.
+async function setup(n=2,random,adaptive=false){const db=new D1();let now=100000;const options={now:()=>now,sleep:async()=>{},...(random?{random}:{})},store=()=>new TerritoryD1Store(db,options),host=await store().create();if(!adaptive)db.fixture(host.pin,r=>delete r.boardRules);const clients=Array.from({length:n},(_,i)=>({clientId:randomUUID(),name:'TEST '+(i+1)}));const players=await Promise.all(clients.map(c=>store().join(host.pin,c)));const act=(token,type,extra={},requestId=randomUUID())=>store().action(host.pin,token,{type,requestId,...extra});const view=t=>store().state(host.pin,t);return {db,options,store,host,clients,players,act,view,tick:ms=>now+=ms,fixture:fn=>db.fixture(host.pin,fn)};}
 async function start(s){await s.act(s.host.hostToken,'host:start');}
+test('adaptive boards: exact counts for 2–12 teams, stable IDs, Crown/mysteries never blocked',async()=>{
+  for(let n=2;n<=12;n++){
+    const s=await setup(n,undefined,true);let v=await s.view(s.host.hostToken);
+    assert.equal(v.boardRules,1);assert.equal(v.board,null);assert.ok(v.tiles.every(t=>!t.blocked));
+    await start(s);v=await s.view(s.host.hostToken);const claimable=Math.min(112,n*10);
+    assert.deepEqual(v.board,{teamsAtStart:n,claimable,mysteries:8,blocked:112-claimable});
+    assert.deepEqual(v.tiles.map(t=>[t.id,t.kind,t.q,t.r]),MAP.map(t=>[t.id,t.kind,t.q,t.r]));
+    assert.equal(v.tiles.filter(t=>!t.blocked&&t.kind!=='mystery').length,claimable);
+    assert.equal(v.tiles.filter(t=>t.blocked).length,112-claimable);
+    assert.ok(v.tiles.filter(t=>t.kind!=='regular').every(t=>!t.blocked));
+    const distance=t=>t.q*t.q+t.q*t.r+t.r*t.r;
+    const blocked=v.tiles.filter(t=>t.blocked),active=v.tiles.filter(t=>!t.blocked&&t.kind==='regular');
+    if(blocked.length)assert.ok(Math.min(...blocked.map(distance))>=Math.max(...active.map(distance)),'only outer ordinary spaces blocked');
+  }
+});
+test('adaptive mask persists across duplicate/concurrent start, late joins, disconnected teams, refresh and end',async()=>{
+  const s=await setup(7,undefined,true),id=randomUUID();
+  const results=await Promise.all([s.act(s.host.hostToken,'host:start',{},id),s.act(s.host.hostToken,'host:start',{},id)]);
+  assert.equal(results.filter(r=>r.replayed).length,1);
+  const initial=await s.view(s.host.hostToken),mask=initial.tiles.map(t=>[t.id,t.blocked]);
+  s.tick(30000);assert.equal((await s.view(s.host.hostToken)).onlineCount,0);
+  const late=await s.store().join(s.host.pin,{clientId:randomUUID(),name:'Late team'});
+  assert.deepEqual(await s.store().join(s.host.pin,s.clients[0]),s.players[0]);
+  for(const token of [late.playerToken,s.players[0].playerToken,s.host.hostToken]){
+    const v=await s.store().state(s.host.pin,token);assert.deepEqual(v.board,initial.board);assert.deepEqual(v.tiles.map(t=>[t.id,t.blocked]),mask);
+  }
+  await assert.rejects(start(s),/already started/);
+  await s.act(s.host.hostToken,'host:end',{confirm:true});assert.deepEqual((await s.view(s.host.hostToken)).tiles.map(t=>[t.id,t.blocked]),mask);
+});
+test('all blocked-space actions reject atomically without spending Actions/cards or making receipts',async()=>{
+  const s=await setup(7,undefined,true);await start(s);s.fixture(r=>{r.players[0].balance=25;r.players[0].cards=['shield','rebellion'];});
+  const before=s.db.room(s.host.pin),tile=before.tiles.find(t=>t.blocked);
+  const attempts=await Promise.allSettled(['claim','explore','fortify','shield','rebellion'].map(type=>action(s,0,'student:'+type,tile.id)));
+  assert.ok(attempts.every(a=>a.status==='rejected'&&a.reason.code==='BLOCKED_TERRITORY'));
+  assert.deepEqual(s.db.room(s.host.pin),before);
+});
+test('adaptive board supports normal claim/capture, Crown bonus, private Shield and all eight mysteries',async()=>{
+  const s=await setup(7,max=>0,true);await start(s);s.fixture(r=>r.players.forEach(p=>p.balance=25));
+  const v=await s.view(s.players[0].playerToken),land=v.tiles.find(t=>!t.blocked&&t.kind==='regular'),crown=v.tiles.find(t=>t.kind==='crown');
+  await action(s,0,'student:claim',land.id);await action(s,1,'student:claim',land.id);
+  assert.equal((await s.view(s.players[1].playerToken)).me.actions,23);
+  for(const tile of v.tiles.filter(t=>t.kind==='mystery'))await action(s,0,'student:explore',tile.id);
+  await action(s,0,'student:claim',crown.id);await action(s,0,'student:shield',crown.id);
+  assert.equal((await s.view(s.players[0].playerToken)).tiles.find(t=>t.id===crown.id).shield,true);
+  assert.equal((await s.view(s.players[1].playerToken)).tiles.find(t=>t.id===crown.id).shield,false);
+  assert.equal((await s.view(s.players[0].playerToken)).me.explored.length,8);
+  await s.act(s.host.hostToken,'host:end',{confirm:true});
+  const result=(await s.view(s.host.hostToken)).results.find(p=>p.id===s.players[0].playerId);
+  assert.equal(result.territories,1);assert.equal(result.score,4);
+});
+test('existing rooms without boardRules keep all 120 positions open and independent rooms have independent masks',async()=>{
+  const legacy=await setup(7);await start(legacy);assert.equal((await legacy.view(legacy.host.hostToken)).board,null);assert.ok((await legacy.view(legacy.host.hostToken)).tiles.every(t=>!t.blocked));
+  const a=await setup(7,undefined,true),b=await setup(11,undefined,true);await start(a);await start(b);
+  assert.equal((await a.view(a.host.hostToken)).board.blocked,42);assert.equal((await b.view(b.host.hostToken)).board.blocked,2);
+  await a.act(a.host.hostToken,'host:end',{confirm:true});assert.equal((await b.view(b.host.hostToken)).phase,'active');
+});
 async function submit(s,i=0,answer='C'){const q=(await s.view(s.players[i].playerToken)).question;return s.act(s.players[i].playerToken,'student:submit',{questionId:q.id,answer});}
 async function finalize(s){const v=await s.view(s.host.hostToken);return s.act(s.host.hostToken,'host:finalize-all',{questionId:v.question.id,reviewVersion:v.reviewVersion});}
 async function action(s,i,type,tileId,extra={},id){const v=await s.view(s.players[i].playerToken),t=v.tiles.find(t=>t.id===tileId);return s.act(s.players[i].playerToken,type,{tileId,tileVersion:t.version,expectedVersion:v.me.actionVersion,...extra},id);}
