@@ -880,7 +880,15 @@ export default function Home() {
       }
       let territoryStudent = '';
       try { territoryStudent = window.sessionStorage.getItem('territory-wars:student-route') || ''; } catch {}
-      if (territoryStudent || (marketParams.get('battle') === '13' && (marketParams.has('join') || marketParams.has('student') || marketParams.has('room')))) {
+      const territoryJoin = marketParams.has('join') || marketParams.has('student') || marketParams.has('room');
+      let territoryHost = false;
+      if (marketParams.get('battle') === '13' && marketParams.has('teacher') && !territoryJoin) {
+        try {
+          const pin = marketParams.get('host') || localStorage.getItem('territory-wars:host-room') || '';
+          territoryHost = /^\d{5}$/.test(pin) && !!localStorage.getItem('territory-wars:host:' + pin);
+        } catch {}
+      }
+      if ((territoryStudent && !territoryHost) || (marketParams.get('battle') === '13' && territoryJoin)) {
         let room = marketParams.get('join') || marketParams.get('room') || '';
         if (!room && territoryStudent) { try { room = JSON.parse(territoryStudent).room || ''; } catch {} }
         window.location.replace('/battle13/?' + (/^\d{5}$/.test(room) ? 'join=' + room : 'student=1'));
@@ -1008,7 +1016,16 @@ export default function Home() {
       try { if (window.localStorage.getItem('treasure-raid:host:' + pin)) window.history.replaceState(window.history.state, '', '/?battle=12&teacher=1&host=' + pin); } catch {}
     };
     const syncTerritory = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || routeRef.current?.mode !== 'territory' || event.data?.type !== 'territory-wars:status') return;
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || routeRef.current?.mode !== 'territory') return;
+      if (event.data?.type === 'territory-wars:unavailable') {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('host') === event.data.pin) {
+          url.searchParams.delete('host');
+          window.history.replaceState(window.history.state, '', url);
+        }
+        return;
+      }
+      if (event.data?.type !== 'territory-wars:status') return;
       const { pin, phase, onlineCount } = event.data;
       if (!/^\d{5}$/.test(pin) || !['lobby', 'active', 'ended'].includes(phase) || !Number.isInteger(onlineCount) || onlineCount < 0 || onlineCount > 12) return;
       setTerritoryStatus(current => current.pin === pin && current.phase === phase && current.onlineCount === onlineCount ? current : { pin, phase, onlineCount });

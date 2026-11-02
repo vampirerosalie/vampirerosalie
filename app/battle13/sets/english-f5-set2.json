@@ -1,0 +1,416 @@
+{
+  "id": "english-f5-set2",
+  "title": "Set 2 — Form 5 English",
+  "subject": "English",
+  "questions": [
+    {
+      "id": "q01",
+      "number": 1,
+      "type": "mcq",
+      "prompt": "LIBRARY SERVICE UPDATE\nBooks left in the returns slot after 4 p.m. are collected next morning. Online records may remain unchanged until noon. Contact staff if a returned item still appears after noon on the next working day. Automatic reminders can be sent before records are updated.\n\nHana's Monday-evening return still appears online on Tuesday morning. She should",
+      "options": {
+        "A": "contact staff as soon as the morning collection ends.",
+        "B": "wait until noon before contacting staff about it.",
+        "C": "give staff until Wednesday noon to record the return."
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "Staff ask borrowers to wait until noon on the next working day for the online record to update."
+    },
+    {
+      "id": "q02",
+      "number": 2,
+      "type": "mcq",
+      "prompt": "From: Farah\nTo: Drama club\nSubject: Costumes for rehearsal\nThe jackets fit, but two have loose buttons. Replacements would arrive just before the performance. I would rather know at our final rehearsal that everything works. I am bringing a sewing kit tomorrow; could someone bring matching thread?\n\nWhy does Farah prefer to repair the jackets?",
+      "options": {
+        "A": "To make sure the club receives the right sizes.",
+        "B": "To leave more rehearsal time for the actors.",
+        "C": "To test the costumes before the last-minute rush."
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Repairing the jackets lets Farah check them at the final rehearsal."
+    },
+    {
+      "id": "q03",
+      "number": 3,
+      "type": "mcq",
+      "prompt": "WEEKEND MUSEUM SHUTTLE\nSaturday's shuttle stops at the north gate because of roadworks, ten minutes' walk from the ticket counter. Pre-booked visitors must collect tickets there before tours leave from the counter. Shuttle and tour times are unchanged.\n\nWhat should a visitor with a booked tour take into account?",
+      "options": {
+        "A": "Reaching the museum grounds does not mean being ready to join the tour.",
+        "B": "A confirmed booking allows ticket collection after the tour has started.",
+        "C": "The new shuttle stop also changes where visitors join their guided tour."
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "Visitors still need to walk to the ticket counter and collect their tickets before the tour leaves."
+    },
+    {
+      "id": "q04",
+      "number": 4,
+      "type": "mcq",
+      "prompt": "OUR TOWN PHOTOGRAPHY COMPETITION\nEnter one photograph of a place in our town, taken by you. Brightness may be adjusted, but objects must not be added or removed digitally. Anyone recognisable in the final image must agree to its use.\n\nWhich entry meets the competition rules?",
+      "options": {
+        "A": "A brighter market photograph taken by your cousin, with every stallholder's consent.",
+        "B": "Your brighter market photograph, with consent from everyone who can be recognised.",
+        "C": "Your market photograph with a stranger digitally removed, with the remaining people's consent."
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "The entrant took the photograph, made a permitted brightness adjustment and obtained the necessary consent."
+    },
+    {
+      "id": "q05",
+      "number": 5,
+      "type": "mcq",
+      "prompt": "CANTEEN PREORDER TRIAL\nChoose tomorrow's lunch through the school portal before 8 p.m. Last week, popular dishes ran out while trays of other meals remained. During the trial, cooks will use each evening's orders to decide how many portions of each dish to prepare. A small selection will still be available without an order.\n\nWhat is the trial mainly designed to improve?",
+      "options": {
+        "A": "How quickly pupils can collect their lunches.",
+        "B": "How widely the menu reflects pupils' suggestions.",
+        "C": "How closely quantities cooked match likely demand."
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Preorders help the cooks match portions to demand."
+    },
+    {
+      "id": "q06",
+      "number": 6,
+      "type": "mcq",
+      "prompt": "BEGINNER WOODWORK SESSION\nSaturday, 10 a.m. to noon. Ages 16-18. Each beginner works alongside a trainer to build a shelf. Tools and wood are provided. The 10 a.m. safety demonstration must be completed before using equipment. Wear covered shoes. Places go to applicants who can attend the whole session; apply by Thursday.\n\nWhich applicant can meet the session's attendance requirements?",
+      "options": {
+        "A": "A 17-year-old beginner available from 10 a.m. to noon.",
+        "B": "An experienced 18-year-old who can arrive at 10.15 a.m.",
+        "C": "A 16-year-old who can attend the demonstration but leave at 11 a.m."
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "The 17-year-old can attend the safety demonstration and the entire session."
+    },
+    {
+      "id": "q07",
+      "number": 7,
+      "type": "mcq",
+      "prompt": "From: Wei To: Daniel\nMy bus has broken down, so 5.30 is the earliest I can reach the sports centre. Our 5 o'clock court is booked by another group at 6. The receptionist can offer us 6 to 7 on Court 2. Could you speak to her? I would still like our usual full hour together.\n\nWhat would best meet Wei's request?",
+      "options": {
+        "A": "Keep their court and practise together from 5.30 to 6.",
+        "B": "Ask Daniel to begin at 5 and join him on arrival.",
+        "C": "Take the later court for a full hour of practice together."
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Court 2 is available for a full hour after Wei can arrive."
+    },
+    {
+      "id": "q08",
+      "number": 8,
+      "type": "mcq",
+      "prompt": "A flask for the journey\nCustomer review\nThe flask kept my tea hot throughout a long journey. It felt awkward in my backpack's side pocket, though it travelled safely inside the bag. I nearly returned it until I compared it with a slimmer model: that one held much less. For day trips, I would rather carry enough than refill it.\n\nWhy did the reviewer decide to keep the flask?",
+      "options": {
+        "A": "Its heat retention was better than that of the slimmer model.",
+        "B": "Its useful capacity outweighed a drawback in carrying it.",
+        "C": "Its width helped it stay more securely in the side pocket."
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "The reviewer prefers the larger capacity despite the awkward fit in the side pocket."
+    },
+    {
+      "id": "q09",
+      "number": 9,
+      "type": "mcq",
+      "prompt": "THE DAILY POST | Correction\nYesterday we reported that a leaking roof forced Green Lane residents to leave their flats. In fact, firefighters asked them to leave after smoke from a nearby warehouse entered the building. The roof was damaged later, during the operation. We apologise for the error.\n\nWhat does this correction make clear?",
+      "options": {
+        "A": "The damage to the roof happened before residents were evacuated.",
+        "B": "The residents left because of a danger originating outside their building.",
+        "C": "The warehouse fire began while repairs were being made to the flats."
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "Smoke from a nearby warehouse prompted the evacuation."
+    },
+    {
+      "id": "q10",
+      "number": 10,
+      "type": "mcq",
+      "prompt": "MISSING: MISTY\nOur grey cat has been missing since Tuesday. She may hide when strangers approach. If you see her, please note the location and call us rather than following her. A photograph taken from a distance would help, but please do not risk losing sight of her just to get one.\n\nWhat matters most to Misty’s owners?",
+      "options": {
+        "A": "Receiving a clear photograph before they investigate a sighting.",
+        "B": "Having someone approach Misty gently and bring her home.",
+        "C": "Learning where Misty is without frightening her away."
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "The owners need the cat’s location and ask people to avoid frightening her away."
+    },
+    {
+      "id": "q11",
+      "number": 11,
+      "type": "mcq",
+      "prompt": "Chat | Rafi and Siew\nRafi: Could you send me your completed history assignment? I only want to see how to start.\nSiew: I can send you the questions I used to plan it. Shall we talk through your first paragraph after school instead?\n\nSiew’s reply suggests that she is willing to",
+      "options": {
+        "A": "help Rafi develop his own work without sharing her finished assignment.",
+        "B": "share her completed introduction after discussing how Rafi plans to use it.",
+        "C": "check Rafi’s finished assignment after he has used her planning questions."
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "Siew offers planning questions and a discussion so Rafi can write his own paragraph."
+    },
+    {
+      "id": "q12",
+      "number": 12,
+      "type": "mcq",
+      "prompt": "KEEP YOUR DISTANCE, ENJOY THE VIEW\nVisitors have been leaving the path to obtain closer views of nesting birds. The birds often stop feeding their young when people approach. Binoculars are available at the visitor centre. Staying on the marked path lets you enjoy a close view without becoming part of the birds’ day.\n\nWhy does the notice mention binoculars?",
+      "options": {
+        "A": "To show how visitors can observe the birds without disrupting them.",
+        "B": "To help visitors find a safer route through the nesting area.",
+        "C": "To encourage visitors to record what the young birds are eating."
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "Binoculars let visitors see the birds closely while staying on the path."
+    },
+    {
+      "id": "q13",
+      "number": 13,
+      "type": "mcq",
+      "prompt": "STUDENT TECH BULLETIN\nA message from a friend’s account asks you to vote in a competition by entering your email password. The familiar profile picture is not proof that your friend sent it: accounts can be taken over. Contact your friend by another method before doing anything with the link.\n\nWhat should a student do before responding to the request?",
+      "options": {
+        "A": "Reply to the same account and ask whether the competition is real.",
+        "B": "Speak to the friend through a separate channel to verify the message.",
+        "C": "Check that the account still displays the friend’s usual photograph."
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "The account may have been taken over, so the request needs independent verification."
+    },
+    {
+      "id": "q14",
+      "number": 14,
+      "type": "mcq",
+      "prompt": "YOUR FIRST LOOK AT THE NIGHT SKY\nNever looked through a telescope? This evening is designed for you. Our volunteers will point out a few easy-to-find objects, then help you explore them using the observatory’s equipment. Expect questions, not a lecture full of technical terms. You do not need to recognise a single constellation to join us.\n\nWho is the event especially intended for?",
+      "options": {
+        "A": "People who prefer an expert lecture to trying out equipment themselves.",
+        "B": "People familiar with constellations who want to choose their first telescope.",
+        "C": "People interested in astronomy who have little practical experience."
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "The volunteers welcome people with no experience using a telescope."
+    },
+    {
+      "id": "q15",
+      "number": 15,
+      "type": "mcq",
+      "prompt": "LETTER TO THE EDITOR\nYour poll says that nearly everyone in town supports closing the market road to cars. Yet the link appeared only in the cycling club’s newsletter. I cycle too, and I may support the plan, but shopkeepers and delivery drivers deserve a chance to answer before you call this the town’s view.\n\nWhat is the writer mainly questioning?",
+      "options": {
+        "A": "Whether closing the road would benefit the town as a whole.",
+        "B": "Whether the poll represents the range of people affected.",
+        "C": "Whether the reported percentage was calculated accurately."
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "The poll reached cycling club readers and may exclude other people affected."
+    },
+    {
+      "id": "q16",
+      "number": 16,
+      "type": "mcq",
+      "prompt": "BAKING NOTES | A flat result\nI replaced the plain flour in my cake with ground almonds and kept everything else the same. It tasted lovely but collapsed when I cut it. I had treated the flour as if it only supplied flavour. Next time I will use a recipe written for almonds rather than assume that equal amounts do the same job.\n\nWhat has the writer learnt?",
+      "options": {
+        "A": "An ingredient can affect a cake’s structure as well as its flavour.",
+        "B": "Matching quantities is the main requirement when replacing an ingredient.",
+        "C": "Reducing the amount of almonds would make the cake hold its shape."
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "The collapsed cake shows that flour contributes to structure."
+    },
+    {
+      "id": "q17",
+      "number": 17,
+      "type": "mcq",
+      "prompt": "Our English club was planning its first radio programme. Before choosing our guests, we ______ a short survey to find out what our listeners wanted. Many asked to hear about unusual hobbies, so we invited a student who repairs old bicycles.",
+      "options": {
+        "A": "attended",
+        "B": "conducted",
+        "C": "received",
+        "D": "delivered"
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "To conduct a survey means to carry it out."
+    },
+    {
+      "id": "q18",
+      "number": 18,
+      "type": "mcq",
+      "prompt": "We invited a student to talk about repairing old bicycles on our radio programme. ______ he was confident when talking to us in the playground, he became quiet in the studio. We moved the microphone to a smaller room and chatted for a few minutes before recording.",
+      "options": {
+        "A": "Unless",
+        "B": "Because",
+        "C": "Since",
+        "D": "Although"
+      },
+      "answer": "D",
+      "variants": [
+        "D"
+      ],
+      "explanation": "Although introduces the contrast between his confidence in the playground and his silence in the studio."
+    },
+    {
+      "id": "q19",
+      "number": 19,
+      "type": "mcq",
+      "prompt": "We needed help with the final edit of our radio programme. Our teacher introduced us to a former pupil ______ job involves producing podcasts. She gave us practical advice about editing.",
+      "options": {
+        "A": "who",
+        "B": "which",
+        "C": "whose",
+        "D": "whom"
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Whose connects the former pupil to her job."
+    },
+    {
+      "id": "q20",
+      "number": 20,
+      "type": "mcq",
+      "prompt": "Before we received any advice, we had doubted our ability to manage the final edit of our radio programme. A former pupil's practical advice gave us the ______ to finish the programme ourselves. We no longer felt that the task was beyond us.",
+      "options": {
+        "A": "confidence",
+        "B": "permission",
+        "C": "reputation",
+        "D": "responsibility"
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "Her advice made the pupils feel capable of completing the edit."
+    },
+    {
+      "id": "q21",
+      "number": 21,
+      "type": "mcq",
+      "prompt": "At a batik workshop, I chose a simple design for my first piece of cloth. The finished samples looked so easy to make that I found it hard to ______ the temptation to work quickly. I wanted to reach the colourful stage without spending too long on the wax outline.",
+      "options": {
+        "A": "prevent",
+        "B": "refuse",
+        "C": "resist",
+        "D": "deny"
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Resist the temptation means to avoid giving in to it."
+    },
+    {
+      "id": "q22",
+      "number": 22,
+      "type": "mcq",
+      "prompt": "I left a tiny break in the wax outline on my batik cloth. ______ carefully I applied the dye afterwards, I could not control where it went. The dye escaped through the gap onto an area that should have remained white.",
+      "options": {
+        "A": "Although",
+        "B": "Despite",
+        "C": "Whereas",
+        "D": "However"
+      },
+      "answer": "D",
+      "variants": [
+        "D"
+      ],
+      "explanation": "However carefully means no matter how carefully."
+    },
+    {
+      "id": "q23",
+      "number": 23,
+      "type": "mcq",
+      "prompt": "An unwanted green patch on my batik cloth looked like a second leaf when I turned it around. Instead of treating it as something to remove, my tutor encouraged me to ______ what was already there. She suggested adding a few smaller leaves around it.",
+      "options": {
+        "A": "take after",
+        "B": "put off",
+        "C": "build on",
+        "D": "get through"
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Build on means to develop the design using what is already there."
+    },
+    {
+      "id": "q24",
+      "number": 24,
+      "type": "mcq",
+      "prompt": "I tested the idea on paper before adding more wax to my batik cloth. The extra leaves helped the unwanted patch ______ in with the rest of the design. It now looked like part of the pattern rather than a mistake.",
+      "options": {
+        "A": "blend",
+        "B": "settle",
+        "C": "match",
+        "D": "connect"
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "Blend in means to fit naturally with the rest of the pattern."
+    },
+    {
+      "id": "q25",
+      "number": 25,
+      "type": "mcq",
+      "prompt": "I had arrived at the batik workshop expecting a lesson in following instructions. What I took away was a lesson in ______: when the original plan failed, I could respond to what was actually in front of me. My cloth did not resemble the sample I had chosen, but I no longer minded.",
+      "options": {
+        "A": "accuracy",
+        "B": "consistency",
+        "C": "independence",
+        "D": "adaptability"
+      },
+      "answer": "D",
+      "variants": [
+        "D"
+      ],
+      "explanation": "Changing her approach when the original plan failed shows adaptability."
+    }
+  ]
+}
