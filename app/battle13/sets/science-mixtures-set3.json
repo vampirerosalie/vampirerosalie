@@ -1,0 +1,315 @@
+{
+  "id": "science-mixtures-set3",
+  "title": "Set 3 — Science: Mixtures and Separation",
+  "subject": "Science",
+  "shuffleQuestions": true,
+  "questions": [
+    {
+      "id": "q01",
+      "number": 1,
+      "type": "mcq",
+      "prompt": "Which statement correctly describes a mixture?",
+      "options": {
+        "A": "It contains only one element.",
+        "B": "It contains two or more elements or compounds mixed physically.",
+        "C": "Its components cannot be separated.",
+        "D": "It is always a liquid."
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "A mixture contains substances combined physically."
+    },
+    {
+      "id": "q02",
+      "number": 2,
+      "type": "mcq",
+      "prompt": "Which method separates iron filings from sand?",
+      "options": {
+        "A": "Evaporation",
+        "B": "Filtration",
+        "C": "Magnetic separation",
+        "D": "Chromatography"
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Iron is attracted to a magnet, allowing it to be removed from the sand."
+    },
+    {
+      "id": "q03",
+      "number": 3,
+      "type": "mcq",
+      "prompt": "Which method separates fine sand from coarse gravel?",
+      "options": {
+        "A": "Sieving",
+        "B": "Distillation",
+        "C": "Evaporation",
+        "D": "Chromatography"
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "A sieve separates particles of different sizes."
+    },
+    {
+      "id": "q04",
+      "number": 4,
+      "type": "mcq",
+      "prompt": "When sand and water are filtered, what is the sand left on the filter paper called?",
+      "options": {
+        "A": "Filtrate",
+        "B": "Vapour",
+        "C": "Solution",
+        "D": "Residue"
+      },
+      "answer": "D",
+      "variants": [
+        "D"
+      ],
+      "explanation": "The insoluble solid left on the filter paper is the residue."
+    },
+    {
+      "id": "q05",
+      "number": 5,
+      "type": "mcq",
+      "prompt": "A mixture of sand and salt solution is filtered. What passes through the filter paper?",
+      "options": {
+        "A": "Sand only",
+        "B": "Salt solution",
+        "C": "Dry salt only",
+        "D": "Sand and dry salt"
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "Dissolved salt passes through the filter paper with the water."
+    },
+    {
+      "id": "q06",
+      "number": 6,
+      "type": "mcq",
+      "prompt": "Why does oil float above water?",
+      "options": {
+        "A": "Oil has a higher density than water.",
+        "B": "Oil is magnetic.",
+        "C": "Oil has a lower density than water.",
+        "D": "Oil dissolves completely in water."
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Oil is less dense than water."
+    },
+    {
+      "id": "q07",
+      "number": 7,
+      "type": "mcq",
+      "prompt": "Distillation can separate mixed liquids because they have different:",
+      "options": {
+        "A": "Particle sizes",
+        "B": "Colours",
+        "C": "Magnetic properties",
+        "D": "Boiling points"
+      },
+      "answer": "D",
+      "variants": [
+        "D"
+      ],
+      "explanation": "Distillation uses differences in boiling points."
+    },
+    {
+      "id": "q08",
+      "number": 8,
+      "type": "mcq",
+      "prompt": "What change happens when vapour cools inside a Liebig condenser?",
+      "options": {
+        "A": "Condensation",
+        "B": "Melting",
+        "C": "Evaporation",
+        "D": "Freezing"
+      },
+      "answer": "A",
+      "variants": [
+        "A"
+      ],
+      "explanation": "Cooling turns the vapour into a liquid by condensation."
+    },
+    {
+      "id": "q09",
+      "number": 9,
+      "type": "mcq",
+      "prompt": "Which method separates the colours in an ink mixture?",
+      "options": {
+        "A": "Filtration",
+        "B": "Chromatography",
+        "C": "Sieving",
+        "D": "Magnetic separation"
+      },
+      "answer": "B",
+      "variants": [
+        "B"
+      ],
+      "explanation": "Chromatography separates the colours in the ink."
+    },
+    {
+      "id": "q10",
+      "number": 10,
+      "type": "mcq",
+      "prompt": "Which method obtains salt from salt solution by removing the water?",
+      "options": {
+        "A": "Sieving",
+        "B": "Sedimentation",
+        "C": "Evaporation",
+        "D": "Magnetic separation"
+      },
+      "answer": "C",
+      "variants": [
+        "C"
+      ],
+      "explanation": "Water evaporates, leaving the salt behind."
+    },
+    {
+      "id": "q11",
+      "number": 11,
+      "type": "short",
+      "prompt": "What is the liquid that passes through filter paper called?",
+      "answer": "Filtrate",
+      "variants": [
+        "Filtrate",
+        "The filtrate"
+      ],
+      "explanation": "The liquid passing through filter paper is the filtrate."
+    },
+    {
+      "id": "q12",
+      "number": 12,
+      "type": "short",
+      "prompt": "What is the process called when sand settles at the bottom of water after the mixture is left still?",
+      "answer": "Sedimentation",
+      "variants": [
+        "Sedimentation"
+      ],
+      "explanation": "Sedimentation is the settling of solid particles in a liquid."
+    },
+    {
+      "id": "q13",
+      "number": 13,
+      "type": "short",
+      "prompt": "Give two properties of sand that allow it to settle at the bottom of water.",
+      "answer": "Sand is insoluble in water and denser than water.",
+      "variants": [
+        "Sand is insoluble in water and denser than water.",
+        "Insoluble in water and denser than water",
+        "Denser than water and insoluble in water",
+        "Sand is denser than water and insoluble in water",
+        "Sand does not dissolve in water and is denser than water",
+        "Sand is insoluble in water and has a higher density than water",
+        "Insoluble in water and has a higher density than water"
+      ],
+      "explanation": "Both properties are needed: sand is insoluble in water and denser than water."
+    },
+    {
+      "id": "q14",
+      "number": 14,
+      "type": "short",
+      "prompt": "Which apparatus is used to separate oil and water into separate containers?",
+      "answer": "Separating funnel",
+      "variants": [
+        "Separating funnel",
+        "A separating funnel",
+        "The separating funnel"
+      ],
+      "explanation": "A separating funnel drains the lower liquid separately from the upper liquid."
+    },
+    {
+      "id": "q15",
+      "number": 15,
+      "type": "short",
+      "prompt": "When oil and water are separated using a separating funnel, which liquid is collected first?",
+      "answer": "Water",
+      "variants": [
+        "Water"
+      ],
+      "explanation": "Water forms the lower layer and is collected first."
+    },
+    {
+      "id": "q16",
+      "number": 16,
+      "type": "short",
+      "prompt": "In a Liebig condenser, does cooling water enter through the lower inlet or the upper outlet?",
+      "answer": "Lower inlet",
+      "variants": [
+        "Lower inlet",
+        "The lower inlet",
+        "Through the lower inlet"
+      ],
+      "explanation": "Cooling water enters through the lower inlet."
+    },
+    {
+      "id": "q17",
+      "number": 17,
+      "type": "short",
+      "prompt": "What does the thermometer measure during distillation?",
+      "answer": "The temperature of the vapour",
+      "variants": [
+        "The temperature of the vapour",
+        "Temperature of the vapour",
+        "Temperature of vapour",
+        "Vapour temperature",
+        "The temperature of the vapor",
+        "Temperature of the vapor",
+        "Temperature of vapor",
+        "Vapor temperature"
+      ],
+      "explanation": "The thermometer measures the temperature of the vapour."
+    },
+    {
+      "id": "q18",
+      "number": 18,
+      "type": "short",
+      "prompt": "In paper chromatography, should the starting ink dots be above or below the water level?",
+      "answer": "Above the water level",
+      "variants": [
+        "Above the water level",
+        "Above",
+        "Above water level"
+      ],
+      "explanation": "The ink dots should start above the water level."
+    },
+    {
+      "id": "q19",
+      "number": 19,
+      "type": "short",
+      "prompt": "State one use of chromatography given in your notes.",
+      "answer": "Checking document fraud",
+      "variants": [
+        "Checking document fraud",
+        "Detecting harmful food colourings",
+        "Detecting drugs in urine"
+      ],
+      "explanation": "Any one is accepted: checking document fraud, detecting harmful food colourings, or detecting drugs in urine."
+    },
+    {
+      "id": "q20",
+      "number": 20,
+      "type": "short",
+      "prompt": "A mixture contains sand and salt. Water is added to dissolve the salt. Name the next two separation methods, in order, to recover the sand and the salt.",
+      "answer": "Filtration, followed by evaporation.",
+      "variants": [
+        "Filtration, followed by evaporation.",
+        "Filtration followed by evaporation",
+        "Filtration, then evaporation",
+        "Filtration then evaporation",
+        "Filtration and then evaporation",
+        "Filtration, evaporation"
+      ],
+      "explanation": "Filter first to recover the sand, then evaporate the water from the filtrate to recover the salt."
+    }
+  ]
+}

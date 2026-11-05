@@ -13,6 +13,7 @@ export class TerritoryGame{
     if(typeof setId!=='string'||!Object.hasOwn(SETS,setId))fail('Choose an available question set.','INVALID_SET',400);
     const pin=String(10000+this.random(90000)),hostToken=randomBytes(32).toString('hex');
     const r={pin,setId,mysteryRules:2,boardRules:1,hostHash:hash(hostToken),createdAt:this.now(),expiresAt:this.now()+48*3600000,version:1,phase:'lobby',paused:false,questionIndex:0,startAt:null,endedAt:null,results:null,players:[],rounds:{},reviewVersion:0,receipts:{},log:[],tiles:MAP.map(t=>({...t,owner:null,fortress:false,shield:false,resolved:false,version:0}))};
+    r.questionOrder=this.newQuestionOrder(setId);
     this.rooms.set(pin,r);return {pin,hostToken};
   }
   room(pin){const r=this.rooms.get(String(pin));if(!r||r.expiresAt<=this.now())fail('This room is unavailable. Ask your teacher for the current joining QR.','ROOM_NOT_FOUND',404);return r;}
@@ -27,7 +28,21 @@ export class TerritoryGame{
     return {playerId:id,playerToken:token};
   }
   auth(r,token){if(!token)return {role:'public'};const digest=hash(token);if(equal(digest,r.hostHash))return {role:'host'};const player=r.players.find(p=>equal(digest,p.tokenHash));if(!player)fail('This device key is not valid for this room.','UNAUTHORIZED',401);this.lastSeen.set(`${r.pin}:${player.id}`,this.now());return {role:'student',player};}
-  question(r){return SETS[r.setId].questions[r.questionIndex];}
+  newQuestionOrder(setId){
+    if(!SETS[setId].shuffleQuestions)return undefined;
+    const ids=SETS[setId].questions.map(q=>q.id);
+    for(let i=ids.length-1;i>0;i--){
+      const j=this.random(i+1);
+      [ids[i],ids[j]]=[ids[j],ids[i]];
+    }
+    return ids;
+  }
+  questions(r){
+    const bank=SETS[r.setId].questions;
+    if(!r.questionOrder)return bank;
+    return r.questionOrder.map((id,index)=>({...bank.find(q=>q.id===id),number:index+1}));
+  }
+  question(r){return this.questions(r)[r.questionIndex];}
   round(r,q=this.question(r)){return r.rounds[q.id]??{};}
   isClosed(r,q=this.question(r)){const x=this.round(r,q);return r.phase!=='active'||!!x.closed||!!x.finalized||!!(x.deadline&&this.now()>=x.deadline);}
   standings(r,final=false){let prev='',rank=0;return r.players.map(p=>{const tiles=r.tiles.filter(t=>t.owner===p.id);return {id:p.id,name:p.name,color:p.color,territories:tiles.length,science:p.science,actions:Math.max(0,p.balance),debt:Math.max(0,-p.balance),fortresses:tiles.filter(t=>t.fortress).length,crown:tiles.some(t=>t.kind==='crown'),score:tiles.length+(final&&tiles.some(t=>t.kind==='crown')?RULES.crownBonus:0)};}).sort((a,b)=>b.score-a.score||b.science-a.science).map((p,i)=>{const key=p.score+':'+p.science;if(key!==prev)rank=i+1;prev=key;return {...p,rank};});}
@@ -40,7 +55,7 @@ export class TerritoryGame{
     return v;
   }
   state(pin,token){const r=this.room(pin);return this.view(r,this.auth(r,token));}
-  review(pin,token,questionId){const r=this.room(pin);if(this.auth(r,token).role!=='host')fail('Teacher key required.','FORBIDDEN',403);const q=SETS[r.setId].questions.find(x=>x.id===(questionId??this.question(r).id));if(!q||q.number>r.questionIndex+1)fail('Question is not open.');return {question:q,reviewVersion:r.reviewVersion,questions:SETS[r.setId].questions.slice(0,r.questionIndex+1).map(publicQuestion),entries:r.players.map(p=>({id:p.id,name:p.name,response:p.responses[q.id]??null})),log:r.log};}
+  review(pin,token,questionId){const r=this.room(pin);if(this.auth(r,token).role!=='host')fail('Teacher key required.','FORBIDDEN',403);const questions=this.questions(r),q=questions.find(x=>x.id===(questionId??this.question(r).id));if(!q||q.number>r.questionIndex+1)fail('Question is not open.');return {question:q,reviewVersion:r.reviewVersion,questions:questions.slice(0,r.questionIndex+1).map(publicQuestion),entries:r.players.map(p=>({id:p.id,name:p.name,response:p.responses[q.id]??null})),log:r.log};}
   action(pin,token,b={}){const r=this.room(pin),a=this.auth(r,token);if(a.role==='public')fail('Join this room first.','UNAUTHORIZED',401);if(typeof b.type!=='string'||!b.type.startsWith(a.role==='host'?'host:':'student:'))fail('That action requires a different role.','FORBIDDEN',403);if(!/^[-a-zA-Z0-9]{12,100}$/.test(b.requestId??''))fail('Request ID required.','MISSING_REQUEST_ID',400);
     const key=`${a.player?.id??'host'}:${b.requestId}`,signature=hash(JSON.stringify(b)),receipt=r.receipts[key];if(receipt){if(receipt.signature!==signature)fail('Request ID reused.','RECEIPT_CONFLICT');return {replayed:true,result:receipt.result,state:this.view(r,a)};}
     if(Object.keys(r.receipts).length>=30000&&b.type!=='host:end')fail('Room action limit reached. Finish this game.');
@@ -79,7 +94,7 @@ export class TerritoryGame{
   apply(r,a,b){const q=this.question(r),p=a.player;
     if(b.type==='host:end'){if(r.phase==='ended')return {ended:true};if(b.confirm!==true)fail('Confirm End Game first.');r.phase='ended';r.paused=true;r.endedAt=this.now();r.results=this.standings(r,true);this.log(r,'end',null,{});return {ended:true};}
     if(r.phase==='ended')fail('This game has ended. Results are locked.','GAME_ENDED');
-    if(b.type==='host:set'){if(r.phase!=='lobby')fail('Choose the set before starting.');if(typeof b.setId!=='string'||!Object.hasOwn(SETS,b.setId))fail('Unknown question set.');r.setId=b.setId;return;}
+    if(b.type==='host:set'){if(r.phase!=='lobby')fail('Choose the set before starting.');if(typeof b.setId!=='string'||!Object.hasOwn(SETS,b.setId))fail('Unknown question set.');if(r.setId!==b.setId){r.setId=b.setId;r.questionOrder=this.newQuestionOrder(b.setId);}return;}
     if(b.type==='host:team'){const team=r.players.find(x=>x.id===b.playerId);if(!team)fail('Team not found.');const safeName=name(b.name);if(!safeName)fail('Enter a team name.');if(!COLORS.includes(b.color))fail('Choose a team colour.');const other=r.players.find(x=>x.id!==team.id&&x.color===b.color);if(other)other.color=team.color;team.name=safeName;team.color=b.color;return;}
     if(b.type==='host:start'){if(r.phase!=='lobby')fail('Game already started.');if(r.players.length<2)fail('At least two teams must join.');lockBoard(r);r.phase='active';r.startAt=this.now();return;}
     if(b.type==='host:pause'){if(typeof b.paused!=='boolean')fail('Choose pause or resume.');r.paused=b.paused;return;}

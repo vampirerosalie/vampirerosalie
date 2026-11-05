@@ -21,6 +21,73 @@ class D1{
 async function setup(n=2,random,adaptive=false){const db=new D1();let now=100000;const options={now:()=>now,sleep:async()=>{},...(random?{random}:{})},store=()=>new TerritoryD1Store(db,options),host=await store().create();if(!adaptive)db.fixture(host.pin,r=>delete r.boardRules);const clients=Array.from({length:n},(_,i)=>({clientId:randomUUID(),name:'TEST '+(i+1)}));const players=await Promise.all(clients.map(c=>store().join(host.pin,c)));const act=(token,type,extra={},requestId=randomUUID())=>store().action(host.pin,token,{type,requestId,...extra});const view=t=>store().state(host.pin,t);return {db,options,store,host,clients,players,act,view,tick:ms=>now+=ms,fixture:fn=>db.fixture(host.pin,fn)};}
 async function start(s){await s.act(s.host.hostToken,'host:start');}
 
+test('Set 3 contains the supplied 20 questions and accepts complete short answers',()=>{
+  const bank=SETS['science-mixtures-set3'];
+  assert.equal(bank.questions.length,20);
+  assert.equal(bank.questions.filter(q=>q.type==='mcq').length,10);
+  assert.equal(bank.questions.slice(0,10).map(q=>q.answer).join(''),'BCADBCDABC');
+  for(const q of bank.questions){
+    for(const answer of q.variants)assert.equal(mark(q,answer),true);
+    if(q.type==='short')assert.equal(mark(q,'  '+q.answer.toUpperCase()+'  '),true);
+  }
+  assert.equal(mark(bank.questions[12],'Insoluble in water'),false);
+  assert.equal(mark(bank.questions[12],'Denser than water'),false);
+  assert.equal(mark(bank.questions[19],'Evaporation then filtration'),false);
+  assert.equal(mark(bank.questions[19],'Filtration'),false);
+  assert.equal(mark(bank.questions[18],'Detecting drugs in urine'),true);
+});
+
+test('Set 3 order persists across reloads and all players; review and awards follow shuffled IDs',async()=>{
+  const s=await setup(2,()=>0),key='science-mixtures-set3',bank=SETS[key];
+  await s.act(s.host.hostToken,'host:set',{setId:key});
+  const order=s.db.room(s.host.pin).questionOrder;
+  assert.equal(new Set(order).size,20);
+  assert.notDeepEqual(order,bank.questions.map(q=>q.id));
+  await s.act(s.host.hostToken,'host:set',{setId:key});
+  assert.deepEqual(s.db.room(s.host.pin).questionOrder,order);
+  await start(s);
+  const firstLoad=await s.store().load(s.host.pin);
+  assert.throws(()=>firstLoad.game.review(s.host.pin,s.host.hostToken,order[19]),/not open/);
+  for(let i=0;i<20;i++){
+    for(const player of s.players){
+      const view=await s.view(player.playerToken);
+      assert.equal(view.question.id,order[i]);
+      assert.equal(view.question.number,i+1);
+      assert.equal(view.questionCount,20);
+      assert.equal(view.questionOrder,undefined);
+      assert.equal(view.question.answer,undefined);
+      assert.deepEqual(view.question.options,bank.questions.find(q=>q.id===order[i]).options);
+    }
+    const {game}=await s.store().load(s.host.pin);
+    const review=game.review(s.host.pin,s.host.hostToken);
+    assert.equal(review.question.id,order[i]);
+    assert.equal(review.question.number,i+1);
+    assert.deepEqual(review.questions.map(q=>q.id),order.slice(0,i+1));
+    await submit(s,0,review.question.answer);
+    await finalize(s);
+    await finalize(s);
+    if(i<19)await s.act(s.host.hostToken,'host:next',{questionId:order[i]});
+  }
+  const final=await s.view(s.players[0].playerToken);
+  assert.equal(final.me.actions,20);
+  assert.equal(final.me.science,20);
+  await assert.rejects(s.act(s.host.hostToken,'host:next',{questionId:order[19]}),/complete/);
+});
+
+test('Set 3 can be created directly; new rooms shuffle independently and lobby switches restore fixed sets',async()=>{
+  const s=await setup();
+  let draw=0;
+  const store=new TerritoryD1Store(s.db,{...s.options,random:max=>(draw++)%max});
+  const first=await store.create('science-mixtures-set3');
+  const second=await store.create('science-mixtures-set3');
+  assert.notDeepEqual(s.db.room(first.pin).questionOrder,s.db.room(second.pin).questionOrder);
+  assert.equal((await store.state(first.pin,first.hostToken)).question.id,s.db.room(first.pin).questionOrder[0]);
+  await s.act(s.host.hostToken,'host:set',{setId:'science-mixtures-set3'});
+  await s.act(s.host.hostToken,'host:set',{setId:BANK.id});
+  assert.equal((await s.view(s.host.hostToken)).question.id,'q01');
+  assert.equal(s.db.room(s.host.pin).questionOrder,undefined);
+});
+
 test('English Set 2 uses the 25 PDF answers in order with three or four choices',async()=>{
   const s=await setup();
   const teacher=s.host.hostToken, student=s.players[0].playerToken;
@@ -120,7 +187,7 @@ test('Shield blocks capture without spending AP; Rebellion neutralises only elig
 test('Crown only gets +3 at End Game; Science breaks ties, equal results share rank',async()=>{const s=await setup(3);await start(s);s.fixture(r=>{r.players[0].science=10;r.players[1].science=8;r.players[2].science=8;const reg=r.tiles.filter(t=>t.kind==='regular');reg.slice(0,4).forEach(t=>t.owner=r.players[0].id);reg.slice(4,8).forEach(t=>t.owner=r.players[1].id);r.tiles.find(t=>t.kind==='crown').owner=r.players[2].id;});const live=await s.view(s.host.hostToken);assert.equal(live.players.find(p=>p.crown).score,1);await s.act(s.host.hostToken,'host:end',{confirm:true});const end=await s.view(s.host.hostToken);assert.deepEqual(end.results.map(p=>p.score),[4,4,4]);assert.deepEqual(end.results.map(p=>p.rank),[1,2,2]);assert.equal(end.results[0].science,10);});
 test('idempotency survives lost response, stale resources and repeated ending',async()=>{const s=await setup();await start(s);s.fixture(r=>r.players[0].balance=5);const tile=MAP.find(t=>t.kind==='regular').id,body={tileId:tile,tileVersion:0,expectedVersion:0},id=randomUUID();s.db.loseResponse=true;await assert.rejects(s.act(s.players[0].playerToken,'student:claim',body,id),/Response lost/);const replay=await s.act(s.players[0].playerToken,'student:claim',body,id);assert.equal(replay.replayed,true);assert.equal(replay.state.me.actions,4);await assert.rejects(s.act(s.players[0].playerToken,'student:claim',body),/changed/);await assert.rejects(s.act(s.players[0].playerToken,'student:fortify',body,id),/reused/);await s.act(s.host.hostToken,'host:end',{confirm:true});const r=await s.view(s.host.hostToken);s.tick(1000);await s.act(s.host.hostToken,'host:end',{confirm:true});assert.deepEqual((await s.view(s.host.hostToken)).results,r.results);assert.equal((await s.view(s.host.hostToken)).endedAt,r.endedAt);assert.deepEqual(await s.store().join(s.host.pin,s.clients[0]),s.players[0]);for(const type of ['student:claim','student:submit','student:shield'])await assert.rejects(s.act(s.players[0].playerToken,type),/ended/);});
 test('pause only blocks map actions; answer submissions/marking still work',async()=>{const s=await setup();await start(s);await s.act(s.host.hostToken,'host:pause',{paused:true});await submit(s);await finalize(s);await assert.rejects(action(s,0,'student:claim',MAP[0].id),/paused/);await s.act(s.host.hostToken,'host:pause',{paused:false});await action(s,0,'student:claim',MAP[0].id);});
-test('HTTP role gates, safe joining QR, hidden keys, public state and default teacher privacy',async()=>{const s=await setup();await start(s);await submit(s,0,'C');const p='rooms/'+s.host.pin;for(const token of ['',s.players[0].playerToken]){assert.equal((await http(s,p+'/review',token)).status,403);for(const type of ['host:start','host:decision','host:finalize-all','host:next','host:end','host:set','host:team'])assert.ok([401,403].includes((await http(s,p+'/action',token,{type,requestId:randomUUID()})).status));}for(const token of ['',s.players[0].playerToken,s.host.hostToken]){const state=await(await http(s,p+'/state',token)).json();const raw=JSON.stringify(state);assert.ok(!raw.includes('variants'));assert.ok(!raw.includes('explanation'));assert.ok(!raw.includes('tokenHash'));if(token===s.host.hostToken)assert.ok(!raw.includes('"answer":"C"'));}const qr=await http(s,p+'/qr.svg');assert.equal(qr.status,200);assert.match(await qr.text(),/<svg/);const student=await(await http(s,p+'/state',s.players[0].playerToken)).json();assert.match(student.joinUrl,new RegExp('/battle13/index.html\\?join='+s.host.pin));assert.ok(!student.joinUrl.includes('host'));const catalogs=await(await http(s,'sets')).json();assert.deepEqual(catalogs.sets.map(set=>set.id),['science-f1-ch6','english-f5-set2']);assert.ok(!JSON.stringify(catalogs).includes('answer'));});
+test('HTTP role gates, safe joining QR, hidden keys, public state and default teacher privacy',async()=>{const s=await setup();await start(s);await submit(s,0,'C');const p='rooms/'+s.host.pin;for(const token of ['',s.players[0].playerToken]){assert.equal((await http(s,p+'/review',token)).status,403);for(const type of ['host:start','host:decision','host:finalize-all','host:next','host:end','host:set','host:team'])assert.ok([401,403].includes((await http(s,p+'/action',token,{type,requestId:randomUUID()})).status));}for(const token of ['',s.players[0].playerToken,s.host.hostToken]){const state=await(await http(s,p+'/state',token)).json();const raw=JSON.stringify(state);assert.ok(!raw.includes('variants'));assert.ok(!raw.includes('explanation'));assert.ok(!raw.includes('tokenHash'));if(token===s.host.hostToken)assert.ok(!raw.includes('"answer":"C"'));}const qr=await http(s,p+'/qr.svg');assert.equal(qr.status,200);assert.match(await qr.text(),/<svg/);const student=await(await http(s,p+'/state',s.players[0].playerToken)).json();assert.match(student.joinUrl,new RegExp('/battle13/index.html\\?join='+s.host.pin));assert.ok(!student.joinUrl.includes('host'));const catalogs=await(await http(s,'sets')).json();assert.deepEqual(catalogs.sets.map(set=>set.id),['science-f1-ch6','english-f5-set2','science-mixtures-set3']);assert.ok(!JSON.stringify(catalogs).includes('answer'));});
 test('team name/colour management, set validation, no game reset through student requests',async()=>{const s=await setup();const v=await s.view(s.host.hostToken),[a,b]=v.players;await s.act(s.host.hostToken,'host:team',{playerId:a.id,name:'Blue whales',color:b.color});const after=await s.view(s.host.hostToken);assert.equal(after.players.find(p=>p.id===a.id).color,b.color);assert.equal(after.players.find(p=>p.id===b.id).color,a.color);await assert.rejects(s.act(s.host.hostToken,'host:set',{setId:'unknown'}),/Unknown/);await start(s);await assert.rejects(s.act(s.host.hostToken,'host:set',{setId:BANK.id}),/before/);});
 test('all 25 questions complete with exactly 25 rewards; fresh room retains fixed map and clears progress',async()=>{const s=await setup();await start(s);for(const q of BANK.questions){assert.equal((await s.view(s.players[0].playerToken)).question.id,q.id);await submit(s,0,q.answer);await finalize(s);if(q.number<BANK.questions.length)await s.act(s.host.hostToken,'host:next',{questionId:q.id});}const final=await s.view(s.players[0].playerToken);assert.equal(final.me.actions,25);assert.equal(final.me.science,25);await assert.rejects(s.act(s.host.hostToken,'host:next',{questionId:'q25'}),/complete/);await s.act(s.host.hostToken,'host:end',{confirm:true});const fresh=await s.store().create();const next=await s.store().state(fresh.pin,fresh.hostToken);assert.equal(next.phase,'lobby');assert.equal(next.joinedCount,0);assert.ok(next.tiles.every(t=>!t.owner&&!t.fortress&&!t.resolved&&!t.shield));assert.deepEqual(next.tiles.map(t=>t.id),final.tiles.map(t=>t.id));});
 test('question-set registry rejects inherited object properties and never creates invalid rooms',async()=>{const s=await setup();for(const setId of ['__proto__','constructor','toString']){await assert.rejects(s.store().create(setId),/available question set/);await assert.rejects(s.act(s.host.hostToken,'host:set',{setId}),/Unknown/);}assert.equal(s.db.sql.prepare('SELECT COUNT(*) AS n FROM territory_rooms').get().n,1);});
