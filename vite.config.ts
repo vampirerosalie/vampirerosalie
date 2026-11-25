@@ -9,8 +9,12 @@ const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
 
 const localBindingConfig = {
-  main: 'vinext/server/app-router-entry',
+  main: './worker.js',
   compatibility_flags: ['nodejs_compat'],
+  durable_objects: {
+    bindings: [{ name: 'PAINTBALL_ROOMS', class_name: 'PaintballRoom' }],
+  },
+  migrations: [{ tag: 'paintball-v1', new_sqlite_classes: ['PaintballRoom'] }],
   d1_databases: [
     {
       binding: 'DB',

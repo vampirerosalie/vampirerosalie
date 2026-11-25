@@ -16,14 +16,15 @@ function component(file, overrides = {}) {
   return exports;
 }
 
-test('one shared menu renders all thirteen battles including the default teacher menu', () => {
+test('one shared menu renders all fourteen battles including the default teacher menu', () => {
   const { BattleTabs, BATTLE_CHOICES } = component('battle-tabs.tsx');
-  assert.deepEqual(Array.from(BATTLE_CHOICES, row => row[0]), [1,2,3,4,5,6,7,8,9,10,11,12,13]);
-  for (const selected of [1, 7, 11, 12, 13]) {
+  assert.deepEqual(Array.from(BATTLE_CHOICES, row => row[0]), [1,2,3,4,5,6,7,8,9,10,11,12,13,14]);
+  for (const selected of [1, 7, 11, 12, 13, 14]) {
     let clicked;
     const element = BattleTabs({ selected, onSelect: battle => { clicked = battle; } });
     const html = renderToStaticMarkup(element);
-    assert.equal((html.match(/role="tab"/g) || []).length, 13);
+    assert.equal((html.match(/role="tab"/g) || []).length, 14);
+    assert.match(html, /Paintball Showdown/);
     assert.match(html, /BATTLE 13/); assert.match(html, /Territory Wars/);
     assert.match(html, /BATTLE 12/); assert.match(html, /Treasure Raid/);
     assert.match(html, /BATTLE 11/); assert.match(html, /The Missing Museum Jewel/);

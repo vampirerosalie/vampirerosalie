@@ -6,18 +6,19 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vinext dev",
-    "build": "node scripts/build-territory-map.mjs && vinext build",
+    "dev": "node scripts/build-paintball.mjs && vinext dev",
+    "build": "node scripts/build-territory-map.mjs && node scripts/build-paintball.mjs && vinext build",
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
-    "build:cloudflare": "node scripts/build-territory-map.mjs && vinext build && node scripts/configure-cloudflare-deploy.mjs",
+    "build:cloudflare": "node scripts/build-territory-map.mjs && node scripts/build-paintball.mjs && vinext build && node scripts/configure-cloudflare-deploy.mjs",
     "deploy:cloudflare": "wrangler deploy --config dist/server/wrangler.json",
     "deploy": "pnpm run build:cloudflare && pnpm run deploy:cloudflare",
     "test:battle7": "node --test test/battle7/*.test.js",
     "test:battle8": "node --test test/battle8/*.test.js",
     "test:battle9": "node --test test/battle9/*.test.js",
-    "test:battle13": "node --test test/battle13/*.test.js"
+    "test:battle13": "node --test test/battle13/*.test.js",
+    "test:battle14": "node --test test/battle14/*.test.js"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

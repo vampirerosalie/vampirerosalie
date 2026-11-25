@@ -35,5 +35,6 @@ next-env.d.ts
 /dist/
 /.wrangler/
 /outputs/
+/public/battle14/arena-view.js
 /work/
 /.openai/

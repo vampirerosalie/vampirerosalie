@@ -1,0 +1,194 @@
+/* Keep the usual document reading order in portrait and on the projector. */
+.question-copy,
+.question-responses {
+  display: contents;
+}
+
+.student-view {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+.student-view:not(.player-shoot) #app {
+  padding-top: max(8px, var(--safe-top));
+  padding-inline: max(8px, var(--safe-left)) max(8px, var(--safe-right));
+  padding-bottom: max(8px, var(--safe-bottom));
+}
+
+/* A playing phone uses a fixed viewport so aiming cannot pan the document. */
+body.player-shoot {
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.player-shoot #app {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.player-shoot #stage,
+body.player-shoot #stage-visual,
+body.player-shoot #stage-visual > div,
+body.player-shoot #stage-visual .pb-world {
+  height: 100%;
+  min-height: 0;
+}
+
+body.player-shoot #stage-visual {
+  box-shadow: none;
+}
+
+body.player-shoot #notice {
+  bottom: auto;
+  top: max(53px, calc(var(--safe-top) + 46px));
+  max-width: min(76vw, 370px);
+  pointer-events: none;
+}
+
+/* A short, wide phone has room for the question and the answer pad side by side. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .student-quiz #app {
+    padding: max(4px, var(--safe-top)) max(9px, var(--safe-right)) max(6px, var(--safe-bottom)) max(9px, var(--safe-left));
+  }
+
+  .student-quiz #mast {
+    min-height: 37px;
+    padding: 4px 12px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+
+  .student-quiz #mast .brand {
+    gap: 7px;
+  }
+
+  .student-quiz #mast .brandmark {
+    width: 23px;
+    height: 23px;
+    border-radius: 6px;
+  }
+
+  .student-quiz #mast .brandmark svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .student-quiz #mast .brand strong {
+    font-size: 13px;
+  }
+
+  .student-quiz #mast .brand small {
+    display: none;
+  }
+
+  .student-quiz #mast .room-code {
+    padding: 2px 8px;
+  }
+
+  .student-quiz #mast .room-code b {
+    font-size: 15px;
+  }
+
+  .student-quiz #content {
+    width: 100%;
+    max-width: 1060px;
+  }
+
+  .student-quiz .question-sheet {
+    display: grid;
+    grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
+    column-gap: clamp(14px, 3vw, 32px);
+    row-gap: 8px;
+    align-content: start;
+    padding: 12px clamp(12px, 2vw, 22px);
+  }
+
+  .student-quiz .question-copy,
+  .student-quiz .question-responses {
+    display: block;
+    min-width: 0;
+    align-self: start;
+  }
+
+  .student-quiz .question-copy {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .student-quiz .question-responses {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+  }
+
+  .student-quiz .question-copy .heading-line {
+    gap: 5px;
+    margin-bottom: 9px;
+  }
+
+  .student-quiz .question-copy .kicker {
+    font-size: 10px;
+    margin: 0;
+  }
+
+  .student-quiz .question-copy .badge {
+    padding: 3px 7px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .student-quiz .question-sheet h1 {
+    font-size: clamp(19px, 3vw, 29px);
+    line-height: 1.16;
+    overflow-wrap: anywhere;
+  }
+
+  .student-quiz .question-responses .options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin: 0 0 8px;
+  }
+
+  .student-quiz .question-responses .option {
+    gap: 6px;
+    min-height: 48px;
+    padding: 8px;
+    font-size: clamp(15px, 2.1vw, 19px);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .student-quiz .question-responses .option b {
+    width: 22px;
+    height: 24px;
+    font-size: 12px;
+  }
+
+  .student-quiz .question-responses .btn {
+    min-height: 44px;
+    padding: 7px 10px;
+  }
+
+  .student-quiz .question-sheet .stage-track,
+  .student-quiz .question-sheet #quiz-clock {
+    grid-column: 1;
+    margin: 0;
+  }
+
+  .student-quiz .question-sheet #quiz-clock {
+    justify-self: start;
+  }
+
+  .student-quiz .question-responses .status-note {
+    margin: 6px 0;
+    padding: 6px 9px;
+  }
+}
