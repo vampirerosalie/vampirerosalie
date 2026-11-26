@@ -16,14 +16,15 @@ function component(file, overrides = {}) {
   return exports;
 }
 
-test('one shared menu renders all fifteen battles including the default teacher menu', () => {
+test('one shared menu renders all sixteen battles including the default teacher menu', () => {
   const { BattleTabs, BATTLE_CHOICES } = component('battle-tabs.tsx');
-  assert.deepEqual(Array.from(BATTLE_CHOICES, row => row[0]), [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]);
-  for (const selected of [1, 7, 11, 12, 13, 14, 15]) {
+  assert.deepEqual(Array.from(BATTLE_CHOICES, row => row[0]), [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]);
+  for (const selected of [1, 7, 11, 12, 13, 14, 15, 16]) {
     let clicked;
     const element = BattleTabs({ selected, onSelect: battle => { clicked = battle; } });
     const html = renderToStaticMarkup(element);
-    assert.equal((html.match(/role="tab"/g) || []).length, 15);
+    assert.equal((html.match(/role="tab"/g) || []).length, 16);
+    assert.match(html, /Misi 10 Markah/);
     assert.match(html, /Meniti Impian: Card Battle/);
     assert.match(html, /Paintball Showdown/);
     assert.match(html, /BATTLE 13/); assert.match(html, /Territory Wars/);

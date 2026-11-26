@@ -906,11 +906,13 @@ export default function Home() {
   const [territoryStatus, setTerritoryStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [menitiStatus, setMenitiStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [menitiFrameUrl, setMenitiFrameUrl] = useState('/battle15/index.html?teacher=1&embedded=1');
+  const [sasteraStatus, setSasteraStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
+  const [sasteraFrameUrl, setSasteraFrameUrl] = useState('/battle16/?teacher=1&embedded=1');
   const [paintballStatus, setPaintballStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [paintballFrameUrl, setPaintballFrameUrl] = useState('/battle14/index.html?teacher=1&embedded=1');
   const [territoryFrameUrl, setTerritoryFrameUrl] = useState('/battle13/?teacher=1&embedded=1');
   const [treasureFrameUrl, setTreasureFrameUrl] = useState('/battle12/?teacher=1&embedded=1');
-  const { isFullscreen, inPageFullscreen, fullscreenError, toggleFullscreen } = useClassroomFullscreen(route?.mode === 'meniti');
+  const { isFullscreen, inPageFullscreen, fullscreenError, toggleFullscreen } = useClassroomFullscreen(route?.mode === 'meniti' || route?.mode === 'sastera');
   const frameRef = useRef<HTMLIFrameElement>(null);
   const routeRef = useRef<ShellRoute | null>(null);
   const studentRouteRef = useRef<StudentRoute | null>(null);
@@ -935,6 +937,33 @@ export default function Home() {
     };
     const readRoute = () => {
       const marketParams = new URLSearchParams(window.location.search);
+      let sasteraStudent: string | null = null;
+      try { sasteraStudent = window.sessionStorage.getItem('sastera:student-room'); } catch {}
+      if (marketParams.get('battle') === '16' || (!window.location.search && sasteraStudent !== null)) {
+        const student = ['student', 'join', 'room', 'station'].some(key => marketParams.has(key));
+        const teacher = marketParams.has('teacher') || marketParams.has('host');
+        const params = new URLSearchParams();
+        if (student || (!teacher && !marketParams.has('screen') && sasteraStudent !== null)) {
+          const pin = marketParams.get('join') ?? marketParams.get('room') ?? sasteraStudent ?? '';
+          if (/^\d{5}$/.test(pin)) params.set('join', pin);
+          else params.set('student', '1');
+          for (const key of ['station', 'code']) {
+            const value = marketParams.get(key);
+            if (value !== null) params.set(key, value);
+          }
+        } else if (marketParams.has('screen')) {
+          params.set('screen', marketParams.get('screen') || '');
+        } else {
+          const pin = marketParams.get('host') || '';
+          setSasteraFrameUrl('/battle16/?teacher=1&embedded=1' + (/^\d{5}$/.test(pin) ? '&host=' + pin : ''));
+          const next = { mode: 'sastera', role: 'teacher' } as const;
+          routeRef.current = next;
+          setRoute(next);
+          return;
+        }
+        window.location.replace('/battle16/?' + params.toString());
+        return;
+      }
       const meniti = marketParams.get('battle') === '15';
       let menitiStudent: string | null = null;
       try { menitiStudent = window.sessionStorage.getItem('meniti:student-room'); } catch {}
@@ -1147,6 +1176,20 @@ export default function Home() {
       if (!/^\d{5}$/.test(pin) || typeof phase !== 'string' || !Number.isInteger(onlineCount) || onlineCount < 0 || onlineCount > 12) return;
       setPaintballStatus({ pin, phase, onlineCount });
     };
+    const syncSastera = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || routeRef.current?.mode !== 'sastera') return;
+      if (event.data?.type === 'sastera:unavailable') {
+        setSasteraStatus({ pin: '', phase: 'lobby', onlineCount: 0 });
+        window.history.replaceState(window.history.state, '', '/?battle=16&teacher=1');
+        return;
+      }
+      if (event.data?.type !== 'sastera:status') return;
+      const { pin, phase, onlineCount } = event.data;
+      if (!/^\d{5}$/.test(pin) || !['lobby','active','ended'].includes(phase) || !Number.isInteger(onlineCount) || onlineCount < 0) return;
+      setSasteraStatus(current => current.pin === pin && current.phase === phase && current.onlineCount === onlineCount ? current : {pin, phase, onlineCount});
+      const search = '?battle=16&teacher=1&host=' + pin;
+      if (window.location.search !== search) window.history.replaceState(window.history.state, '', '/' + search);
+    };
     // The initial render is deliberately neutral, so no teacher component mounts
     // before the tab's student intent has been checked.
     readRoute();
@@ -1160,6 +1203,7 @@ export default function Home() {
     window.addEventListener('message', syncTreasure);
     window.addEventListener('message', syncTerritory);
     window.addEventListener('message', syncMeniti);
+    window.addEventListener('message', syncSastera);
     window.addEventListener('message', syncPaintball);
     return () => {
       window.removeEventListener('popstate', readRoute);
@@ -1172,6 +1216,7 @@ export default function Home() {
       window.removeEventListener('message', syncTreasure);
       window.removeEventListener('message', syncTerritory);
       window.removeEventListener('message', syncMeniti);
+      window.removeEventListener('message', syncSastera);
       window.removeEventListener('message', syncPaintball);
     };
   }, []);
@@ -1210,21 +1255,22 @@ export default function Home() {
   const isTreasure = route.mode === 'treasure';
   const isTerritory = route.mode === 'territory';
   const isMeniti = route.mode === 'meniti';
+  const isSastera = route.mode === 'sastera';
   const isPaintball = route.mode === 'paintball';
-  const standaloneStatus = isMeniti ? menitiStatus : isPaintball ? paintballStatus : isTerritory ? territoryStatus : isTreasure ? treasureStatus : isMuseum ? museumStatus : isLantern ? lanternStatus : isMarket ? marketStatus : demolitionStatus;
-  const standaloneBattle = isMeniti ? 15 : isPaintball ? 14 : isTerritory ? 13 : isTreasure ? 12 : isMuseum ? 11 : isLantern ? 10 : isMarket ? 9 : 8;
-  if (route.mode === 'demolition' || isMarket || isLantern || isMuseum || isTreasure || isTerritory || isPaintball || isMeniti) return <main className="game-shell host-shell" data-meniti-in-play={isMeniti && !['lobby', 'ended'].includes(standaloneStatus.phase) || undefined} data-classroom-fullscreen={inPageFullscreen || (isMeniti && isFullscreen) ? 'frame' : undefined} style={{ display: 'flex', flexDirection: 'column' }}>
+  const standaloneStatus = isSastera ? sasteraStatus : isMeniti ? menitiStatus : isPaintball ? paintballStatus : isTerritory ? territoryStatus : isTreasure ? treasureStatus : isMuseum ? museumStatus : isLantern ? lanternStatus : isMarket ? marketStatus : demolitionStatus;
+  const standaloneBattle = isSastera ? 16 : isMeniti ? 15 : isPaintball ? 14 : isTerritory ? 13 : isTreasure ? 12 : isMuseum ? 11 : isLantern ? 10 : isMarket ? 9 : 8;
+  if (route.mode === 'demolition' || isMarket || isLantern || isMuseum || isTreasure || isTerritory || isPaintball || isMeniti || isSastera) return <main className="game-shell host-shell" data-meniti-in-play={(isMeniti || isSastera) && !['lobby', 'ended'].includes(standaloneStatus.phase) || undefined} data-classroom-fullscreen={inPageFullscreen || ((isMeniti || isSastera) && isFullscreen) ? 'frame' : undefined} style={{ display: 'flex', flexDirection: 'column' }}>
     <header className="host-topbar" style={{ flexShrink: 0 }}>
       <div className="game-logo"><span>★</span><strong>GRAMMAR</strong><em>BATTLE!</em></div>
-      <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{standaloneStatus.pin || '•••••'}</strong></div><div className="online-pill"><span />{standaloneStatus.onlineCount}{(isPaintball || isMeniti) && standaloneStatus.onlineCount === 1 ? ' team online' : isLantern || isTreasure ? ' students online' : ' teams online'}</div><div className="connection-pill connected">{isMeniti ? 'BATTLE 15 · MENITI IMPIAN' : isPaintball ? 'BATTLE 14 · PAINTBALL SHOWDOWN' : isTerritory ? 'BATTLE 13 · TERRITORY WARS' : isTreasure ? 'BATTLE 12 · TREASURE RAID' : isMuseum ? 'BATTLE 11 · MUSEUM JEWEL' : isLantern ? 'BATTLE 10 · LANTERN KEEPER' : isMarket ? 'BATTLE 9 · ENGLISH BLACK MARKET' : 'BATTLE 8 · DEMOLITION DASH'}</div></div>
+      <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{standaloneStatus.pin || '•••••'}</strong></div><div className="online-pill"><span />{standaloneStatus.onlineCount}{(isPaintball || isMeniti || isSastera) && standaloneStatus.onlineCount === 1 ? ' team online' : isLantern || isTreasure ? ' students online' : ' teams online'}</div><div className="connection-pill connected">{isSastera ? 'BATTLE 16 · MISI 10 MARKAH' : isMeniti ? 'BATTLE 15 · MENITI IMPIAN' : isPaintball ? 'BATTLE 14 · PAINTBALL SHOWDOWN' : isTerritory ? 'BATTLE 13 · TERRITORY WARS' : isTreasure ? 'BATTLE 12 · TREASURE RAID' : isMuseum ? 'BATTLE 11 · MUSEUM JEWEL' : isLantern ? 'BATTLE 10 · LANTERN KEEPER' : isMarket ? 'BATTLE 9 · ENGLISH BLACK MARKET' : 'BATTLE 8 · DEMOLITION DASH'}</div></div>
       <button type="button" className="fullscreen-button" aria-pressed={isFullscreen} onClick={() => void toggleFullscreen()}><span aria-hidden="true">{isFullscreen ? '↙' : '⛶'}</span>{isFullscreen ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
     </header>
     {fullscreenError && <p role="status">{fullscreenError}</p>}
-    {!((isMeniti || isTreasure || isTerritory || isPaintball) && isFullscreen) && (isMeniti || isTerritory || isTreasure || isMuseum || ['lobby', 'finished', 'ended'].includes(standaloneStatus.phase)) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
-      <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle}{(isMeniti && !['lobby', 'ended'].includes(standaloneStatus.phase)) || ((isMuseum || isTerritory) && standaloneStatus.phase === 'active') || (isTreasure && ['questions', 'finalPlay', 'finalBank'].includes(standaloneStatus.phase)) ? ' is in progress' : ' is ready'}</strong></div>
+    {!((isSastera || isMeniti || isTreasure || isTerritory || isPaintball) && isFullscreen) && (isSastera || isMeniti || isTerritory || isTreasure || isMuseum || ['lobby', 'finished', 'ended'].includes(standaloneStatus.phase)) && <section className="battle-selector" aria-label="Choose grammar battle" style={{ flexShrink: 0 }}>
+      <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle}{(isMeniti && !['lobby', 'ended'].includes(standaloneStatus.phase)) || ((isMuseum || isTerritory || isSastera) && standaloneStatus.phase === 'active') || (isTreasure && ['questions', 'finalPlay', 'finalBank'].includes(standaloneStatus.phase)) ? ' is in progress' : ' is ready'}</strong></div>
       <BattleTabs selected={standaloneBattle} onSelect={battle => { if (battle !== standaloneBattle) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }} />
     </section>}
-    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isMeniti ? "Meniti Impian: Card Battle" : isPaintball ? "Battle Fourteen: Paintball Showdown" : isTerritory ? "Battle Thirteen: Territory Wars teacher game" : isTreasure ? "Battle Twelve: Treasure Raid teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isMeniti ? menitiFrameUrl : isPaintball ? paintballFrameUrl : isTerritory ? territoryFrameUrl : isTreasure ? treasureFrameUrl : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow={isMeniti ? "fullscreen; autoplay" : "fullscreen"} style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />}
+    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isSastera ? "Battle 16 · Meniti Impian: Misi 10 Markah" : isMeniti ? "Meniti Impian: Card Battle" : isPaintball ? "Battle Fourteen: Paintball Showdown" : isTerritory ? "Battle Thirteen: Territory Wars teacher game" : isTreasure ? "Battle Twelve: Treasure Raid teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isSastera ? sasteraFrameUrl : isMeniti ? menitiFrameUrl : isPaintball ? paintballFrameUrl : isTerritory ? territoryFrameUrl : isTreasure ? treasureFrameUrl : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow={isMeniti ? "fullscreen; autoplay" : "fullscreen"} style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />}
   </main>;
 
   const teacher = route.role === 'teacher';
