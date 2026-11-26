@@ -1,3 +1,9 @@
+button[data-game-fullscreen-control], .button[data-game-fullscreen-control] {
+  min-height: 44px;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
 html[data-game-presentation] #game-presentation-bar {
   height: calc(50px + env(safe-area-inset-top, 0px));
 }

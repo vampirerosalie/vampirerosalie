@@ -8,6 +8,10 @@ export const BATTLE_CHOICES = [
   [14, 'Paintball Showdown'], [15, 'Meniti Impian: Card Battle'],
 ] as const;
 
+export function battleTitle(battle: number) {
+  return BATTLE_CHOICES.find(([number]) => number === battle)?.[1];
+}
+
 export function BattleTabs({ selected, busy = false, onSelect }: {
   selected: number; busy?: boolean; onSelect: (battle: number) => void;
 }) {

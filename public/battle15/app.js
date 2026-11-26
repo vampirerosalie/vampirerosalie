@@ -77,7 +77,7 @@ function renderTools(){
   const html=(pin && !(role==='host' && embedded)?`<span class="room-tag">PIN <b>${pin}</b></span>`:'')+
     (role!=='student'?iconButton(playing?'sound':'mute','music','Tetapan muzik'):'')+
     iconButton('help','rules','Cara bermain')+
-    (role==='public'?(document.body.classList.contains('projector-fullscreen')
+    (role==='host'?button('Full screen','fullscreen',{cls:'ghost',attrs:'data-game-fullscreen-control',symbol:'full'}):role==='public'?(document.body.classList.contains('projector-fullscreen')
       ?button('Exit full screen','fullscreen',{cls:'primary',attrs:'aria-pressed="true"',symbol:'full'})
       :iconButton('full','fullscreen','Skrin penuh')):'');
   if(lastTools!==html){tools.innerHTML=html;lastTools=html;}

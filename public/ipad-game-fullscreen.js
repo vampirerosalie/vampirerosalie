@@ -1,8 +1,12 @@
-// The iPad also identifies itself as a Mac when Safari requests desktop websites.
-if (/iPad/i.test(navigator.userAgent) ||
-    (navigator.maxTouchPoints > 0 && /Mac/i.test(navigator.platform + navigator.userAgent))) {
-  const gameButton = 'button[data-action="fullscreen"], button[data-act="fullscreen"]';
+{
+  // The iPad also identifies itself as a Mac when Safari requests desktop websites.
+  const ipad = /iPad/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 0 && /Mac/i.test(navigator.platform + navigator.userAgent));
+  const gameButton = document.currentScript?.hasAttribute('data-explicit-controls')
+    ? 'button[data-game-fullscreen-control]'
+    : 'button[data-action="fullscreen"], button[data-act="fullscreen"]';
   let exitBar;
+  let nativePresentation = false;
   let gameFrame;
   let parentScroll = [];
 
@@ -20,10 +24,12 @@ if (/iPad/i.test(navigator.userAgent) ||
     }
     exitBar.remove();
     exitBar = null;
+    nativePresentation = false;
   }
 
-  function enterPresentation() {
-    gameFrame = window.frameElement;
+  function enterPresentation(native = false) {
+    nativePresentation = native;
+    gameFrame = native ? null : window.frameElement;
     if (gameFrame) {
       // Promoting the iframe can shorten the parent's page and reset its scroll.
       for (let element = gameFrame.parentElement; element; element = element.parentElement) {
@@ -40,7 +46,10 @@ if (/iPad/i.test(navigator.userAgent) ||
     const exitButton = document.createElement('button');
     exitButton.type = 'button';
     exitButton.textContent = 'Exit full screen';
-    exitButton.addEventListener('click', () => {
+    exitButton.addEventListener('click', async () => {
+      if (nativePresentation && document.fullscreenElement) {
+        try { await document.exitFullscreen(); } catch { return; }
+      }
       leavePresentation();
       document.querySelector(gameButton)?.focus({preventScroll:true});
     });
@@ -51,12 +60,23 @@ if (/iPad/i.test(navigator.userAgent) ||
 
   // Games redraw their buttons between questions. Handle the tap before each
   // game's desktop handler can request Safari's native gesture-based fullscreen.
-  document.addEventListener('click', event => {
+  document.addEventListener('click', async event => {
     const button = event.target.closest?.(gameButton);
-    if (!button || button.disabled) return;
+    if (!button || button.disabled || (!ipad && !button.hasAttribute('data-game-fullscreen-control'))) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (!exitBar) enterPresentation();
+    if (exitBar) return;
+    if (!ipad && document.fullscreenEnabled) {
+      try {
+        await document.documentElement.requestFullscreen();
+        if (document.fullscreenElement) enterPresentation(true);
+        return;
+      } catch { /* The game can still expand inside this tab. */ }
+    }
+    enterPresentation();
   }, true);
+  document.addEventListener('fullscreenchange', () => {
+    if (nativePresentation && !document.fullscreenElement) leavePresentation();
+  });
   window.addEventListener('pagehide', leavePresentation);
 }

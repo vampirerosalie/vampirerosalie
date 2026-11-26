@@ -151,6 +151,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible { outline:4px so
 /* A game's own fullscreen button expands its frame above the surrounding site. */
 html[data-game-frame-fullscreen]:has(iframe[data-game-fullscreen]),
 html[data-game-frame-fullscreen]:has(iframe[data-game-fullscreen]) body { overflow: hidden; }
+html[data-game-frame-fullscreen] .host-shell:has(iframe[data-game-fullscreen]) > :is(.host-topbar, .battle-selector) {
+  visibility: hidden;
+}
 html[data-game-frame-fullscreen] .host-shell > section:has(iframe[data-game-fullscreen]) { z-index: 10; }
 html[data-game-frame-fullscreen] iframe.battle7-frame[data-game-fullscreen] {
   position: fixed !important;
@@ -191,4 +194,56 @@ html[data-game-frame-fullscreen] iframe.battle7-frame[data-game-fullscreen] {
     min-height: 44px;
     padding: 3px 9px;
   }
+}
+
+.core-game-surface { width: min(1780px, 100%); margin-inline: auto; }
+.core-game-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 12px;
+  color: #f9f3ff;
+  background: #1d0d47;
+  border: 1px solid #56368a;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.game-fullscreen-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #ffffff55;
+  border-radius: 8px;
+  background: #321e52;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.host-shell[data-core-game-only] > :not(.core-game-surface) { visibility: hidden; }
+.host-shell[data-core-game-only] > .core-game-surface,
+.core-game-surface:fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #10092d;
+}
+.host-shell[data-core-game-only] .core-game-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  border-radius: 0;
 }

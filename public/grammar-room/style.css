@@ -14,3 +14,7 @@
 .dpad [data-dir=right] svg{transform:rotate(90deg)}
 .dpad [data-dir=down] svg{transform:rotate(180deg)}
 .hud{padding-top:max(18px,env(safe-area-inset-top))}.inventory{top:env(safe-area-inset-top)}
+.room-fullscreen{min-height:44px;padding:0 12px;border:1px solid #a48247;border-radius:8px;color:#f9edce;background:#172635;white-space:nowrap}
+.start-overlay>.room-fullscreen{position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right))}
+html[data-game-presentation] #game-presentation-bar{height:0}
+@media(max-width:700px){.top-actions .room-fullscreen{order:-1}}

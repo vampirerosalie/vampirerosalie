@@ -55,6 +55,8 @@ button:disabled { opacity: .43; cursor: default; }
 .brand-mark i::before { content:""; width: 7px; height: 10px; border: 1.5px solid var(--gold); transform: rotate(45deg); }
 .header-tools, .actions, .tools-row, .meter, .facts { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
 .header-tools { flex-wrap: nowrap; justify-content: flex-end; }
+.host .masthead { flex-wrap:wrap; }
+.host .header-tools { margin-inline-start:auto; }
 .room-tag { color: var(--muted); font-size: .85rem; }
 .room-tag b { color: var(--cream); font-variant-numeric: tabular-nums; letter-spacing: .1em; }
 main { width: min(100%, 1530px); margin: 0 auto; padding: clamp(1rem, 3vw, 3rem) clamp(1rem, 4vw, 4rem) 2rem; }

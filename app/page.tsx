@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BattleTabs } from './battle-tabs';
+import { battleTitle, BattleTabs } from './battle-tabs';
 import { MuseumFrame } from './museum-frame';
 import { StudentBoard, TeacherBoard, type BoardBattle } from './battle3';
 import type { BoardAnswerKey, BoardGame, BoardResponse, BoardTeamStatus } from './battle3-types';
@@ -157,6 +157,11 @@ function TeacherGame({ qrReady, initialBattle, onSelectBattle8 }: { qrReady: boo
   const [pollCycle, setPollCycle] = useState(0);
   const [transitionBusy, setTransitionBusy] = useState(false);
   const { isFullscreen, inPageFullscreen, fullscreenError, toggleFullscreen } = useClassroomFullscreen();
+  const [showGameOnly, setShowGameOnly] = useState(false);
+  const gameSurface = useRef<HTMLElement>(null);
+  const returnToShellFullscreen = useRef(false);
+  const savedScroll = useRef({ pageTop: 0, shellTop: 0 });
+  const expandedGame = showGameOnly && isFullscreen;
   const [judgeOverrides, setJudgeOverrides] = useState<Record<number, BoardVerdict>>({});
   const qrRef = useRef<HTMLDivElement>(null);
   const pollAbortRef = useRef<AbortController | null>(null);
@@ -475,33 +480,65 @@ function TeacherGame({ qrReady, initialBattle, onSelectBattle8 }: { qrReady: boo
     try { await navigator.clipboard.writeText(joinUrl); setConnectionLabel('Join link copied'); }
     catch { window.prompt('Copy this join link:', joinUrl); }
   };
+  const toggleGameFullscreen = () => {
+    const game = gameSurface.current;
+    if (!game) return;
+    if (expandedGame) {
+      setShowGameOnly(false);
+      if (!returnToShellFullscreen.current) void toggleFullscreen();
+      return;
+    }
+    savedScroll.current = { pageTop: window.scrollY, shellTop: game.parentElement?.scrollTop ?? 0 };
+    returnToShellFullscreen.current = isFullscreen;
+    setShowGameOnly(true);
+    if (!isFullscreen) void toggleFullscreen(game);
+  };
+  useEffect(() => {
+    if (!expandedGame) return;
+    const game = gameSurface.current;
+    const { pageTop, shellTop } = savedScroll.current;
+    return () => {
+      if (!game?.isConnected) return;
+      window.scrollTo({ top: pageTop, behavior: 'instant' });
+      game.parentElement?.scrollTo({ top: shellTop, behavior: 'instant' });
+    };
+  }, [expandedGame]);
   return (
-    <main className="game-shell host-shell" data-classroom-fullscreen={inPageFullscreen ? 'page' : undefined}>
+    <main className="game-shell host-shell" data-classroom-fullscreen={inPageFullscreen ? 'page' : undefined} data-core-game-only={expandedGame || undefined}>
       <div className="confetti-field" aria-hidden="true"><i>★</i><i>◆</i><i>●</i><i>⚡</i><i>✦</i><i>▲</i></div>
       <header className="host-topbar">
         <div className="game-logo"><span>★</span><strong>GRAMMAR</strong><em>BATTLE!</em></div>
         <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{roomCode || '•••••'}</strong></div><div className="online-pill"><span />{state.onlineCount} students online</div><div className={`connection-pill ${connectionLabel === 'Room online' ? 'connected' : ''}`}>{connectionLabel}</div></div>
         {connectionLabel !== 'Room online' && <button type="button" className="manual-reconnect teacher-reconnect" onClick={restartRoomConnection}>Reconnect now</button>}
-        <button type="button" className="fullscreen-button" aria-pressed={isFullscreen} onClick={() => void toggleFullscreen()}><span aria-hidden="true">{isFullscreen ? '↙' : '⛶'}</span>{isFullscreen ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
+        <button type="button" className="fullscreen-button" aria-pressed={isFullscreen} onClick={() => { setShowGameOnly(false); void toggleFullscreen(); }}><span aria-hidden="true">{isFullscreen ? '↙' : '⛶'}</span>{isFullscreen ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
       </header>
       {fullscreenError && <p role="status">{fullscreenError}</p>}
-      {state.phase === 'lobby' ? <><section className="battle-selector" aria-label="Choose grammar battle">
+      {state.phase === 'lobby' && <section className="battle-selector" aria-label="Choose grammar battle">
         <div><span>CHOOSE QUESTION SET</span><strong>Battle {state.battle} is ready</strong></div>
         <BattleTabs selected={state.battle} busy={transitionBusy} onSelect={battle => {
           if ([1, 2, 3, 4, 6].includes(battle)) void selectBattle(battle as BattleId);
           else if (battle === 8) onSelectBattle8();
           else window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`;
         }} />
-      </section><section className="host-lobby-layout">
+      </section>}
+      <section ref={gameSurface} className="core-game-surface" aria-labelledby="core-game-title">
+        <header className="core-game-toolbar">
+          <strong id="core-game-title">Battle {state.battle} · {battleTitle(state.battle)}</strong>
+          <button type="button" className="game-fullscreen-button" aria-pressed={expandedGame} onClick={toggleGameFullscreen}>
+            <span aria-hidden="true">⛶</span>{expandedGame ? 'Exit full screen' : 'Full screen'}
+          </button>
+        </header>
+        {state.phase === 'lobby' ? <section className="host-lobby-layout">
         <article className="scan-panel"><p className="panel-kicker">SCAN TO JOIN</p><p>Students join at</p><div className="qr-box" ref={qrRef}>{!qrReady && 'Loading QR…'}</div><span className="or-rule">OR</span><div className="lobby-pin">{roomCode || '•••••'}</div><button type="button" className="copy-link" onClick={copyJoinLink}>Copy join link</button></article>
         <article className="roster-panel"><div className="panel-heading"><div><p className="panel-kicker">BATTLE {state.battle} · LIVE JOINING</p><h2>{players.length} players ready</h2></div><span className="roster-live"><i /> LIVE</span></div>{isBoardBattle(state.battle) && state.board && <><div className="b3-lobby-config"><div><strong>Choose team players</strong><small>One player per colour. Changing this resets team choices.</small></div><select aria-label={`Number of Battle ${state.battle} team players`} value={state.board.teamCount} disabled={transitionBusy} onChange={(event) => void boardCommand('configureTeams',{teamCount:Number(event.target.value)})}>{[2,3,4,5,6].map((count) => <option key={count} value={count}>{count} players / teams</option>)}</select></div><div className="b3-lobby-teams">{state.board.teams.map((team,index) => { const status = state.boardTeamStatuses?.[index]; return <div key={team.name} className={status?.occupied ? 'taken' : ''} style={{borderColor:team.color}}><span style={{background:team.color}}>{team.emoji}</span><b>{team.name}</b><small>{status?.occupied ? `${status.memberName ?? 'Player'} · ${status.memberCount ? 'online' : 'saved'}` : 'Available'}</small></div>; })}</div></>}{isPotionBattle(state.battle) && state.potion && <><div className="b3-lobby-config p6-lobby-config"><div><strong>Choose potion teams</strong><small>One player per colour. Supports up to ten teams.</small></div><select aria-label="Number of Battle 6 team players" value={state.potion.teamCount} disabled={transitionBusy} onChange={(event) => void potionCommand('configureTeams',{teamCount:Number(event.target.value)})}>{[2,3,4,5,6,7,8,9,10].map((count) => <option key={count} value={count}>{count} players / teams</option>)}</select></div><div className="b3-lobby-teams p6-lobby-teams">{state.potion.teams.map((team,index) => { const status = state.potionTeamStatuses?.[index]; return <div key={team.name} className={status?.occupied ? 'taken' : ''} style={{borderColor:team.color}}><span style={{background:team.color}}>{team.emoji}</span><b>{team.name}</b><small>{status?.occupied ? `${status.memberName ?? 'Player'} · ${status.memberCount ? 'online' : 'saved'}` : 'Available'}</small></div>; })}</div></>}<div className="roster-list">{players.length === 0 ? <div className="waiting-roster"><span>✦</span><strong>Waiting for players…</strong><p>Names will appear here as students join.</p></div> : players.map((player, index) => <div className="roster-row" key={player.clientId}><span className={`avatar hue-${index % 5}`}>{player.name.slice(0, 1).toUpperCase()}</span><strong>{player.name}</strong><em>{player.online ? 'Just now' : 'Reconnecting'}</em><i className={player.online ? 'online-dot' : 'offline-dot'} /></div>)}</div><div className="lobby-footer"><span>{isBoardBattle(state.battle) ? `🎨 ${occupiedBoardTeams}/${state.board?.teamCount ?? 0} team places chosen` : isPotionBattle(state.battle) ? `🧪 ${occupiedPotionTeams}/${state.potion?.teamCount ?? 0} potion teams chosen` : `🎉 ${state.onlineCount} online`}</span><button type="button" className="game-button start-button" disabled={!roomReady || transitionBusy || !teamGameReady} onClick={() => isBoardBattle(state.battle) || isPotionBattle(state.battle) ? void startBoard() : beginQuestion(0)}>{transitionBusy ? 'STARTING…' : (isBoardBattle(state.battle) || isPotionBattle(state.battle)) && !teamGameReady ? 'WAITING FOR TEAMS…' : `START BATTLE ${state.battle}`} <b>➜</b></button></div></article>
-      </section></> : state.phase === 'board' && state.board && isBoardBattle(state.battle) ? <TeacherBoard key={state.board.currentQuestionId ?? `round-${state.board.round}`} battle={state.battle} board={state.board} statuses={displayedBoardStatuses} responses={displayedBoardResponses} answerKey={state.boardAnswerKey} busy={transitionBusy} onCommand={boardCommand} onExit={() => void resetGame()} /> : state.phase === 'board' && state.potion && isPotionBattle(state.battle) ? <TeacherPotion game={state.potion} statuses={displayedPotionStatuses} responses={displayedPotionResponses} answerKey={state.potionAnswerKey} busy={transitionBusy} onCommand={potionCommand} onExit={() => void resetGame()} /> : <section className={`stage-card phase-${state.phase}`}>
+      </section> : state.phase === 'board' && state.board && isBoardBattle(state.battle) ? <TeacherBoard key={state.board.currentQuestionId ?? `round-${state.board.round}`} battle={state.battle} board={state.board} statuses={displayedBoardStatuses} responses={displayedBoardResponses} answerKey={state.boardAnswerKey} busy={transitionBusy} onCommand={boardCommand} onExit={() => void resetGame()} /> : state.phase === 'board' && state.potion && isPotionBattle(state.battle) ? <TeacherPotion game={state.potion} statuses={displayedPotionStatuses} responses={displayedPotionResponses} answerKey={state.potionAnswerKey} busy={transitionBusy} onCommand={potionCommand} onExit={() => void resetGame()} /> : <section className={`stage-card phase-${state.phase}`}>
         {state.phase === 'get-ready' && <div className="get-ready-stage"><span className="ready-label">GET READY!</span><h2>Next Question</h2><p>is coming up!</p><div className="ready-icons"><span>⚡</span><div className="ready-count">{secondsLeft}</div><span>🏆</span></div><strong>Stay focused. Let’s go! 🚀</strong></div>}
         {(state.phase === 'question' || state.phase === 'locked') && <div className="question-stage"><div className="stage-tabs"><span className="active">✎ QUESTION</span></div><div className="question-board"><div className="question-copy"><p>✎ GRAMMAR CORRECTION</p><h2><QuestionText question={question} /></h2></div><div className={`giant-timer ${secondsLeft <= 5 ? 'urgent' : ''}`}><strong>{state.phase === 'locked' ? 0 : secondsLeft}</strong><span>SEC</span></div></div><div className="question-footer"><span>Students fix the bold, underlined part.</span><div className="submission-meter"><i style={{ width: `${state.onlineCount ? Math.min(100, state.answeredCount / state.onlineCount * 100) : 0}%` }} /><strong>{state.answeredCount}/{state.onlineCount} answered</strong></div></div><div className="host-actions"><button type="button" className="game-button reveal-button" onClick={reveal} disabled={transitionBusy || (!everyoneAnswered && state.phase !== 'locked')}>{transitionBusy ? 'SAVING…' : everyoneAnswered ? 'REVEAL — EVERYONE ANSWERED' : state.phase === 'locked' ? 'REVEAL ANSWER' : 'WAITING FOR ANSWERS…'}</button></div></div>}
         {state.phase === 'reveal' && <div className="reveal-stage"><div className="stage-tabs"><span>✎ QUESTION</span><span className="active">✦ REVEAL ANSWER</span></div><div className="reveal-layout"><div className="reveal-question"><p>✎ GRAMMAR CORRECTION</p><h2><QuestionText question={question} /></h2></div><div className="answer-card"><p>★ CORRECT ANSWER ★</p><h3>{question.answer}</h3><div className="answer-check">✓</div><span>EXPLANATION</span><p>{question.explanation}</p></div></div><div className="reveal-footer"><span>Great job, everyone! 🎉</span><strong>{correctCount}/{responses.length || 0} correct · {roundAccuracy}% accuracy</strong></div><div className="host-actions"><button type="button" className="game-button leaderboard-button" onClick={showLeaderboard} disabled={transitionBusy}>{transitionBusy ? 'SAVING…' : state.qIndex === questions.length - 1 ? 'SHOW FINAL PODIUM' : 'SHOW LEADERBOARD'} ➜</button></div></div>}
         {state.phase === 'leaderboard' && <div className="leaderboard-stage"><div className="leader-title"><span>🏆</span><div><p>LIVE LEADERBOARD</p><h2>Top players</h2></div><div className="round-stat"><small>QUESTION</small><strong>{state.qIndex + 1}/10</strong></div><div className="round-stat"><small>ACCURACY</small><strong>{roundAccuracy}%</strong></div></div><LeaderboardList leaders={state.leaderboard} /><div className="host-actions"><button type="button" className="game-button next-button" onClick={advance} disabled={transitionBusy}>{transitionBusy ? 'LOADING…' : 'NEXT QUESTION'} ➜</button></div></div>}
         {state.phase === 'finished' && <div className="final-stage"><p className="final-kicker">⚡ GAME OVER ⚡</p><h2>CONGRATULATIONS!</h2><p>Here are today’s top winners!</p><FinalPodium leaders={state.leaderboard} /><div className="final-rest"><LeaderboardList leaders={state.leaderboard.slice(3)} limit={5} startRank={4} /></div><div className="host-actions"><button type="button" className="game-button play-again" onClick={() => void resetGame()} disabled={transitionBusy}>{transitionBusy ? 'RESETTING…' : 'PLAY AGAIN'} ↻</button></div></div>}
       </section>}
+      </section>
     </main>
   );
 }
@@ -833,7 +870,7 @@ function useClassroomFullscreen(preferInPageOnTouch = false) {
     return () => document.removeEventListener('fullscreenchange', changed);
   }, []);
 
-  async function toggleFullscreen() {
+  async function toggleFullscreen(target = document.documentElement) {
     setFullscreenError('');
     if (inPageFullscreen) {
       setInPageFullscreen(false);
@@ -849,7 +886,7 @@ function useClassroomFullscreen(preferInPageOnTouch = false) {
       setInPageFullscreen(true);
       return;
     }
-    try { await document.documentElement.requestFullscreen(); }
+    try { await target.requestFullscreen(); }
     catch { setInPageFullscreen(true); }
   }
 

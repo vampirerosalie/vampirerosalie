@@ -39,8 +39,9 @@ try {
       const page = await context.newPage();
       for (const battle of (isTablet ? [1,2,3,4,6,7,8,9,10,11,12,13,14,15] : [1,11,15])) {
         await page.goto(new URL('/?battle=' + battle + '&teacher=1', base).href, { waitUntil: 'domcontentloaded' });
-        const enter = page.getByRole('button', {name:'FULL SCREEN',exact:true});
-        const exit = page.getByRole('button', {name:'EXIT FULL SCREEN',exact:true});
+        const siteHeader = page.locator('.host-topbar');
+        const enter = siteHeader.getByRole('button', {name:'FULL SCREEN',exact:true});
+        const exit = siteHeader.getByRole('button', {name:'EXIT FULL SCREEN',exact:true});
         await enter.waitFor();
         // A changing DOM or room PIN during a live poll is normal. Replacing an iframe is not.
         await enter.evaluate(() => { window.fullscreenTestFrame = document.querySelector('iframe.battle7-frame'); });
@@ -66,15 +67,43 @@ try {
         await enter.waitFor();
         assert.ok(await page.evaluate(() => !document.fullscreenElement && document.querySelector('iframe.battle7-frame') === window.fullscreenTestFrame));
         console.log('PASS',engine,isTablet?'iPad':'desktop','teacher fullscreen',battle);
-      }
-      if (isTablet) {
-        for(const path of ['/grammar-room/battle5.html','/grammar-room/index.html']){
-          await page.goto(new URL(path,base).href);
-          assert.equal(await page.getByRole('button',{name:/full\s?screen/i}).count(),0);
-          assert.equal(await page.evaluate(()=>window.nativeFullscreenRequests),0);
+        if (battle < 7) {
+          const gameButton = page.locator('.game-fullscreen-button');
+          const game = page.locator('.core-game-surface');
+          await gameButton.waitFor();
+          const session = await siteHeader.locator('.pin-pill strong').innerText();
+          if (isTablet) await gameButton.tap(); else await gameButton.click();
+          await game.getByRole('button',{name:/^exit full screen$/i}).waitFor();
+          assert.ok(await gameButton.evaluate(onScreen), 'The inner exit button must be visible.');
+          assert.ok(await game.evaluate(el=>{
+            const box=el.getBoundingClientRect();
+            return box.top<=1 && box.left<=1 && box.width>=innerWidth-2 && box.height>=innerHeight-2;
+          }), 'Only the current game should fill the viewport.');
+          if (isTablet) assert.equal(await page.evaluate(()=>window.nativeFullscreenRequests),0);
+          if (isTablet) await gameButton.tap(); else await gameButton.click();
+          await enter.waitFor();
+          if (/^\d{5}$/.test(session)) assert.equal(await siteHeader.locator('.pin-pill strong').innerText(),session);
+          console.log('PASS',engine,isTablet?'iPad':'desktop','game-only fullscreen',battle);
         }
-        console.log('PASS Battle 5 continues to use its regular page without a fullscreen control.');
       }
+      await page.goto(new URL('/grammar-room/battle5.html',base).href);
+      assert.equal(await page.getByRole('button',{name:/full\s?screen/i}).count(),0);
+      await page.goto(new URL('/grammar-room/index.html',base).href);
+      await page.getByRole('button',{name:/^full screen$/i}).waitFor();
+      await page.locator('#start-button').click();
+      await page.locator('#close-panel').click();
+      const gameEnter = page.getByRole('button',{name:/^full screen$/i});
+      const gameExit = page.getByRole('button',{name:/^exit full screen$/i});
+      if (isTablet) await gameEnter.tap(); else await gameEnter.click();
+      await gameExit.waitFor();
+      assert.ok(await gameExit.evaluate(onScreen));
+      if (isTablet) {
+        assert.equal(await page.evaluate(()=>window.nativeFullscreenRequests),0);
+        await gameExit.tap();
+      } else await gameExit.click();
+      await gameEnter.waitFor();
+      assert.ok(await page.locator('#start').isHidden());
+      console.log('PASS',engine,isTablet?'iPad':'desktop','game-only fullscreen',5);
     } finally { await context.close(); }
   }
 } finally { await browser.close(); }
