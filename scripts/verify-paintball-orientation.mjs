@@ -33,7 +33,7 @@ try {
   await page.route(origin+'/**',async route => {
     const filename = new URL(route.request().url()).pathname.split('/').pop();
     const allowed = {
-      'index.html':'text/html','app.js':'text/javascript','connection.js':'text/javascript','arena-wire.js':'text/javascript',
+      'index.html':'text/html','app.js':'text/javascript','connection.js':'text/javascript','music.js':'text/javascript','arena-wire.js':'text/javascript',
       'arena-view.js':'text/javascript','style.css':'text/css','arena.css':'text/css','orientation.css':'text/css',
       'arena-poster.webp':'image/webp',
     };

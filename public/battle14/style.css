@@ -177,3 +177,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
 @media (forced-colors:active) {
   .question-sheet .option.chosen,.question-sheet .option.revealed {border: 3px double Highlight}
 }
+#teacher-music {
+  display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px;
+  width:fit-content; max-width:100%; margin:0 0 12px; padding:5px 12px 5px 6px;
+  border-radius:10px; background:#1c2c72; color:#fff; font-size:15px;
+}
+#teacher-music a { color:#a9fff1; text-underline-offset:2px; }
+#teacher-music [role="status"]:empty { display:none; }

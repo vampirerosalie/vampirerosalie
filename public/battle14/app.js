@@ -1,4 +1,5 @@
 import {connectRoom,requestId} from './connection.js';
+import {mountTeacherMusic} from './music.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -27,6 +28,7 @@ const btn = (label,action,cls='',disabled=false,attributes='') => `<button type=
 const attr = (k,v) => `data-${k}="${esc(v)}"`;
 const dot = team => `<i class="dot" style="background:${esc(team.color)}"></i>`;
 const host = () => mode === 'host';
+const updateMusic = host() ? mountTeacherMusic($('teacher-music')) : null;
 const player = () => mode === 'team';
 const me = () => state?.teams.find(t=>t.id===state.teamId);
 const joinLink = () => new URL('/battle14/index.html?join='+pin,location.origin).href;
@@ -220,6 +222,7 @@ function results(){
 }
 function render(){
   renderMast();
+  updateMusic?.(pin,state?.phase,state?.paused);
   const phase=state?.phase||'welcome',inQuiz=phase==='quiz',live=phase==='shootout',direct=live&&player();
   const preview=phase==='lobby'||phase==='roundReady'||(phase==='welcome'&&!(token&&pin));
   document.body.classList.toggle('player-shoot',direct);
