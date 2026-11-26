@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { QUESTIONS } from '../../app/battle14/questions.js';
-import { createSession, joinSession, isController, sessionView, quizCommand, finishRound, closeExpiredQuiz } from '../../app/battle14/session.js';
+import { createSession, joinSession, joinFingerprint, isController, sessionView, quizCommand, finishRound, closeExpiredQuiz } from '../../app/battle14/session.js';
 
 const host = {role:'host'}, projector = {role:'projector'};
 function fixture(count = 2) {
@@ -22,6 +22,37 @@ test('the fixed English bank retains all 20 questions and the supplied answer se
   assert.equal(QUESTIONS.map(q=>q.answer).join(''),'ABDACCB DADCB DABCCCAA'.replaceAll(' ',''));
   assert(QUESTIONS.every((q,i)=>q.number===i+1&&Object.keys(q.options).join('')==='ABCD'&&q.prompt.includes('______')));
   assert.equal(new Set(QUESTIONS.map(q=>q.id)).size,20);
+});
+
+test('teacher assigns control using stable numbered phones, including previously named devices',()=>{
+  const {session,teams,admin,view}=fixture(1);
+  const first=teams[0], team=session.teams[0];
+  team.devices[0].name='Previously entered name';
+  const sibling={role:'team',...joinSession(session,{deviceId:'observer',teamId:team.id,deviceName:'Old app input'})};
+  assert.deepEqual(view(host).teams[0].devices.map(d=>d.name),['Previously entered name','Phone 2']);
+  assert.equal(view(first).deviceLabel,'Previously entered name');
+  assert.equal(view(sibling).deviceLabel,'Phone 2');
+  assert.equal(view(projector).deviceLabel,undefined);
+  assert(!JSON.stringify(view(sibling)).includes('Previously entered name'));
+  assert(!JSON.stringify(session).includes('Old app input'));
+  admin('controller',{teamId:team.id,deviceId:sibling.deviceId});
+  assert.equal(view(sibling).canControl,true);
+  const restored=JSON.parse(JSON.stringify(session));
+  assert.equal(joinSession(restored,{deviceId:sibling.deviceId}).teamId,team.id);
+  assert.equal(sessionView(restored,sibling).deviceLabel,'Phone 2');
+  assert.equal(restored.teams[0].devices.length,2);
+  restored.teams[0].devices[0].name='phone 3';
+  const third={role:'team',...joinSession(restored,{deviceId:'next-observer',teamId:team.id})};
+  assert.equal(sessionView(restored,third).deviceLabel,'Phone 4');
+});
+
+test('join keys can retry old name-bearing requests and still distinguish separate teams',()=>{
+  const earlierNewTeam=JSON.stringify(['Sparks','','Former device name']);
+  const earlierTeammate=JSON.stringify(['Unsubmitted team-name draft','team-2','Former device name']);
+  assert.equal(joinFingerprint(...JSON.parse(earlierNewTeam)),joinFingerprint('Sparks'));
+  assert.equal(joinFingerprint(...JSON.parse(earlierTeammate)),joinFingerprint(undefined,'team-2'));
+  assert.notEqual(joinFingerprint('Sparks'),joinFingerprint('Comets'));
+  assert.notEqual(joinFingerprint(undefined,'team-1'),joinFingerprint(undefined,'team-2'));
 });
 
 test('12 team colours, same-device reconnection, watchers and explicit controller handoff',()=>{

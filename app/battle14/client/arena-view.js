@@ -93,7 +93,7 @@ function renderer3D(host) {
     for(const [id,sprite] of badges)if(!frame.pickups.some(item=>item.id===id)){scene.remove(sprite);badges.delete(id);}
     const part=actors.part.bind(actors);
     if(me&&focus&&controls){
-      const a=controls.getYaw(),sx=Math.sin(a),sz=-Math.cos(a);
+      const a=me.yaw,sx=Math.sin(a),sz=-Math.cos(a);
       for(let i=0;i<5;i++){const d=1+i*.47;part('drum',i===4?'#ffab19':'#264a54',me.x+sx*d,.05,me.z+sz*d,.075,.04,.075);}
       part('ring','#ff9715',me.x+sx*3.2,.055,me.z+sz*3.2,.42,.42,.2,-Math.PI/2);
     }
@@ -164,7 +164,7 @@ function overhead(host){
     for(const o of OBSTACLES){box(o.x,o.z+.11,o.w,o.d,'#586f79');box(o.x,o.z,o.w,o.d,o.color);}
     frame.drones.forEach(d=>{dot(d.x,d.z,.38,'#fbf4df');box(d.x,d.z,.44,.12,'#152d51');});
     frame.pickups.forEach(p=>{dot(p.x,p.z,.46,{ammo:'#ffb422',shield:'#3595fa',freeze:'#5cddeb',steal:'#fc517b'}[p.kind]);const [x,y]=project(p.x,p.z);ctx.fillStyle='#172e4b';ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillText(p.kind==='ammo'?'+2':p.kind[0].toUpperCase(),x,y+3);});
-    players.forEach((p,i)=>{const c=getColor(p.id,i);dot(p.x,p.z,.44,'#183151');dot(p.x,p.z,.34,c);const a=(p.id===me?.id&&controls)?controls.getYaw():p.yaw;
+    players.forEach((p,i)=>{const c=getColor(p.id,i);dot(p.x,p.z,.44,'#183151');dot(p.x,p.z,.34,c);const a=p.yaw;
       const [x,y]=project(p.x,p.z);ctx.strokeStyle='#203042';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.sin(a)*k*.7,y-Math.cos(a)*k*.7);ctx.stroke();
       if(!demo){ctx.fillStyle='#132943';ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillText((me?.hitIds?.includes(p.id)?'✓ ':'')+(info(p.id)?.name||''),x,y-k*.62);}
     });
@@ -204,24 +204,27 @@ export function mountArena(container,{teamId=null,onInput=()=>{},canControl=fals
   }
   function mouseAim(e){
     if(e.pointerType!=='mouse'||!controls||!me||frame.paused)return;
-    const pt=view.point(e);if(pt)controls.aimAt(Math.atan2(pt.x-me.x,me.z-pt.z));
+    const pt=view.point(e);if(pt)controls.aimAt(Math.atan2(pt.x-me.x,me.z-pt.z),Boolean(e.buttons&1));
   }
   let aimTouch=null;
   const aimPointer=e=>{
     if(e.pointerType==='mouse'){mouseAim(e);return;}
     if(!controls||aimTouch?.id!==e.pointerId)return;
     const dx=e.clientX-aimTouch.x,dz=e.clientY-aimTouch.y;
-    if(Math.hypot(dx,dz)>6)controls.aimAt(Math.atan2(dx,-dz));
+    if(Math.hypot(dx,dz)>6)controls.aimAt(Math.atan2(dx,-dz),true);
   };
   const startPointer=e=>{
-    if(!controls)return;
-    if(e.pointerType==='mouse'){if(e.button===0){mouseAim(e);controls.shoot();}return;}
+    if(controls?.getYaw()==null||aimTouch!==null)return;
+    if(e.pointerType==='mouse'&&e.button!==0)return;
     aimTouch={id:e.pointerId,x:e.clientX,y:e.clientY};
     view.canvas.setPointerCapture(e.pointerId);
+    if(e.pointerType==='mouse'){mouseAim(e);controls.shoot();}
   };
   view.canvas.addEventListener('pointermove',aimPointer);
   view.canvas.addEventListener('pointerdown',startPointer);
-  view.canvas.addEventListener('lostpointercapture',()=>{aimTouch=null;});
+  view.canvas.addEventListener('lostpointercapture',e=>{
+    if(e.pointerId===aimTouch?.id){aimTouch=null;controls?.releaseCanvasAim();}
+  });
   function update(next){
     if(!next || !Array.isArray(next.players))return;
     if(oldRound!==next.round){poses.clear();reactions.clear();latestEvent=0;fx=[];feedbackUntil=0;oldRound=next.round;}
@@ -229,7 +232,9 @@ export function mountArena(container,{teamId=null,onInput=()=>{},canControl=fals
     if(Array.isArray(next.teams))teamList=next.teams;
     me=frame.players.find(p=>p.id===teamId);
     setupControls(me);
-    controls?.setActive(!frame.paused&&!frame.finished&&!(me?.frozenMs>0));
+    const canPlay=Boolean(me)&&!frame.paused&&!frame.finished&&!(me.frozenMs>0);
+    if(!canPlay)aimTouch=null;
+    controls?.setActive(canPlay,me?.yaw);
     if(me){
       hud.hidden=false;ammo.textContent=me.ammo+' paintballs';points.textContent=me.score+' pts';
       power.hidden=!me.ability;power.textContent=(powerText[me.ability]||'')+(me.abilityMs>0?' · '+Math.ceil(me.abilityMs/1000)+'s':'');
@@ -287,7 +292,9 @@ export function mountArena(container,{teamId=null,onInput=()=>{},canControl=fals
       const previous=poses.get(p.id);
       const alpha=previous?1-Math.exp(-15*dt):1;
       const dx=p.x-(previous?.x??p.x),dz=p.z-(previous?.z??p.z);
-      const pose={...p,x:p.x-dx*(1-alpha),z:p.z-dz*(1-alpha),yaw:viewedYaw(previous?.yaw??p.yaw,p.yaw,alpha),motion:Math.min(1,Math.hypot(dx,dz)*6),hitPulse:Math.max(0,((reactions.get(p.id)||0)-now)/220)};
+      const localYaw=p.id===teamId?controls?.getYaw():null;
+      const yaw=localYaw??viewedYaw(previous?.yaw??p.yaw,p.yaw,alpha);
+      const pose={...p,x:p.x-dx*(1-alpha),z:p.z-dz*(1-alpha),yaw,motion:Math.min(1,Math.hypot(dx,dz)*6),hitPulse:Math.max(0,((reactions.get(p.id)||0)-now)/220)};
       poses.set(p.id,pose);return pose;
     });
     if(!frame.paused)fx=fx.filter(e=>(e.age+=dt)<.48).slice(-60);
@@ -296,7 +303,7 @@ export function mountArena(container,{teamId=null,onInput=()=>{},canControl=fals
     if(live)host.dataset.players=String(players.length);
   }
   raf=requestAnimationFrame(loop);
-  return {update,destroy(){
+  return {update,suspendInput(){aimTouch=null;controls?.setActive(false,me?.yaw);},destroy(){
     disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibility.disconnect();controls?.destroy();view.destroy();host.remove();
   }};
 }

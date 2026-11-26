@@ -10,13 +10,21 @@ const at = (s) => QUESTIONS[s.questionIndex];
 const newQuiz = () => ({ closed:false, finalized:false, revealed:false, entries:{} });
 const quiz = (s) => s.quizzes[at(s).id];
 const emptyStats = () => ({ firstHits:0, drones:0, stolen:0, lost:0 });
+const phoneLabel = index => 'Phone ' + (index + 1);
+const displayPhone = (device,index) => device.name || phoneLabel(index);
+
+// A retry identifies a new team by name, or an existing team by ID. Earlier
+// rooms stored a third, optional device name in this array.
+export function joinFingerprint(name, teamId) {
+  return JSON.stringify([teamId ? '' : name || '', teamId || '']);
+}
 
 export function createSession({ pin, hostTokenHash, now = Date.now() }) {
   return { pin, hostTokenHash, createdAt:now, phase:'lobby', round:1, paused:false, questionIndex:0,
     teams:[], quizzes:{}, quizDeadline:null, history:[], receipts:{} };
 }
 
-export function joinSession(s, {deviceId, teamId, name, deviceName}) {
+export function joinSession(s, {deviceId, teamId, name}) {
   requireRule(typeof deviceId === 'string' && deviceId.length > 0, 'A device identity is required.', 400);
   const existing = s.teams.find(t => t.devices.some(d => d.id === deviceId));
   if (existing) return { teamId:existing.id, deviceId };
@@ -36,7 +44,10 @@ export function joinSession(s, {deviceId, teamId, name, deviceName}) {
       controllerId:deviceId, devices:[], score:0, stats:emptyStats() };
     s.teams.push(team);
   }
-  team.devices.push({id:deviceId, name:clean(deviceName) || 'Device ' + (team.devices.length+1)});
+  const assigned = new Set(team.devices.map((d,i) => displayPhone(d,i).toLowerCase()));
+  let ordinal = team.devices.length;
+  while (assigned.has(phoneLabel(ordinal).toLowerCase())) ordinal++;
+  team.devices.push({id:deviceId, name:phoneLabel(ordinal)});
   return { teamId:team.id, deviceId };
 }
 
@@ -220,13 +231,20 @@ export function sessionView(s, actor, {now = Date.now(), onlineDeviceIds = []} =
     const info = {id:t.id,name:t.name,color:t.color,colorName:t.colorName,score:t.score,stats:{...t.stats},
       online:t.devices.some(d => online.has(d.id)),controllerOnline:online.has(t.controllerId),
       answerStatus:entry?.answer ? 'Answered' : entry?.writing ? 'Writing' : 'Waiting'};
-    if (host) info.devices = t.devices.map(d => ({...d,online:online.has(d.id),controller:d.id === t.controllerId}));
+    if (host) info.devices = t.devices.map((d,index) => ({
+      id:d.id, name:displayPhone(d,index), online:online.has(d.id), controller:d.id === t.controllerId,
+    }));
     if (s.phase === 'finished') info.englishCorrect = correct(s,t.id,QUESTIONS);
     return info;
   });
   const view = {pin:s.pin,role:actor.role,teamId:actor.teamId??null,canControl:isController(s,actor),
     phase:s.phase,round:s.round,paused:s.paused,serverTime:now,teams,onlineCount:teams.filter(t=>t.online).length,
     completedRounds:s.history.length,questionCount:20};
+  if (actor.role === 'team') {
+    const ownTeam = s.teams.find(t => t.id === actor.teamId);
+    const index = ownTeam?.devices.findIndex(d => d.id === actor.deviceId) ?? -1;
+    if (index >= 0) view.deviceLabel = displayPhone(ownTeam.devices[index],index);
+  }
   if (s.phase === 'quiz') {
     const {answer,...publicQuestion} = q;
     view.question = publicQuestion;

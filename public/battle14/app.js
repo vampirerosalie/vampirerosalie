@@ -49,7 +49,11 @@ function disconnect(){socket?.close();socket=null;state=frame=null;started=false
 function startConnection() {
   if(!token||!pin)return;
   started=true;roomError='';
-  socket=connectRoom({pin,token,onStatus(s){connection=s;if(started)renderMast();},
+  socket=connectRoom({pin,token,onStatus(s){
+    connection=s;
+    if(s!=='connected'){frame=null;arena?.suspendInput?.();}
+    if(started)renderMast();
+  },
     onState(next,serverTime){
       const changed=state && (state.phase!==next.phase||state.question?.id!==next.question?.id);
       if(changed){closeDialog();frame=null;}
@@ -82,20 +86,44 @@ async function lookup(input) {
   const result=await api('rooms/'+target+'/teams');
   pin=target;roster=result.teams||[];lobbyPhase=result.phase||'lobby';roomLookup=target;roomError='';render();
 }
+function pendingJoin(){
+  try {
+    const saved=JSON.parse(get('joining',true)||'null');
+    // Earlier pages saved one more item after the name. The original request
+    // key still recovers that phone if the first join response was lost.
+    const [room,teamId,name]=JSON.parse(saved?.identity||'[]');
+    if(room===pin&&saved.joinKey&&(teamId||name))return {teamId,name:teamId?'':name,joinKey:saved.joinKey};
+  } catch {}
+}
+async function enterTeam({teamId,name,joinKey}){
+  const identity=JSON.stringify([pin,teamId,name]);
+  save('joining',JSON.stringify({identity,joinKey}),true);
+  const result=await api('rooms/'+pin+'/join',{...(teamId?{teamId}:{name}),joinKey});
+  token=result.token;rememberRoom();save('joining','',true);render();startConnection();
+}
 async function join(form) {
   const values=new FormData(form);
   if(!roomLookup){await lookup(String(values.get('pin')||''));return;}
-  const teamId=String(values.get('teamId')||''),name=String(values.get('name')||'').trim(),deviceName=String(values.get('deviceName')||'').trim();
+  const teamId=String(values.get('teamId')||''),name=teamId?'':String(values.get('name')||'').trim();
   if(!teamId&&!name)throw Error('Enter your new team’s name.');
-  const identity=JSON.stringify([pin,teamId,name,deviceName]);
-  let saved;try{saved=JSON.parse(get('joining',true)||'null');}catch{}
-  if(saved?.identity!==identity){saved={identity,joinKey:requestId()};save('joining',JSON.stringify(saved),true);}
-  const result=await api('rooms/'+pin+'/join',{name,teamId:teamId||undefined,deviceName,joinKey:saved.joinKey});
-  token=result.token;rememberRoom();save('joining','',true);render();startConnection();
+  const pending=pendingJoin();
+  const joinKey=pending?.teamId===teamId&&pending?.name===name?pending.joinKey:requestId();
+  await enterTeam({teamId,name,joinKey});
+}
+async function restoreStudentEntry() {
+  const attempt=pendingJoin();
+  if(attempt) {
+    try { await enterTeam(attempt); return; }
+    catch(e) {
+      if(e.status>=400&&e.status<500&&e.status!==429)save('joining','',true);
+      notice(e.message);
+    }
+  }
+  await lookup(pin);
 }
 function resetEntry(){disconnect();closeDialog();save(credentialKey(),'');save(mode+'-room','');if(player())save('student-room','',true);pin=token=roomLookup=roomError='';roster=[];history.replaceState(null,'',location.pathname+(host()?'?teacher=1':'?student=1'));render();}
 function renderMast(){
-  $('mast').innerHTML=`<div class="brand"><span class="brandmark">${icon('target')}</span><div><strong>Paintball Showdown</strong><small>Battle 14 · Toybox Arena</small></div></div>
+  $('mast').innerHTML=`<div class="brand"><span class="brandmark">${icon('target')}</span><div><strong>Paintball Showdown</strong><small>Battle 14 · ${esc(state?.deviceLabel||'Toybox Arena')}</small></div></div>
   <div class="top-controls">${pin?`<span class="room-code"><small>PIN</small><b>${esc(pin)}</b></span>`:''}
   ${state?`<span class="online-label ${connection!=='connected'?'offline':''}">${connection==='connected'?'Live':'Reconnecting'}</span>`:''}
   ${host()&&state?btn(icon('qr')+' Join QR','qr','dark')+`<a class="link-btn dark" href="${esc(projectorLink())}" target="_blank" rel="noopener">${icon('screen')} Projector view</a>`:''}
@@ -133,8 +161,7 @@ function welcome(){
   return `<section class="panel start-panel"><div class="kicker">Student entrance</div><h1>Join the arena</h1>
     <form id="join-form">${roomLookup?`<p>${allowNew?'Start a team or join an existing one as a teammate.':'Choose your team to follow its robot.'} Your teacher can switch who controls the robot.</p>
     <label class="field">Team<select name="teamId" id="join-team">${allowNew?'<option value="">Create a new team</option>':''}${teamSelect}</select></label>
-    <label class="field" id="new-team-field" ${allowNew?'':'hidden'}>Team name<input name="name" maxlength="28" autocomplete="off" placeholder="Your team name"></label>
-    <label class="field">Device name (optional)<input name="deviceName" maxlength="28" placeholder="For example, Mei’s phone" autocomplete="off"></label>`:
+    <label class="field" id="new-team-field" ${allowNew?'':'hidden'}>Team name<input name="name" maxlength="28" autocomplete="off" placeholder="Your team name"></label>`:
     `<p>Enter the PIN displayed on your teacher’s screen.</p><label class="field">Room PIN<input name="pin" maxlength="5" inputmode="numeric" pattern="[0-9]{5}" value="${esc(pin)}" required></label>`}
     <button class="btn primary fullrow" type="submit">${roomLookup?'Join room':'Find room'}</button></form>${roomLookup?btn('Use another PIN','reset-entry','tiny mid'):''}</section>`;
 }
@@ -271,4 +298,4 @@ document.addEventListener('click',event=>{const button=event.target.closest('[da
 setInterval(()=>{if(state?.phase==='quiz'&&state.deadline)updateLive();},240);
 if(pin&&token)startConnection();
 render();
-if(pin&&!token&&player())lookup(pin).catch(e=>{roomError=e.message;notice(e.message);});
+if(pin&&!token&&player())restoreStudentEntry().catch(e=>{roomError=e.message;notice(e.message);});

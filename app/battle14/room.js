@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { readBody } from '../battle7/http.js';
 import { json } from './gateway.js';
-import { createSession, joinSession, sessionView, quizCommand, finishRound, isController, closeExpiredQuiz } from './session.js';
+import { createSession, joinSession, joinFingerprint, sessionView, quizCommand, finishRound, isController, closeExpiredQuiz } from './session.js';
 import { createArena, stepArena, inputArena, pauseArena, resumeArena, endArena, frameArena, clearArenaInput } from './arena.js';
 import { diffFrame } from '../../public/battle14/arena-wire.js';
 
@@ -95,13 +95,13 @@ export class PaintballRoom extends DurableObject {
         const joinKey = body.joinKey || randomUUID();
         const deviceToken = createHmac('sha256', this.data.joinSecret).update(joinKey).digest('hex');
         const key = hash(deviceToken);
-        const fingerprint = JSON.stringify([body.name || '', body.teamId || '', body.deviceName || '']);
+        const fingerprint = joinFingerprint(body.name, body.teamId);
         const existing = this.data.joins[key];
-        if (existing && existing.fingerprint !== fingerprint) return json({ error: 'This join attempt has already been used.' }, 409);
+        if (existing && joinFingerprint(...JSON.parse(existing.fingerprint)) !== fingerprint) return json({ error: 'This join attempt has already been used.' }, 409);
         if (!existing) {
           if (Object.keys(this.data.joins).length >= 120) return json({ error: 'This room has reached its device limit.' }, 409);
           const deviceId = randomUUID();
-          const result = joinSession(session, { name: body.name, teamId: body.teamId, deviceName: body.deviceName, deviceId }, now);
+          const result = joinSession(session, { name: body.name, teamId: body.teamId, deviceId }, now);
           this.data.credentials[key] = { role: 'team', teamId: result.teamId, deviceId };
           this.data.joins[key] = { fingerprint, teamId: result.teamId, deviceId };
           await this.persist();
