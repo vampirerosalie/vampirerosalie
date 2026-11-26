@@ -20,8 +20,7 @@
         "scenes": [
           "poem",
           "enrolment"
-        ],
-        "model": "Nilai yang ditunjukkan ialah kegigihan dalam mencapai cita-cita. Contohnya, Zahar tetap melanjutkan pengajian di IKM walaupun Suhaili memperlekehkan pilihannya. Akhirnya, dia berjaya membuka bengkel perabot sendiri."
+        ]
       },
       {
         "prompt": "Huraikan nilai kerjasama semasa minggu suai kenal di IKM. Sertakan satu contoh peristiwa.",
@@ -29,8 +28,7 @@
         "scenes": [
           "clearing",
           "building"
-        ],
-        "model": "Nilai yang ditunjukkan ialah kerjasama dalam melaksanakan tugas. Contohnya, semasa minggu suai kenal, Zahar bersama-sama pelatih baharu membersihkan kawasan belakang IKM untuk pembinaan asrama baharu."
+        ]
       },
       {
         "prompt": "Huraikan nilai kasih sayang Pak Yusuf terhadap keluarga Zahar. Sertakan satu contoh peristiwa.",
@@ -38,19 +36,17 @@
         "scenes": [
           "rest",
           "promise"
-        ],
-        "model": "Nilai yang ditunjukkan ialah kasih sayang terhadap ahli keluarga. Contohnya, Pak Yusuf mengambil berat tentang keluarga Zahar dengan berjanji untuk membantu persekolahan adik-adik Zahar."
+        ]
       }
     ],
     "pengajaran": [
       {
         "prompt": "Jelaskan pengajaran tentang usaha untuk mencapai cita-cita. Buktikan dengan satu peristiwa.",
-        "hint": "Mulakan dengan “Kita hendaklah…”. Susuli pengajaran itu dengan tindakan Zahar.",
+        "hint": "Mulakan dengan “Pengajaran yang pertama ialah kita hendaklah…”. Jelaskan tindakan Zahar dalam ayat yang bermula dengan “Sebagai contoh, …”.",
         "scenes": [
           "enrolment",
           "parting"
-        ],
-        "model": "Kita hendaklah gigih berusaha untuk mencapai cita-cita. Contohnya, Zahar tetap mengikuti kursus pertukangan perabot di IKM meskipun Suhaili memandang rendah pilihannya. Usahanya itu membuahkan hasil apabila dia berjaya membuka bengkel sendiri."
+        ]
       },
       {
         "prompt": "Jelaskan pengajaran tentang sikap memaafkan kesalahan orang lain. Sertakan satu contoh peristiwa.",
@@ -58,8 +54,7 @@
         "scenes": [
           "parting",
           "forgiveness"
-        ],
-        "model": "Kita hendaklah memaafkan kesalahan orang lain. Contohnya, Zahar memaafkan Suhaili yang pernah memperlekehkan keputusannya untuk belajar di IKM dan bersetuju untuk terus berkawan dengannya."
+        ]
       },
       {
         "prompt": "Jelaskan pengajaran tentang bekerjasama untuk menyelesaikan tugas. Sertakan satu contoh peristiwa.",
@@ -67,19 +62,17 @@
         "scenes": [
           "gathering-grass",
           "poem"
-        ],
-        "model": "Kita hendaklah bekerjasama untuk menyelesaikan sesuatu tugas. Contohnya, Zahar dan pelatih baharu berganding bahu membersihkan kawasan belakang IKM semasa minggu suai kenal."
+        ]
       }
     ],
     "persoalan": [
       {
         "prompt": "Huraikan persoalan kegigihan dalam mencapai cita-cita walaupun menghadapi halangan. Berikan satu contoh peristiwa.",
-        "hint": "Mulakan dengan “Persoalannya ialah…”. Kaitkan cabaran Zahar dengan usaha yang diteruskannya.",
+        "hint": "Mulakan dengan “Persoalan yang pertama ialah…”. Kaitkan cabaran Zahar dengan usaha yang diteruskannya.",
         "scenes": [
           "football",
           "enrolment"
-        ],
-        "model": "Persoalannya ialah kegigihan dalam meneruskan usaha walaupun menghadapi halangan. Contohnya, Zahar meneruskan pengajian di IKM meskipun Suhaili memperlekehkan pilihannya. Dia akhirnya mencapai cita-citanya untuk membuka bengkel perabot sendiri."
+        ]
       },
       {
         "prompt": "Huraikan persoalan kerajinan dalam menuntut ilmu untuk mencapai kejayaan. Berikan satu contoh peristiwa.",
@@ -87,8 +80,7 @@
         "scenes": [
           "examination",
           "rest"
-        ],
-        "model": "Persoalannya ialah kerajinan dalam menuntut ilmu untuk mencapai kejayaan. Contohnya, menjelang peperiksaan asas di IKM, Zahar mengetepikan kegiatan lain supaya dapat menumpukan perhatian pada tugasan menghasilkan rak buku."
+        ]
       },
       {
         "prompt": "Huraikan persoalan kerjasama dalam menyelesaikan sesuatu tugas. Berikan satu contoh peristiwa.",
@@ -96,8 +88,7 @@
         "scenes": [
           "poem",
           "clearing"
-        ],
-        "model": "Persoalannya ialah kerjasama dalam menyelesaikan sesuatu tugas. Contohnya, semasa minggu suai kenal, Zahar dan pelatih baharu bersama-sama membersihkan kawasan belakang IKM untuk dijadikan tapak asrama."
+        ]
       }
     ]
   }

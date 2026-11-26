@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import jsQR from 'jsqr';
+import { MODEL_ANSWERS } from '../app/battle16/models.js';
 
 // Exercise the real classroom shell, printed QR art, teacher iPad and a team phone.
 // node scripts/verify-sastera-classroom.mjs http://localhost:4195 chrome|webkit
@@ -157,6 +158,8 @@ try {
   async function mark(n,status) {
     const target=frame.locator('button[data-act="read"][data-station="'+n+'"]');
     await target.click();
+    await frame.getByText('Jawapan contoh untuk cikgu',{exact:true}).click();
+    await frame.getByText(MODEL_ANSWERS.nilai[n-1],{exact:true}).waitFor();
     if(status==='revise')await frame.locator('#feedback').fill(feedback);
     await frame.locator('[data-act="mark"][data-status="'+status+'"]').click();
     await frame.locator('#overlay').waitFor({state:'hidden'});
@@ -180,6 +183,7 @@ try {
   await phone.getByRole('heading',{name:/Tahniah, Pasukan Delima/}).waitFor();
   await act(phone,'toggle-compare').click();
   assert.equal(await phone.locator('.compare').count(),3);
+  for(const model of MODEL_ANSWERS.nilai) await phone.getByText(model,{exact:true}).waitFor();
   await phone.getByText(updated,{exact:true}).waitFor();
   note('Paragraph draft, manual marking, return to station, resubmission, final rescan and three unlocked model answers passed.');
 

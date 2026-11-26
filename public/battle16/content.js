@@ -1,7 +1,7 @@
 const art = (scene) => `/battle16/art/${scene}.webp`;
 
 export const HERO_ART = art("entrance");
-export const CONTENT_EDITION = 2;
+export const CONTENT_EDITION = 3;
 
 // Each choice depicts a real event. The teacher assesses how the team uses it
 // to support the paragraph, so the browser never receives an answer flag.
@@ -23,12 +23,12 @@ export const EXERCISES = {
           { speaker: "Suhaili", text: "Awak betul-betul yakin dengan pilihan awak, Zahar?" },
           { speaker: "Zahar", text: "Awak boleh meraguinya, Suhaili. Saya tahu apa yang saya mahu." },
         ],
-        prompt: "Selepas Suhaili memperlekehkan pilihannya, apakah tindakan Zahar yang membuktikan kegigihannya untuk belajar di IKM? Huraikan nilai itu dengan satu peristiwa.",
+        prompt: "Suhaili memperlekehkan pilihan Zahar. Pilih gambar yang menunjukkan Zahar tetap meneruskan pilihannya selepas pertemuan itu. Huraikan nilai kegigihan dengan satu contoh peristiwa.",
         choices: [
           scene("course-letter", "Zahar menerima surat IKM daripada Mak Kiah."),
           scene("enrolment", "Zahar menyerahkan dokumen kepada petugas IKM."),
         ],
-        hint: "Nyatakan nilai, kemudian jelaskan tindakan Zahar walaupun pilihannya dipersoalkan.",
+        hint: "Mulakan dengan “Nilai murni yang pertama ialah …”. Selepas “Sebagai contoh, …”, ceritakan tindakan Zahar ketika pilihannya dipersoalkan.",
       },
       {
         number: 2,
@@ -43,7 +43,7 @@ export const EXERCISES = {
           scene("clearing", "Pelatih IKM mengurus kawasan di belakang bangunan."),
           scene("match-refreshments", "Pelatih IKM mengurus jamuan di tepi padang."),
         ],
-        hint: "Nyatakan nilai. Sebutkan siapa yang terlibat, apa yang mereka lakukan dan tempatnya.",
+        hint: "Mulakan dengan “Selain itu, nilai murni yang kedua ialah …”. Selepas “Sebagai contoh, …”, nyatakan siapa yang bekerjasama dan kerja yang mereka lakukan.",
       },
       {
         number: 3,
@@ -58,7 +58,7 @@ export const EXERCISES = {
           scene("workshop-funds", "Pak Yusuf berbincang dengan Zahar sambil meneliti anggaran belanja."),
           scene("promise", "Pak Yusuf berbincang dengan Zahar selepas Zahar pulang dari Alor Setar."),
         ],
-        hint: "Nyatakan nilai, penerima bantuan dan perkara yang hendak ditanggung oleh Pak Yusuf.",
+        hint: "Mulakan dengan “Seterusnya, nilai murni yang ketiga ialah …”. Selepas “Sebagai contoh, …”, jelaskan bantuan Pak Yusuf dan siapa yang dibantunya.",
       },
     ],
   },
@@ -72,15 +72,15 @@ export const EXERCISES = {
         title: "Gigih berusaha",
         opening: art("at-the-bench"),
         dialogue: [
-          { speaker: "Pak Yusuf", text: "Enam bulan di Kamunting, tentu macam-macam yang kamu fikirkan tentang masa depan." },
-          { speaker: "Zahar", text: "Betul, pak cik. Ada beberapa pilihan di sana. Saya kena ingat tujuan asal saya." },
+          { speaker: "Pak Yusuf", text: "Kamu nampak murung sejak pulang dari Alor Setar, Zahar. Ada orang meragui pilihan kamu?" },
+          { speaker: "Zahar", text: "Ada, pak cik. Kata-katanya memang menyakitkan hati. Tapi saya masih ingat apa yang saya mahu capai." },
         ],
-        prompt: "Masa depan Zahar di kilang dibincangkan lebih daripada sekali. Jelaskan pengajaran tentang kegigihan melalui keputusan yang diambilnya apabila latihan industri tamat.",
+        prompt: "Kedua-dua gambar menunjukkan langkah Zahar ke arah cita-citanya. Pilih langkah yang diambilnya untuk memulakan pengajian selepas pilihannya dipandang rendah. Apakah pengajaran daripada peristiwa itu?",
         choices: [
-          scene("factory-offer", "Zahar berbincang tentang pekerjaan dengan Miss Ooi."),
-          scene("factory-conversation", "Zahar berbincang tentang pekerjaan dengan Suhaili."),
+          scene("workshop-funds", "Zahar dan Pak Yusuf meneliti dokumen di bengkel."),
+          scene("enrolment", "Zahar dan Pak Yusuf mengurus dokumen di kaunter."),
         ],
-        hint: "Mulakan dengan “Kita hendaklah…”. Terangkan pilihan yang ada dan cita-cita yang ingin dicapai oleh Zahar.",
+        hint: "Mulakan dengan “Pengajaran yang pertama ialah kita hendaklah …”. Selepas “Sebagai contoh, …”, ceritakan keputusan Zahar dan cita-cita yang akhirnya dicapainya.",
       },
       {
         number: 2,
@@ -95,7 +95,7 @@ export const EXERCISES = {
           scene("factory-conversation", "Zahar dan Suhaili berbual di dalam pejabat."),
           scene("forgiveness", "Zahar dan Suhaili berbual di luar bangunan."),
         ],
-        hint: "Nyatakan apa yang kita patut lakukan. Terangkan siapa yang dimaafkan dan kesalahannya.",
+        hint: "Mulakan dengan “Selain itu, pengajaran yang kedua ialah kita hendaklah …”. Selepas “Sebagai contoh, …”, nyatakan siapa yang dimaafkan oleh Zahar dan kesalahannya.",
       },
       {
         number: 3,
@@ -105,12 +105,12 @@ export const EXERCISES = {
           { speaker: "Norimi", text: "Zahar, kadang-kadang orang yang menikmati hasil sesuatu kerja pun tak kenal orang yang mengusahakannya." },
           { speaker: "Zahar", text: "Betul, Norimi. Yang penting, setiap orang sanggup menyumbangkan tenaga." },
         ],
-        prompt: "Kedua-dua peristiwa melibatkan gotong-royong. Yang manakah berkaitan dengan keperluan tempat tinggal pelatih pada masa hadapan? Jelaskan pengajaran melalui peristiwa itu.",
+        prompt: "Kedua-dua gambar menunjukkan gotong-royong. Pilih gambar yang berkaitan dengan tapak asrama pelatih. Jelaskan pengajaran dengan menceritakan kerja yang dilakukan bersama-sama.",
         choices: [
           scene("building", "Zahar dan rakan-rakan mengangkut kayu di tapak kerja."),
           scene("gathering-grass", "Zahar dan rakan-rakan mengangkut rumput di tapak kerja."),
         ],
-        hint: "Nyatakan pengajaran, kemudian jelaskan siapa yang bekerjasama dan tujuan kerja mereka.",
+        hint: "Mulakan dengan “Seterusnya, pengajaran yang ketiga ialah kita hendaklah …”. Selepas “Sebagai contoh, …”, nyatakan siapa yang bekerjasama, apa yang dilakukan dan di mana.",
       },
     ],
   },
@@ -127,12 +127,12 @@ export const EXERCISES = {
           { speaker: "Pak Yusuf", text: "Dahulu ramai yang tertanya-tanya ke mana pilihan kamu akan membawa kamu, Zahar." },
           { speaker: "Zahar", text: "Waktu itu saya pun belum tahu bagaimana akhirnya, pak cik. Tapi saya tetap mahu mencuba." },
         ],
-        prompt: "Suhaili pernah meragui masa depan Zahar dalam bidang perabot. Peristiwa di tempat kerja manakah yang membuktikan bahawa cita-cita asalnya akhirnya tercapai? Huraikan persoalan kegigihan itu.",
+        prompt: "Pilih gambar yang menunjukkan cita-cita Zahar akhirnya tercapai. Huraikan persoalan kegigihan melalui tindakan Zahar selepas Suhaili memperlekehkan pilihannya.",
         choices: [
           scene("workshop-trainees", "Zahar menunjukkan cara kerja kepada tiga orang pelatih."),
           scene("factory-production", "Zahar melihat cara kerja di bahagian pengeluaran."),
         ],
-        hint: "Nyatakan persoalan, kemudian hubungkan peranan Zahar dalam peristiwa pilihan kamu dengan cita-citanya.",
+        hint: "Mulakan dengan “Persoalan yang pertama ialah …”. Selepas “Sebagai contoh, …”, kaitkan keputusan Zahar dengan kejayaan yang akhirnya dicapainya.",
       },
       {
         number: 2,
@@ -142,12 +142,12 @@ export const EXERCISES = {
           { speaker: "Cikgu Baharum", text: "Hasil kerja yang kemas bermula sebelum kamu menyentuh alatan, Zahar." },
           { speaker: "Zahar", text: "Betul, cikgu. Kalau masa saya tidak teratur, susah hendak memberikan tumpuan." },
         ],
-        prompt: "Zahar pernah mengetepikan kegiatan lain untuk menghadapi peperiksaan asas. Pilih tugasan yang disiapkannya pada peringkat itu dan huraikan persoalan kerajinan menuntut ilmu.",
+        prompt: "Pilih gambar tugasan Zahar dalam peperiksaan asas di IKM. Kemudian, huraikan persoalan kerajinan menuntut ilmu melalui cara Zahar membuat persediaan untuk peperiksaan.",
         choices: [
           scene("cupboard-test", "Zahar menyiapkan sebuah almari dalam ujian amali."),
           scene("examination", "Zahar menyiapkan sebuah rak buku dalam ujian amali."),
         ],
-        hint: "Nyatakan persoalan. Kemudian terangkan perubahan dalam rutin Zahar dan tugasan yang diberinya tumpuan.",
+        hint: "Mulakan dengan “Selain itu, persoalan yang kedua ialah …”. Selepas “Sebagai contoh, …”, terangkan bagaimana Zahar belajar sebelum peperiksaan.",
       },
       {
         number: 3,
@@ -162,7 +162,7 @@ export const EXERCISES = {
           scene("clearing", "Zahar dan sekumpulan pelatih bekerja dengan alatan di kawasan lapang."),
           scene("workshop-trainees", "Zahar dan sekumpulan pelatih bekerja dengan alatan di meja pertukangan."),
         ],
-        hint: "Nyatakan persoalan. Jelaskan kedudukan Zahar dalam kumpulan itu dan tugas yang mereka lakukan.",
+        hint: "Mulakan dengan “Seterusnya, persoalan yang ketiga ialah …”. Selepas “Sebagai contoh, …”, nyatakan siapa yang bekerja bersama Zahar dan tugas yang mereka lakukan.",
       },
     ],
   },

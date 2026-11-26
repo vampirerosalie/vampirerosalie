@@ -19,25 +19,35 @@ function freshEntries() {
   return stations.map(station => ({ station, revision: 0, status: 'empty', sceneId: null, text: '', feedback: '' }));
 }
 function freshProgress() {
-  return { activeStation: 0, entries: freshEntries(), check: null, won: false };
+  return { activeStation: 0, scanEdition: null, entries: freshEntries(), check: null, won: false };
 }
 function studentEntry(player, entry) {
   const disclosed = player.check?.items.find(item => item.station === entry.station && item.revision === entry.revision);
   return { ...entry, status: disclosed?.status ?? (entry.revision ? 'pending' : 'empty'), feedback: disclosed?.feedback ?? '' };
 }
 
-// Older rooms may still contain paragraphs written against different prompts.
-// Keep their evidence, feedback and sample answer together through revision.
-function previousTask(setId, entry) {
-  if (!entry.revision || (entry.edition ?? 1) !== 1) return null;
-  return previousTasks.sets[setId][entry.station - 1];
+// The first pengajaran station was the only evidence pair changed after edition 2.
+const factoryTask = {
+  prompt: 'Masa depan Zahar di kilang dibincangkan lebih daripada sekali. Jelaskan pengajaran tentang kegigihan melalui keputusan yang diambilnya apabila latihan industri tamat.',
+  hint: 'Mulakan dengan “Pengajaran yang pertama ialah kita hendaklah…”. Terangkan keputusan Zahar dalam ayat yang bermula dengan “Sebagai contoh, …”.',
+  choices: [
+    { id: 'factory-offer', image: '/battle16/art/factory-offer.webp', caption: 'Zahar berbincang tentang pekerjaan dengan Miss Ooi.' },
+    { id: 'factory-conversation', image: '/battle16/art/factory-conversation.webp', caption: 'Zahar berbincang tentang pekerjaan dengan Suhaili.' },
+  ],
+};
+function archivedTask(setId, station, edition) {
+  if (edition === 1) {
+    const task = previousTasks.sets[setId][station - 1];
+    const choices = task.scenes.map(id => ({ id, image: '/battle16/art/' + id + '.webp', caption: previousTasks.scenes[id] }));
+    return { prompt: task.prompt, hint: task.hint, choices };
+  }
+  return edition === 2 && setId === 'pengajaran' && station === 1 ? factoryTask : null;
 }
-function displayEntry(setId, entry, forTeacher = false) {
-  const task = previousTask(setId, entry);
-  if (!task) return entry;
-  const choices = task.scenes.map(id => ({ id, image: '/battle16/art/' + id + '.webp', caption: previousTasks.scenes[id] }));
-  return { ...entry, edition: 1, legacyTask: { prompt: task.prompt, hint: task.hint, choices },
-    ...(forTeacher ? { legacyModel: task.model } : {}) };
+function displayEntry(setId, entry) {
+  if (!entry.revision) return entry;
+  const edition = entry.edition ?? 1;
+  const legacyTask = archivedTask(setId, entry.station, edition);
+  return legacyTask ? { ...entry, edition, legacyTask } : entry;
 }
 export function stationHref(pin, station, code) {
   return '/battle16/index.html?' + new URLSearchParams({ join: pin, station, code });
@@ -117,23 +127,26 @@ export class SasteraGame {
         return { station, href: stationHref(room.pin, station, code), qrUrl: '/api/sastera/rooms/' + room.pin + '/stations/' + station + '/qr.svg?code=' + code };
       });
       result.teams = room.players.map(player => ({ id: player.id, name: player.name, online: online(player), won: player.won,
-        entries: player.entries.map(entry => displayEntry(room.setId, entry, true)) }));
+        entries: player.entries.map(entry => displayEntry(room.setId, entry)) }));
       result.models = MODEL_ANSWERS[room.setId];
     } else if (actor.player) {
       const p = actor.player;
       const entries = p.entries.map(entry => displayEntry(room.setId, studentEntry(p, entry)));
       const active = entries[p.activeStation - 1];
       let choiceOrder = [];
+      let reverseChoices = false;
       if (active) {
-        const task = active.legacyTask ?? EXERCISES[room.setId].stations[p.activeStation - 1];
+        // Tabs opened before an update may still be displaying their bundled choices.
+        const edition = active.revision ? (active.edition ?? 1) : (p.scanEdition ?? room.contentEdition ?? 2);
+        const task = archivedTask(room.setId, p.activeStation, edition) ?? EXERCISES[room.setId].stations[p.activeStation - 1];
         choiceOrder = task.choices.map(choice => choice.id);
         // Each station offers two scenes. Derive a stable coin flip per team and run.
         const flip = mac(this.secret, [room.gameId, p.id, p.activeStation].join(':'));
-        if (parseInt(flip[0], 16) % 2) choiceOrder.reverse();
+        reverseChoices = parseInt(flip[0], 16) % 2 === 1;
+        if (reverseChoices) choiceOrder.reverse();
       }
-      result.me = { id: p.id, name: p.name, activeStation: p.activeStation, entries, choiceOrder,
-        won: p.won, check: p.check, models: p.won ? p.entries.map((entry, i) =>
-          previousTask(room.setId, entry)?.model ?? MODEL_ANSWERS[room.setId][i]) : null };
+      result.me = { id: p.id, name: p.name, activeStation: p.activeStation, entries, choiceOrder, reverseChoices,
+        won: p.won, check: p.check, models: p.won ? MODEL_ANSWERS[room.setId] : null };
     }
     return result;
   }
@@ -144,7 +157,7 @@ export class SasteraGame {
     return this.view(room, actor);
   }
 
-  scan(room, player, { station, code }) {
+  scan(room, player, { station, code, edition }) {
     if (![1, 2, 3, 4].includes(station) || typeof code !== 'string' || !/^[a-f0-9]{32}$/.test(code)
       || !same(code, this.stationCode(room, station))) fail('Imbas kod QR stesen bagi bilik ini.', 'BAD_STATION', 400);
     if (station === 4) {
@@ -152,6 +165,8 @@ export class SasteraGame {
       player.won = items.every(item => item.status === 'correct');
       player.check = { items, won: player.won };
     }
+    // Edition 2 clients submitted a version but did not send one with the scan.
+    player.scanEdition = edition === CONTENT_EDITION ? CONTENT_EDITION : 2;
     player.activeStation = station;
   }
 
@@ -160,12 +175,12 @@ export class SasteraGame {
     const entry = player.entries[station - 1];
     const answer = clean(text);
     if (!answer || answer.length > 800) fail('Tulis jawapan antara 1 hingga 800 aksara.', 'BAD_TEXT', 400);
-    const expected = entry.revision ? (entry.edition ?? 1) : (room.contentEdition ?? edition ?? 1);
-    if (![1, CONTENT_EDITION].includes(expected) || (edition !== undefined && edition !== expected))
+    const expected = entry.revision ? (entry.edition ?? 1) : (edition ?? room.contentEdition ?? 1);
+    if (![1, 2, CONTENT_EDITION].includes(expected) || (edition !== undefined && edition !== expected)
+      || (!entry.revision && expected === 1 && (room.contentEdition ?? 1) !== 1))
       fail('Tugasan telah dikemas kini. Muat semula stesen ini.', 'STALE_TASK');
-    const sceneIds = expected === 1 ? previousTasks.sets[room.setId][station - 1].scenes
-      : EXERCISES[room.setId].stations[station - 1].choices.map(choice => choice.id);
-    if (!sceneIds.includes(sceneId)) fail('Pilih satu peristiwa di stesen ini.', 'BAD_SCENE', 400);
+    const task = archivedTask(room.setId, station, expected) ?? EXERCISES[room.setId].stations[station - 1];
+    if (!task.choices.some(choice => choice.id === sceneId)) fail('Pilih satu peristiwa di stesen ini.', 'BAD_SCENE', 400);
     if (revision !== entry.revision) {
       if (revision === entry.revision - 1 && sceneId === entry.sceneId && answer === entry.text) return false;
       fail('Versi jawapan telah berubah. Muat semula jawapan.', 'STALE_REVISION');

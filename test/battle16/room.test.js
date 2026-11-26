@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import decodeQR from 'jsqr';
 import { TestD1 } from '../battle7/d1-helper.js';
 import { handleSasteraRequest } from '../../app/battle16/http.js';
-import { EXERCISES } from '../../public/battle16/content.js';
+import { CONTENT_EDITION, EXERCISES } from '../../public/battle16/content.js';
 import { MODEL_ANSWERS } from '../../app/battle16/models.js';
 import { SasteraGame } from '../../app/battle16/game.js';
 import previousTasks from '../../app/battle16/previous-tasks.json' with { type:'json' };
@@ -13,6 +13,35 @@ import previousTasks from '../../app/battle16/previous-tasks.json' with { type:'
 const require = createRequire(import.meta.url);
 const sharp = createRequire(require.resolve('next/package.json'))('sharp');
 const origin = 'https://classroom.example';
+
+test('model paragraphs use the comic’s opening for their station and introduce the evidence', () => {
+  const openings = {
+    nilai: ['Nilai murni yang pertama ialah', 'Selain itu, nilai murni yang kedua ialah', 'Seterusnya, nilai murni yang ketiga ialah'],
+    pengajaran: ['Pengajaran yang pertama ialah kita hendaklah', 'Selain itu, pengajaran yang kedua ialah kita hendaklah', 'Seterusnya, pengajaran yang ketiga ialah kita hendaklah'],
+    persoalan: ['Persoalan yang pertama ialah', 'Selain itu, persoalan yang kedua ialah', 'Seterusnya, persoalan yang ketiga ialah'],
+  };
+  const table = {
+    gigih: 'Zahar tetap melanjutkan pengajian di IKM walaupun Suhaili memperlekehkan pilihannya, lalu berjaya membuka bengkel sendiri.',
+    bekerjasama: 'Zahar bersama pelatih baharu membersihkan kawasan belakang IKM.',
+    menyayangi: 'Pak Yusuf mengambil berat tentang keluarga Zahar dengan membantu persekolahan adik-adiknya.',
+    memaafkan: 'Zahar memaafkan Suhaili yang pernah memperlekehkan pilihannya belajar di IKM.',
+    rajin: 'Zahar belajar bersungguh-sungguh dan membuat persediaan awal untuk menghadapi peperiksaan di IKM.',
+  };
+  const examples = {
+    nilai: [table.gigih, table.bekerjasama, table.menyayangi],
+    pengajaran: [table.gigih, table.memaafkan, table.bekerjasama],
+    persoalan: [table.gigih, table.rajin, table.bekerjasama],
+  };
+  for (const [setId, stems] of Object.entries(openings)) {
+    const models = MODEL_ANSWERS[setId];
+    assert.equal(models.length, stems.length);
+    stems.forEach((stem, index) => {
+      const [isi, ...evidence] = models[index].split('. Sebagai contoh, ');
+      assert.ok(isi.startsWith(stem + ' '));
+      assert.deepEqual(evidence, [examples[setId][index]]);
+    });
+  }
+});
 
 test('each team keeps its own station order after a refresh or another QR scan', () => {
   const game = new SasteraGame({secret:'order-test'});
@@ -37,7 +66,7 @@ test('each team keeps its own station order after a refresh or another QR scan',
   assert.equal(positions.size,2);
 });
 
-test('existing paragraphs keep the prompt, two pictures and model that were used to write them', () => {
+test('existing paragraphs retain their original prompt and pictures and use the comic model for comparison', () => {
   const game = new SasteraGame();
   const {pin,hostToken} = game.create('pengajaran');
   const room = game.room(pin);
@@ -50,22 +79,22 @@ test('existing paragraphs keep the prompt, two pictures and model that were used
     scan(station);
     const legacy=station===3;
     const sceneId=legacy?'poem':EXERCISES.pengajaran.stations[station-1].choices[0].id;
-    send(playerToken,'submit',{station,revision:0,sceneId,text:'Perenggan pasukan.',...(legacy?{}:{edition:2})});
+    send(playerToken,'submit',{station,revision:0,sceneId,text:'Perenggan pasukan.',...(legacy?{}:{edition:CONTENT_EDITION})});
     send(hostToken,'mark',{teamId:playerId,station,revision:1,status:legacy?'revise':'correct',feedback:legacy?'Berikan bukti.':''});
   }
   delete room.players[0].entries[2].edition; // Older stored rows have no edition field.
   const graded=game.state(pin,hostToken).teams[0].entries[2];
   const old=previousTasks.sets.pengajaran[2];
   assert.equal(graded.legacyTask.prompt,old.prompt);
-  assert.equal(graded.legacyModel,old.model);
+  assert.deepEqual(game.state(pin,hostToken).models,MODEL_ANSWERS.pengajaran);
   scan(4);
   const revision=scan(3).me;
   assert.deepEqual([...revision.choiceOrder].sort(),[...old.scenes].sort());
   assert.equal(revision.entries[2].legacyModel,undefined);
-  assert.ok(!JSON.stringify(revision).includes(old.model));
+  assert.ok(!JSON.stringify(revision).includes(MODEL_ANSWERS.pengajaran[2]));
   send(playerToken,'submit',{station:3,revision:1,sceneId:old.scenes[0],edition:1,text:'Perenggan yang telah dibaiki.'});
   send(hostToken,'mark',{station:3,revision:2,teamId:playerId,status:'correct'});
-  assert.deepEqual(scan(4).me.models,[...MODEL_ANSWERS.pengajaran.slice(0,2),old.model]);
+  assert.deepEqual(scan(4).me.models,MODEL_ANSWERS.pengajaran);
 });
 
 async function setup() {

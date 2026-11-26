@@ -150,11 +150,16 @@ function apply(next){
       const available=e.legacyTask?.choices??st.choices;
       const order=state.me.choiceOrder??[];
       const choices=order.map(id=>available.find(c=>c.id===id)).filter(Boolean);
-      const choice=(saved && (saved.edition??1)===edition ? saved.sceneId : e.sceneId)||'';
+      // On refresh the server may still have a scan from an older tab. Use the
+      // same team-specific flip on the current pair if its IDs have changed.
+      const ordered=choices.length===available.length?choices:(state.me.reverseChoices?[...available].reverse():available);
+      const sameTask=saved?.edition===edition ||
+        (saved?.edition===2 && edition===3 && !(state.setId==='pengajaran'&&n===1));
+      const choice=(saved && (sameTask||(!saved.edition&&edition===1)) ? saved.sceneId : e.sceneId)||'';
       const validChoice=available.some(c=>c.id===choice);
       ui={...ui,step:e.status==='revise'?(validChoice?'write':'choice'):(['dialogue','choice','write'].includes(saved?.step)?saved.step:'dialogue'),
         beat:Math.max(0,Math.min(Number(saved?.beat)||0,st.dialogue.length-1)),sceneId:validChoice?choice:'',
-        choices:choices.length===available.length?choices:available,edition,text:String(saved?.text??e.text??'')};
+        choices:ordered,edition,text:String(saved?.text??e.text??'')};
       if(ui.step==='write'&&!validChoice)ui.step='choice';
     }
   }
@@ -205,7 +210,7 @@ async function join(form){
 }
 function queue(type,fields={}){
  if(busy||!state||pending)return;
- pending={type,requestId:uuid(),gameId:state.gameId,...fields};
+ pending={type,requestId:uuid(),gameId:state.gameId,...(type==='scan'?{edition:CONTENT_EDITION}:{}),...fields};
  store.put('pending:'+role+':'+pin,JSON.stringify(pending));
  draw();void transmit();
 }
