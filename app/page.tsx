@@ -156,7 +156,7 @@ function TeacherGame({ qrReady, initialBattle, onSelectBattle8 }: { qrReady: boo
   const [joinUrl, setJoinUrl] = useState('');
   const [pollCycle, setPollCycle] = useState(0);
   const [transitionBusy, setTransitionBusy] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { isFullscreen, inPageFullscreen, fullscreenError, toggleFullscreen } = useClassroomFullscreen();
   const [judgeOverrides, setJudgeOverrides] = useState<Record<number, BoardVerdict>>({});
   const qrRef = useRef<HTMLDivElement>(null);
   const pollAbortRef = useRef<AbortController | null>(null);
@@ -313,12 +313,6 @@ function TeacherGame({ qrReady, initialBattle, onSelectBattle8 }: { qrReady: boo
       window.removeEventListener('offline', offline);
     };
   }, [roomReady, restartRoomConnection]);
-
-  useEffect(() => {
-    const syncFullscreenState = () => setIsFullscreen(Boolean(document.fullscreenElement));
-    document.addEventListener('fullscreenchange', syncFullscreenState);
-    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
-  }, []);
 
   useEffect(() => {
     if (!qrReady || !joinUrl || !qrRef.current || !window.QRCode) return;
@@ -481,17 +475,8 @@ function TeacherGame({ qrReady, initialBattle, onSelectBattle8 }: { qrReady: boo
     try { await navigator.clipboard.writeText(joinUrl); setConnectionLabel('Join link copied'); }
     catch { window.prompt('Copy this join link:', joinUrl); }
   };
-  const toggleFullscreen = async () => {
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
-    } catch {
-      setConnectionLabel('Full screen was blocked — click again');
-    }
-  };
-
   return (
-    <main className="game-shell host-shell">
+    <main className="game-shell host-shell" data-classroom-fullscreen={inPageFullscreen ? 'page' : undefined}>
       <div className="confetti-field" aria-hidden="true"><i>★</i><i>◆</i><i>●</i><i>⚡</i><i>✦</i><i>▲</i></div>
       <header className="host-topbar">
         <div className="game-logo"><span>★</span><strong>GRAMMAR</strong><em>BATTLE!</em></div>
@@ -499,6 +484,7 @@ function TeacherGame({ qrReady, initialBattle, onSelectBattle8 }: { qrReady: boo
         {connectionLabel !== 'Room online' && <button type="button" className="manual-reconnect teacher-reconnect" onClick={restartRoomConnection}>Reconnect now</button>}
         <button type="button" className="fullscreen-button" aria-pressed={isFullscreen} onClick={() => void toggleFullscreen()}><span aria-hidden="true">{isFullscreen ? '↙' : '⛶'}</span>{isFullscreen ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
       </header>
+      {fullscreenError && <p role="status">{fullscreenError}</p>}
       {state.phase === 'lobby' ? <><section className="battle-selector" aria-label="Choose grammar battle">
         <div><span>CHOOSE QUESTION SET</span><strong>Battle {state.battle} is ready</strong></div>
         <BattleTabs selected={state.battle} busy={transitionBusy} onSelect={battle => {
@@ -835,6 +821,41 @@ function hasKitchenHostCredential(pin: string) {
   catch { return false; }
 }
 
+function useClassroomFullscreen(preferInPageOnTouch = false) {
+  const [nativeFullscreen, setNativeFullscreen] = useState(false);
+  const [inPageFullscreen, setInPageFullscreen] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState('');
+
+  useEffect(() => {
+    const changed = () => setNativeFullscreen(Boolean(document.fullscreenElement));
+    changed();
+    document.addEventListener('fullscreenchange', changed);
+    return () => document.removeEventListener('fullscreenchange', changed);
+  }, []);
+
+  async function toggleFullscreen() {
+    setFullscreenError('');
+    if (inPageFullscreen) {
+      setInPageFullscreen(false);
+      return;
+    }
+    if (document.fullscreenElement) {
+      try { await document.exitFullscreen(); } catch { setFullscreenError('Use your browser’s full-screen control.'); }
+      return;
+    }
+    // iPadOS Safari can identify itself as macOS in desktop browsing mode.
+    const ipad = /iPad/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && /Mac/i.test(navigator.platform + navigator.userAgent));
+    if (ipad || (preferInPageOnTouch && navigator.maxTouchPoints > 0) || !document.fullscreenEnabled) {
+      setInPageFullscreen(true);
+      return;
+    }
+    try { await document.documentElement.requestFullscreen(); }
+    catch { setInPageFullscreen(true); }
+  }
+
+  return { isFullscreen: nativeFullscreen || inPageFullscreen, inPageFullscreen, fullscreenError, toggleFullscreen };
+}
+
 export default function Home() {
   const [route, setRoute] = useState<ShellRoute | null>(null);
   const [qrReady, setQrReady] = useState(false);
@@ -852,10 +873,7 @@ export default function Home() {
   const [paintballFrameUrl, setPaintballFrameUrl] = useState('/battle14/index.html?teacher=1&embedded=1');
   const [territoryFrameUrl, setTerritoryFrameUrl] = useState('/battle13/?teacher=1&embedded=1');
   const [treasureFrameUrl, setTreasureFrameUrl] = useState('/battle12/?teacher=1&embedded=1');
-  const [nativeFullscreen, setNativeFullscreen] = useState(false);
-  const [menitiExpanded, setMenitiExpanded] = useState(false);
-  const isFullscreen = nativeFullscreen || (route?.mode === 'meniti' && menitiExpanded);
-  const [fullscreenError, setFullscreenError] = useState('');
+  const { isFullscreen, inPageFullscreen, fullscreenError, toggleFullscreen } = useClassroomFullscreen(route?.mode === 'meniti');
   const frameRef = useRef<HTMLIFrameElement>(null);
   const routeRef = useRef<ShellRoute | null>(null);
   const studentRouteRef = useRef<StudentRoute | null>(null);
@@ -1136,30 +1154,6 @@ export default function Home() {
     return () => script.removeEventListener('load', ready);
   }, [route?.mode]);
 
-  useEffect(() => {
-    const changed = () => setNativeFullscreen(Boolean(document.fullscreenElement));
-    document.addEventListener('fullscreenchange', changed);
-    return () => document.removeEventListener('fullscreenchange', changed);
-  }, []);
-
-  const toggleFullscreen = async () => {
-    const meniti = route?.mode === 'meniti';
-    if (meniti && menitiExpanded) {
-      setMenitiExpanded(false);
-      return;
-    }
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      // Let the page own the exit button on iPad, including Safari's desktop browsing mode.
-      else if (meniti && (navigator.maxTouchPoints > 0 || !document.fullscreenEnabled)) setMenitiExpanded(true);
-      else await document.documentElement.requestFullscreen();
-      setFullscreenError('');
-    } catch {
-      if (meniti && !document.fullscreenElement) setMenitiExpanded(true);
-      else setFullscreenError('Use your browser’s full-screen control.');
-    }
-  };
-
   const selectDemolition = () => {
     const next = resolveShellRoute('?battle=8&teacher=1');
     window.history.pushState(window.history.state, '', '/?battle=8&teacher=1');
@@ -1182,7 +1176,7 @@ export default function Home() {
   const isPaintball = route.mode === 'paintball';
   const standaloneStatus = isMeniti ? menitiStatus : isPaintball ? paintballStatus : isTerritory ? territoryStatus : isTreasure ? treasureStatus : isMuseum ? museumStatus : isLantern ? lanternStatus : isMarket ? marketStatus : demolitionStatus;
   const standaloneBattle = isMeniti ? 15 : isPaintball ? 14 : isTerritory ? 13 : isTreasure ? 12 : isMuseum ? 11 : isLantern ? 10 : isMarket ? 9 : 8;
-  if (route.mode === 'demolition' || isMarket || isLantern || isMuseum || isTreasure || isTerritory || isPaintball || isMeniti) return <main className="game-shell host-shell" data-meniti-in-play={isMeniti && !['lobby', 'ended'].includes(standaloneStatus.phase) || undefined} data-meniti-fullscreen={isMeniti && isFullscreen || undefined} style={{ display: 'flex', flexDirection: 'column' }}>
+  if (route.mode === 'demolition' || isMarket || isLantern || isMuseum || isTreasure || isTerritory || isPaintball || isMeniti) return <main className="game-shell host-shell" data-meniti-in-play={isMeniti && !['lobby', 'ended'].includes(standaloneStatus.phase) || undefined} data-classroom-fullscreen={inPageFullscreen || (isMeniti && isFullscreen) ? 'frame' : undefined} style={{ display: 'flex', flexDirection: 'column' }}>
     <header className="host-topbar" style={{ flexShrink: 0 }}>
       <div className="game-logo"><span>★</span><strong>GRAMMAR</strong><em>BATTLE!</em></div>
       <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{standaloneStatus.pin || '•••••'}</strong></div><div className="online-pill"><span />{standaloneStatus.onlineCount}{(isPaintball || isMeniti) && standaloneStatus.onlineCount === 1 ? ' team online' : isLantern || isTreasure ? ' students online' : ' teams online'}</div><div className="connection-pill connected">{isMeniti ? 'BATTLE 15 · MENITI IMPIAN' : isPaintball ? 'BATTLE 14 · PAINTBALL SHOWDOWN' : isTerritory ? 'BATTLE 13 · TERRITORY WARS' : isTreasure ? 'BATTLE 12 · TREASURE RAID' : isMuseum ? 'BATTLE 11 · MUSEUM JEWEL' : isLantern ? 'BATTLE 10 · LANTERN KEEPER' : isMarket ? 'BATTLE 9 · ENGLISH BLACK MARKET' : 'BATTLE 8 · DEMOLITION DASH'}</div></div>
@@ -1193,14 +1187,14 @@ export default function Home() {
       <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle}{(isMeniti && !['lobby', 'ended'].includes(standaloneStatus.phase)) || ((isMuseum || isTerritory) && standaloneStatus.phase === 'active') || (isTreasure && ['questions', 'finalPlay', 'finalBank'].includes(standaloneStatus.phase)) ? ' is in progress' : ' is ready'}</strong></div>
       <BattleTabs selected={standaloneBattle} onSelect={battle => { if (battle !== standaloneBattle) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }} />
     </section>}
-    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isMeniti ? "Meniti Impian: Card Battle" : isPaintball ? "Battle Fourteen: Paintball Showdown" : isTerritory ? "Battle Thirteen: Territory Wars teacher game" : isTreasure ? "Battle Twelve: Treasure Raid teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isMeniti ? menitiFrameUrl : isPaintball ? paintballFrameUrl : isTerritory ? territoryFrameUrl : isTreasure ? treasureFrameUrl : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow={isMeniti ? "fullscreen; autoplay" : "fullscreen"} style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2, ...(isMeniti && isFullscreen ? { flex: '1 1 0', height: 0, minHeight: 0, borderRadius: 0 } : {}) }} />}
+    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isMeniti ? "Meniti Impian: Card Battle" : isPaintball ? "Battle Fourteen: Paintball Showdown" : isTerritory ? "Battle Thirteen: Territory Wars teacher game" : isTreasure ? "Battle Twelve: Treasure Raid teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isMeniti ? menitiFrameUrl : isPaintball ? paintballFrameUrl : isTerritory ? territoryFrameUrl : isTreasure ? treasureFrameUrl : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow={isMeniti ? "fullscreen; autoplay" : "fullscreen"} style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />}
   </main>;
 
   const teacher = route.role === 'teacher';
   const frame = <iframe ref={frameRef} className="battle7-frame" title="Battle Seven: Crazy Kitchen" src={'/battle7/index.html' + kitchenSearch} allow="fullscreen" style={teacher ? { position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 } : undefined} />;
   if (!teacher) return frame;
 
-  return <main className="game-shell host-shell" style={{ display: 'flex', flexDirection: 'column' }}>
+  return <main className="game-shell host-shell" data-classroom-fullscreen={inPageFullscreen ? 'frame' : undefined} style={{ display: 'flex', flexDirection: 'column' }}>
     <header className="host-topbar" style={{ flexShrink: 0 }}>
       <div className="game-logo"><span>★</span><strong>GRAMMAR</strong><em>BATTLE!</em></div>
       <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{route.room || '•••••'}</strong></div><div className="online-pill"><span />{kitchenStatus.onlineCount} teams online</div><div className="connection-pill connected">BATTLE 7 · CRAZY KITCHEN</div></div>

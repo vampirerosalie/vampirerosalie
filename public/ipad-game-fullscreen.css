@@ -1,0 +1,22 @@
+html[data-game-presentation] #game-presentation-bar {
+  height: calc(50px + env(safe-area-inset-top, 0px));
+}
+
+#game-presentation-bar button {
+  position: fixed;
+  z-index: 2147483646;
+  top: calc(3px + env(safe-area-inset-top, 0px));
+  right: calc(8px + env(safe-area-inset-right, 0px));
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #ffffff90;
+  border-radius: 8px;
+  background: #211b32;
+  color: white;
+  font: 700 15px/1.2 system-ui, sans-serif;
+  touch-action: manipulation;
+}
+
+html[data-game-presentation] :is(button[data-action="fullscreen"], button[data-act="fullscreen"]) {
+  visibility: hidden;
+}
