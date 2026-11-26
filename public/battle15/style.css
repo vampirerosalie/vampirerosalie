@@ -131,6 +131,32 @@ input, select { width: 100%; min-height: 46px; padding:.58rem .78rem; border:1px
 .controls .tools-row + .tools-row { margin-top:.75rem; border-top:1px solid var(--line); padding-top:.65rem; }
 .controls .icon-button { background:#2a231e; }
 .controls select { min-width:0; width:auto; }
+.teacher-roster { min-width:0; margin-top:1rem; padding:.8rem 1rem .45rem; border:1px solid #ad915269; border-radius:.5rem; background:#092c25; }
+.teacher-roster header { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:.3rem .65rem; margin-bottom:.4rem; }
+.teacher-roster h2 { margin:0; color:#fff0c5; font:600 1.35rem/1.2 var(--serif); }
+.teacher-roster header span { color:#e0c78e; font-size:.82rem; font-variant-numeric:tabular-nums; }
+.teacher-roster table { width:100%; min-width:0; table-layout:fixed; margin:0; border-collapse:collapse; }
+.teacher-roster th,.teacher-roster td { color:#faefce; border:0; border-top:1px solid #d0bb8433; padding:.34rem .25rem; text-align:left; font-size:.92rem; background:transparent; }
+.teacher-roster thead th { color:#ceb887; font-size:.73rem; letter-spacing:.04em; }
+.teacher-roster th:first-child { width:46%; }
+.teacher-roster tr>:last-child { width:15%; text-align:right; }
+.roster-name { display:flex; align-items:center; gap:.5rem; overflow-wrap:anywhere; line-height:1.2; }
+.roster-initial { flex:none; display:grid; place-items:center; width:1.7rem; height:1.7rem; border-radius:50%; color:#f6dfaa; border:1px solid #bda26788; background:#27453c; font:600 .69rem/1 var(--serif); }
+.seat-status { display:inline-flex; align-items:baseline; gap:.4rem; color:#d8d6c8; font-size:.84rem; line-height:1.25; }
+.seat-status::before { content:''; width:.45rem; height:.45rem; flex:none; border:1px solid currentColor; border-radius:50%; }
+.teacher-roster [data-status="choosing"] .seat-status { color:#f3cf85; }
+.teacher-roster [data-status="submitted"] .seat-status { color:#b2e9c0; }
+.teacher-roster [data-status="unanswered"] .seat-status { color:#f0b9a5; }
+.teacher-roster [data-status="choosing"] .seat-status::before,.teacher-roster [data-status="submitted"] .seat-status::before { background:currentColor; }
+.teacher-roster .seat-chips { font-weight:750; color:#ffe2a3; font-variant-numeric:tabular-nums; }
+@media(min-width:980px) {
+  .controls:has(.teacher-roster) { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(20rem,.8fr); gap:1.2rem; align-items:start; }
+  .teacher-roster { margin-top:0; }
+}
+@media(max-width:480px) {
+  .teacher-roster { padding:.65rem .5rem .3rem; }
+  .roster-initial { display:none; }
+}
 .control-label { display:flex; flex-direction:row; align-items:center; gap:.45rem; }
 .phone-hud { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding-bottom:.8rem; border-bottom:1px solid var(--line); }
 .phone-hud h2 { font-size:1.6rem; overflow-wrap:anywhere; }
@@ -191,9 +217,22 @@ input, select { width: 100%; min-height: 46px; padding:.58rem .78rem; border:1px
 .power-card .cost { color:#70542f; font:600 .85rem/1.3 var(--sans); }
 .shop-cards button:disabled { opacity:.72; }
 .purchase-form { margin-top:.9rem; }
-.winner { padding:clamp(1.3rem,3.4vw,3.5rem) 1rem; border:3px double #c7ad6f; border-radius:.75rem; text-align:center; background:radial-gradient(ellipse at 50% 0%,#b18b454a,transparent 65%); position:relative; overflow:hidden; }
-.winner .crown { display:inline-flex; color:#f1d398; font-size:2.9rem; }
-.winner h1 { font:italic 500 clamp(2.3rem,5.8vw,6rem)/1.05 var(--serif); color:#ffe3a7; margin:.38rem auto; overflow-wrap:anywhere; }
+.winner {
+  position:relative; isolation:isolate; overflow:hidden; display:grid; justify-items:center; align-content:center; gap:.3rem;
+  min-height:clamp(13rem,19vw,17rem); padding:clamp(1.2rem,2.5vw,2.2rem) 16%;
+  border:3px double #c7ad6f; border-radius:.75rem; background:#08241d; text-align:center;
+}
+.winner::before {
+  content:""; position:absolute; z-index:-1; pointer-events:none; inset:0;
+  background:url("./art/winner-table-wide.webp") center / 100% auto no-repeat;
+}
+.winner .crown { display:inline-flex; color:#f1d398; font-size:clamp(2rem,3.5vw,2.75rem); }
+.winner h1 { max-width:100%; font:italic 500 clamp(2.15rem,5.1vw,4.9rem)/1.07 var(--serif); color:#ffe3a7; margin:.12rem 0 .24rem; text-wrap:balance; overflow-wrap:anywhere; }
+.winner .crown,.winner h1,.winner .chip-count,.winner .kicker { filter:drop-shadow(0 2px 3px #102017); }
+@media(max-width:640px) {
+  .winner { min-height:12rem; padding-inline:12%; }
+  .winner::before { background-image:url("./art/winner-table-compact.webp"); }
+}
 .ranking { margin-top:1rem; }
 .table-scroll { max-width:100%; overflow:auto; }
 table { width:100%; border-collapse:collapse; text-align:left; font-variant-numeric:tabular-nums; }
@@ -256,6 +295,8 @@ body::before {
 .purchase-art { width:100%;border:2px solid #cbb177;border-radius:6px; }
 .volume { margin:1rem 0; }.credit { color:var(--muted);font-size:.82rem; }.credit a { color:var(--gold); }
 .review-detail h3 { margin-top:.85rem; }
+.review-tools { display:flex;flex-wrap:wrap;align-items:flex-end;gap:.65rem; }
+.review-tools label { flex:1;min-width:8rem; }
 @media(min-width:1200px) { .lobby-grid { grid-template-columns:minmax(0,1fr) minmax(270px,.33fr); } }
 @media(max-width:900px) {
   .lobby-grid,.board-grid { grid-template-columns:1fr; }
@@ -361,8 +402,6 @@ body.seated::before { background-image:linear-gradient(180deg,#12080133 0%,trans
 .short-hand:not(.five) .caption { min-height:3.1em; }
 .hand .answer-card.hidden-face { background:#512634;border:1px solid #d4b473;border-radius:6.2% / 4.2%; }
 .hand .answer-card .back { border:0; }
-.winner { background:linear-gradient(90deg,#22160dcc,#34250e55,#22160dcc),url("./art/victory.webp") center / cover no-repeat; }
-.winner .crown,.winner h1,.winner .chip-count,.winner .kicker { filter:drop-shadow(0 2px 3px #1a130c); }
 @media (max-width:700px) {
   .hand-tray { padding-bottom:clamp(1.6rem,6svh,3.5rem); }
   .hand:not(.five):not(.long-hand) { display:flex;width:100%; }

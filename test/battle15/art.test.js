@@ -15,7 +15,7 @@ test('every story scene, answer face and table illustration ships as a local Web
     assert.ok(!q.options.some(option => option.art === q.scene), 'Question scene must differ from answer art');
   }
   for (const name of ['table', 'table-phone', 'hero', 'flash', 'extra', 'raise', 'shield',
-    'back', 'frame', 'victory', 'chip-1', 'chip-2', 'chip-3']) {
+    'back', 'frame', 'winner-table-wide', 'winner-table-compact', 'chip-1', 'chip-2', 'chip-3']) {
     referenced.add('/battle15/art/' + name + '.webp');
   }
   for (const path of referenced) {
@@ -33,8 +33,8 @@ test('browser sources omit the keyed bank and the soundtrack has visible attribu
     .map(file => readFileSync(new URL(file, dir), 'utf8')).join('\n');
   assert.doesNotMatch(clientCode, /bank\.json|art\.json|correctId/);
   for (const q of QUESTIONS) assert.ok(!clientCode.includes(q.correctId));
-  assert.match(clientCode, /Thinking Music/);
+  assert.match(clientCode, /Backbay Lounge/);
   assert.match(clientCode, /Kevin MacLeod/);
   assert.match(clientCode, /creativecommons\.org\/licenses\/by\/4\.0/);
-  assert.ok(readFileSync(new URL('battle11/assets/thinking-music.mp3', site)).length > 100000);
+  assert.ok(readFileSync(new URL('battle15/audio/backbay-lounge.mp3', site)).length > 100000);
 });

@@ -92,10 +92,15 @@ test('simultaneous submissions, lost acknowledgements, concurrent timeout checks
   assert.equal((await s.request('action',s.command('host:reset',{confirm:true}),a)).status,403);
   assert.equal((await s.request('review?questionId=1',undefined,a)).status,403);
   assert.equal((await s.state()).me,undefined);
-  await s.host('countdown',{seconds:10});
-  s.tick(10000);
+  await s.host('countdown');
+  s.tick(9999);
+  assert.equal((await s.data('review?questionId=1',undefined,s.hostToken)).live,true);
+  assert.equal(s.saved().rounds[1].settled,false);
+  s.tick(1);
   const closing=await Promise.all([s.state(),s.state(a),s.state(b),s.state(s.hostToken),s.data('review?questionId=1',undefined,s.hostToken)]);
   assert.ok(closing.slice(0,4).every(v=>v.phase==='closed'&&v.reveal===null));
+  assert.equal(closing[4].settled,true);
+  assert.equal(closing[4].live,false);
   assert.deepEqual(closing[4].entries.map(e=>e.delta).sort((x,y)=>y-x),[3,-1,-1]);
   assert.equal(s.saved().players.find(p=>p.id===s.teams[0].playerId).balance,13);
   await s.host('reveal');
@@ -110,6 +115,101 @@ test('simultaneous submissions, lost acknowledgements, concurrent timeout checks
   assert.equal((await s.state(a)).me.balance,10);
   assert.equal((await (await s.request('action',oldPlay,a)).json()).code,'STALE_ROUND');
   assert.deepEqual(s.saved().rounds,{});
+});
+
+test('only the host sees choosing or submitted status; duplicate and racing requests converge after reconnect', async () => {
+  const s = await setup(3);
+  const [a,b,c] = s.teams;
+  await s.host('start');
+  await s.host('deal');
+  const choosing = s.command('student:choosing');
+  const roster = async () => (await s.state(s.hostToken)).players;
+  const status = (rows, team) => rows.find(row => row.id === team.playerId).answerStatus;
+  assert.equal((await s.request('action', choosing)).status, 401);
+  assert.equal((await s.request('action', choosing, s.hostToken)).status, 403);
+  await Promise.all([s.data('action', choosing, a.playerToken), s.data('action', choosing, a.playerToken)]);
+  await s.data('join', s.clients[0]);
+  assert.equal(status(await roster(), a), 'choosing');
+  const version = s.saved().version;
+  await s.data('action', s.command('student:choosing'), a.playerToken);
+  assert.equal(s.saved().version, version);
+
+  const hand = (await s.state(b.playerToken)).me.hand;
+  const play = s.command('student:submit', { cardId: hand[0].id, wager: 2 });
+  await Promise.all([s.data('action', play, b.playerToken),
+    s.data('action', s.command('student:choosing'), b.playerToken)]);
+  const rows = await roster();
+  assert.deepEqual(s.teams.map(team => status(rows, team)), ['choosing', 'submitted', 'waiting']);
+  assert.ok(rows.every(row => row.balance === 10));
+  for (const state of [await s.state(), await s.state(c.playerToken)]) {
+    assert.equal(state.submittedCount, 1);
+    assert.ok(state.players.every(row => !Object.hasOwn(row, 'answerStatus')));
+    assert.ok(!JSON.stringify(state).includes('choosing'));
+  }
+  await s.host('countdown');
+  s.tick(10000);
+  await s.data('action', s.command('student:choosing'), c.playerToken);
+  assert.equal(s.saved().phase, 'closed');
+  const closed = await roster();
+  assert.deepEqual(s.teams.map(team => status(closed, team)), ['unanswered','submitted','unanswered']);
+  await s.host('reveal');
+  await s.host('next');
+  const stale = { ...choosing, requestId: randomUUID() };
+  assert.equal((await (await s.request('action', stale, a.playerToken)).json()).code, 'STALE_ROUND');
+  assert.ok((await roster()).every(row => row.answerStatus === 'waiting'));
+});
+
+test('live review stays private and read-only; concurrent reveal confirmations settle the active round once', async () => {
+  const s = await setup(3);
+  const [first, second] = s.teams.map(team => team.playerToken);
+  const q = QUESTIONS[0];
+  const answer = q.options.find(option => option.id === q.correctId);
+  await s.host('start');
+  await s.host('deal');
+  const team = await s.state(first);
+  const cardId = team.me.hand.find(card => card.caption === answer.caption).id;
+  await s.data('action', s.command('student:submit', { cardId, wager: 3 }), first);
+
+  const saved = s.saved();
+  const reviewPath = 'review?questionId=1';
+  const [response, publicReview, studentReview, secondView] = await Promise.all([
+    s.request(reviewPath, undefined, s.hostToken),
+    s.request(reviewPath), s.request(reviewPath, undefined, second), s.state(second),
+  ]);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('cache-control'), /no-store/);
+  const live = await response.json();
+  assert.equal(live.live, true);
+  assert.equal(live.pending, 2);
+  assert.ok(live.entries.every(entry => entry.delta === null));
+  for (const forbidden of [publicReview, studentReview]) {
+    assert.equal(forbidden.status, 403);
+    assert.equal((await forbidden.json()).entries, undefined);
+  }
+  assert.equal(secondView.reveal, null);
+  assert.equal(secondView.me.result, null);
+  assert.deepEqual(s.saved(), saved);
+
+  const confirm = s.command('host:reveal');
+  const otherConfirmation = s.command('host:reveal');
+  const results = await Promise.all([
+    s.data('action', confirm, s.hostToken), s.data('action', confirm, s.hostToken),
+    s.data('action', otherConfirmation, s.hostToken),
+  ]);
+  assert.equal(results.filter(result => result.replayed).length, 1);
+  assert.ok(results.every(result => result.state.phase === 'reveal' && result.state.reveal.caption === answer.caption));
+  const report = await s.data(reviewPath, undefined, s.hostToken);
+  assert.equal(report.settled, true);
+  assert.equal(report.pending, 0);
+  assert.deepEqual(report.entries.map(entry => entry.delta).sort((a,b) => b-a), [3, -1, -1]);
+  for (const p of s.saved().players) {
+    assert.equal(p.correct + p.incorrect + p.unanswered, 1);
+    assert.equal(p.balance, p.id === team.me.id ? 13 : 9);
+  }
+  const latePlay = s.command('student:submit', { cardId: secondView.me.hand[0].id, wager: 1 });
+  assert.equal((await (await s.request('action', latePlay, second)).json()).code, 'WRONG_PHASE');
+  await s.host('next');
+  assert.deepEqual(await s.data(reviewPath, undefined, s.hostToken), report);
 });
 
 test('competing attacks atomically reserve a target; loser can buy elsewhere, duplicate purchases cannot spend twice', async () => {

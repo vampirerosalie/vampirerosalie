@@ -57,10 +57,22 @@ function standings(room, final = false) {
     return { ...row, rank };
   });
 }
+function responseOutcome(q, seat) {
+  if (seat.result) return seat.result.outcome;
+  if (!seat.submission) return 'pending';
+  return seat.submission.optionId === q.correctId ? 'correct' : 'incorrect';
+}
+function answerStatus(round, playerId) {
+  const seat = round.seats[playerId];
+  if (seat.submission) return 'submitted';
+  if (round.settled) return 'unanswered';
+  return seat.choosing ? 'choosing' : 'waiting';
+}
 function answerInfo(q, round) {
   const answer = q.options.find(option => option.id === q.correctId);
   const votes = { correct: 0, incorrect: 0, unanswered: 0 };
-  for (const seat of Object.values(round.seats)) votes[seat.result.outcome]++;
+  if (!round.settled) votes.pending = 0;
+  for (const seat of Object.values(round.seats)) votes[responseOutcome(q, seat)]++;
   return { caption: answer.caption, art: answer.art, explanation: q.explanation,
     nilai: q.nilai ?? null, ...votes };
 }
@@ -149,7 +161,7 @@ export class MenitiGame {
       const attack = attacks[player.id] ?? null;
       seats[player.id] = { openingBalance: player.balance, attack,
         effect: attack && !attack.blocked && !attack.refunded ? attack.card : null,
-        hand: [], previewStart: null, previewEnd: null, submission: null, result: null };
+        hand: [], previewStart: null, previewEnd: null, choosing: false, submission: null, result: null };
     }
     room.rounds[room.questionId] = { deadline: null, settled: false, revealed: false, seats };
   }
@@ -173,7 +185,7 @@ export class MenitiGame {
     for (const p of room.players) {
       const seat = round.seats[p.id];
       const sub = seat.submission;
-      const outcome = !sub ? 'unanswered' : sub.optionId === q.correctId ? 'correct' : 'incorrect';
+      const outcome = sub ? responseOutcome(q, seat) : 'unanswered';
       const actual = sub?.actualWager ?? Math.min(p.balance, seat.effect === 'raise' ? 2 : 1);
       const delta = outcome === 'correct' ? actual : -actual;
       p.balance += delta;
@@ -206,14 +218,18 @@ export class MenitiGame {
     if (this.auth(room, key).role !== 'host') fail('Kunci guru diperlukan.', 'FORBIDDEN', 403);
     const id = Number(questionId ?? room.questionId);
     const round = room.rounds[id];
-    if (!round?.settled) fail('Tunggu sehingga jawapan dikunci.', 'NOT_SETTLED');
+    const live = id === room.questionId && room.phase === 'answering';
+    if (!round || (!round.settled && !live)) fail('Tunggu sehingga kad diedarkan.', 'NOT_SETTLED');
     const q = QUESTIONS[id - 1];
-    return { question: publicQuestion(q), ...answerInfo(q, round), reference: q.reference,
+    return { question: publicQuestion(q), live, settled: round.settled, pending: 0,
+      ...answerInfo(q, round), reference: q.reference,
       entries: room.players.map(p => {
         const seat = round.seats[p.id];
         const option = q.options.find(opt => opt.id === seat.submission?.optionId);
+        const result = seat.result ?? { outcome: responseOutcome(q, seat),
+          actualWager: seat.submission?.actualWager ?? null, delta: null };
         return { id: p.id, name: p.name, caption: option?.caption ?? null,
-          baseWager: seat.submission?.baseWager ?? null, ...seat.result, effect: seat.effect, attack: seat.attack };
+          baseWager: seat.submission?.baseWager ?? null, ...result, effect: seat.effect, attack: seat.attack };
       }) };
   }
 
@@ -246,6 +262,9 @@ export class MenitiGame {
       shopDue: room.phase === 'reveal' && SHOP_AFTER.has(room.questionId), preload,
       reveal: round?.revealed ? answerInfo(q, round) : null, results: room.results };
     if (actor.role === 'host') {
+      if (round) {
+        for (const player of players) player.answerStatus = answerStatus(round, player.id);
+      }
       v.history = Object.keys(room.rounds).map(Number).filter(id => room.rounds[id].settled);
     }
     if (actor.role !== 'student') return v;
@@ -334,6 +353,15 @@ export class MenitiGame {
           seat.previewEnd = seat.previewStart + 3000;
         }
         return;
+      case 'student:choosing':
+        if (round?.settled) return false;
+        requirePhase(room, 'answering');
+        if (body.cardId !== undefined || body.wager !== undefined) {
+          fail('Hantar status sahaja tanpa kad atau taruhan.', 'INVALID_STATUS', 400);
+        }
+        if (seat.submission || seat.choosing) return false;
+        seat.choosing = true;
+        return;
       case 'student:submit': {
         requirePhase(room, 'answering');
         if (seat.submission) fail('Jawapan telah dikunci.', 'ALREADY_SUBMITTED');
@@ -350,7 +378,8 @@ export class MenitiGame {
         requirePhase(room, 'answering');
         return this.settle(room);
       case 'host:reveal':
-        requirePhase(room, 'closed');
+        requirePhase(room, 'answering', 'closed', 'reveal');
+        if (room.phase === 'answering') this.settle(room);
         round.revealed = true;
         room.phase = 'reveal';
         return;
@@ -414,7 +443,9 @@ export class MenitiGame {
       fail('Permainan atau soalan telah berubah. Semak skrin semasa.', 'STALE_ROUND');
     }
     if (room.phase === 'ended' && body.type !== 'host:reset') fail('Keputusan telah dimuktamadkan.', 'GAME_ENDED');
-    this.apply(room, actor, body);
+    // Reconnects can report the first interaction again. No extra receipt or version
+    // is needed when its flag is already present or the team has already submitted.
+    if (this.apply(room, actor, body) === false) return { ok: true, state: this.view(room, actor) };
     room.receipts[receiptKey] = signature;
     room.version++;
     return { ok: true, state: this.view(room, actor) };

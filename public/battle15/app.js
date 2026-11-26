@@ -13,15 +13,18 @@ const local={
 };
 const validPin=pin=>/^\d{5}$/.test(pin??'');
 const uuid=()=>crypto.randomUUID?.()??Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
-const role=query.has('join')||query.has('student')?'student':query.has('screen')?'public':query.has('teacher')||query.has('host')?'host':'student';
+const role=query.has('join')||query.has('student')||query.has('room')?'student':query.has('screen')?'public':query.has('teacher')||query.has('host')?'host':'student';
+const embedded = window.parent !== window;
+const openTeacherShell = role === 'host' && !embedded;
 document.body.classList.add(role==='public'?'projector':role);
-const requestedPin=query.get(role==='public'?'screen':role==='host'?'host':'join');
+const requestedPin=role==='student' ? query.get('join') ?? query.get('room') ?? (query.has('student') ? '' : null) : query.get(role==='public'?'screen':'host');
 let pin=requestedPin??(role==='public'?'':local.read(role+'-room'));
 if(!validPin(pin))pin='';
 let key=role==='public'?'':local.read(role+':'+pin);
 let clientId=local.read('client-id');
 if(!clientId) {clientId=uuid();local.write('client-id',clientId);}
-let state=null, busy=false, pending=null, pollActive=false, closed=false, seconds=10;
+let state=null, busy=false, pending=null, pollActive=false, closed=false;
+let choosingHint=null;
 let lastLayout='',lastTools='',reviewTicket=0, lastVersion=0,lastSample=0;
 let timer,clockSample=null,roundPaintQueued=false,welcomeId='', modalMode='';
 let music=null,playing=false, enabled=local.read('music')!=='off', volume=.16;
@@ -31,7 +34,7 @@ function serverClock(){return clockSample?clockSample.time+performance.now()-clo
 function stampRoute() {
   if(role==='student') {
     try{sessionStorage.setItem(prefix+'student-room',pin);}catch{}
-    if(pin)local.write('student-room',pin);
+    if(pin)local.write('student-room',pin);else local.remove('student-room');
     history.replaceState(null,'',location.pathname+(pin?'?join='+pin:'?student=1'));
   }else if(role==='host') {
     history.replaceState(null,'',location.pathname+'?teacher=1'+(window.parent!==window?'&embedded=1':'')+(pin?'&host='+pin:''));
@@ -71,10 +74,10 @@ async function api(path,{body,auth=key}={}){
   }finally{clearTimeout(timeout);}
 }
 function renderTools(){
-  const html=(role==='host'?'<a class="battle-return" href="/?teacher=1" target="_top">Pilihan Battle</a>':'')+(pin?`<span class="room-tag">PIN <b>${pin}</b></span>`:'')+
+  const html=(pin && !(role==='host' && embedded)?`<span class="room-tag">PIN <b>${pin}</b></span>`:'')+
     (role!=='student'?iconButton(playing?'sound':'mute','music','Tetapan muzik'):'')+
     iconButton('help','rules','Cara bermain')+
-    (role!=='student'?iconButton('full','fullscreen','Skrin penuh'):'');
+    (role==='public'?iconButton('full','fullscreen','Skrin penuh'):'');
   if(lastTools!==html){tools.innerHTML=html;lastTools=html;}
 }
 function showWelcome(force=false) {
@@ -100,7 +103,7 @@ function draw(){
   if(role==='student') {
     html=phone(state);
   }else {
-    html=(state.phase==='lobby'?lobby(state,role==='host'):board(state))+(role==='host'?controls(state,seconds):'');
+    html=(state.phase==='lobby'?lobby(state,role==='host'):board(state))+(role==='host'?controls(state):'');
   }
   if(html!==lastLayout){
     const focus=document.activeElement?.closest('[data-act]');
@@ -134,9 +137,11 @@ function accept(next,sent) {
   const inPreview=sameRound&&next.me?.previewStart&&next.me.previewStart===previous.me?.previewStart&&serverClock()<next.me.previewEnd;
   if(!inPreview)clockSample={time:sameRound?Math.max(serverClock(),estimate):estimate,at:arrived};
   state=next;
-  if(!sameRound){clearHand();closeDialog();seconds=10;}
+  if(!sameRound){clearHand();closeDialog();}
+  if(!sameRound||next.phase!=='answering'||next.me?.submitted)choosingHint=null;
+  if(sameRound&&previous.phase==='answering'&&next.phase!=='answering'&&modalMode==='review'&&modal.querySelector('[data-live="true"]'))openReview(next.questionId);
   if(previous?.phase!==next.phase&&modalMode==='purchase')closeDialog();
-  if((next.phase==='ended'||next.phase==='lobby')&&playing)stopMusic();
+  if(playing && (next.phase==='ended' || (next.phase==='lobby' && previous && (previous.phase!=='lobby' || previous.gameId!==next.gameId)))) stopMusic();
   if(next.phase==='lobby'&&previous?.gameId!==next.gameId)clearPending();
   if(role==='student')warmImages(next);
   if(role==='public'||role==='host'){
@@ -144,6 +149,10 @@ function accept(next,sent) {
     warmImages(next);
   }
   draw();
+  if(next.me&&next.phase==='answering'&&!next.me.submitted){
+    const draft=selection();
+    if(draft.cardId||draft.wager)notifyChoosing();
+  }
   if(previous?.me&&previous.me.balance!==next.me?.balance)chipFlight(next.me.balance>previous.me.balance);
   if(role==='host')postToShell('meniti:status',{phase:next.phase,onlineCount:next.onlineCount});
   return true;
@@ -211,6 +220,30 @@ async function act(type,extra={}){
   if(!state||busy||pending)return false;
   return transmit({type,gameId:state.gameId,questionId:state.questionId,requestId:uuid(),...extra});
 }
+// Progress is independent of the confirmed action queue. A slow hint must never delay play.
+async function notifyChoosing(){
+  if(role!=='student'||state?.phase!=='answering'||state.me.submitted)return;
+  if(!choosingHint){
+    const marker=[pin,state.gameId,state.questionId,state.me.id].join(':');
+    let delivered=false;
+    try{delivered=sessionStorage.getItem('meniti:choosing')===marker;}catch{}
+    const body={type:'student:choosing',gameId:state.gameId,questionId:state.questionId,requestId:uuid()};
+    choosingHint={marker,body,delivered,sending:false};
+  }
+  const hint=choosingHint;
+  if(hint.delivered||hint.sending)return;
+  hint.sending=true;
+  try{
+    await api('/'+pin+'/action',{body:hint.body});
+    if(hint===choosingHint){
+      hint.delivered=true;
+      try{sessionStorage.setItem('meniti:choosing',hint.marker);}catch{}
+    }
+  }catch(error){
+    // A transient failure is retried with the same request ID on the next state poll.
+    if(!error.retry)hint.delivered=true;
+  }finally{hint.sending=false;}
+}
 configureHand({serverClock,frame:queueHand,ready: s=>s===state?act('student:ready'):false});
 function closeDialog(){reviewTicket++;modalMode='';if(dialog.open)dialog.close();}
 function openDialog(mode,title,html) {
@@ -219,12 +252,14 @@ function openDialog(mode,title,html) {
   if(!dialog.open)dialog.showModal();
 }
 async function openReview(id) {
-  if(role!=='host'||!state.history?.length)return;
-  const questionId=id??state.history.at(-1);
+  if(role!=='host')return;
+  const questionId=id??(state.phase==='answering'?state.questionId:state.history.at(-1));
+  if(!questionId)return;
   const ticket=++reviewTicket;const game=state.gameId;
   try{
     const result=await api('/'+pin+'/review?questionId='+Number(questionId));
     if(ticket!==reviewTicket||state?.gameId!==game)return;
+    if(result.live&&(state.phase!=='answering'||state.questionId!==questionId))return openReview(questionId);
     openDialog('review','Semakan jawapan',reviewView(result,state));
   }catch(error){notice(error.message);}
 }
@@ -248,7 +283,7 @@ function stopMusic(){
 }
 async function startMusic(){
   if(role==='student'||!enabled||playing)return;
-  if(!music){music=new Audio('/battle11/assets/thinking-music.mp3');music.loop=true;music.preload='none';}
+  if(!music){music=new Audio('/battle15/audio/backbay-lounge.mp3');music.loop=true;music.preload='none';}
   music.volume=volume;
   try{
     // Only one teacher/projector tab plays this room's music on this browser.
@@ -274,9 +309,9 @@ async function handle(action,el) {
     case 'qr': return openQR();
     case 'start': { const request=act('host:start');if(enabled)startMusic();if(!await request)stopMusic();return; }
     case 'deal': return act('host:deal');
-    case 'countdown': return act('host:countdown',{seconds});
-    case 'close-answer': return act('host:close');
+    case 'countdown': return act('host:countdown',{seconds:10});
     case 'review': return openReview();
+    case 'refresh-review': return openReview(Number(modal.querySelector('#review-question').value));
     case 'reveal': return act('host:reveal');
     case 'next': return act('host:next');
     case 'open-shop': return act('host:openShop');
@@ -284,13 +319,13 @@ async function handle(action,el) {
     case 'leaderboard': return act('host:leaderboard',{visible:!state.showLeaderboard});
     case 'end': case 'reset': return confirmAction(action);
     case 'confirmed': {const mode=modalMode;closeDialog();if(mode==='end'||mode==='reset')return act('host:'+mode,{confirm:true});return;}
-    case 'wager': return pickWager(Number(el.dataset.base));
-    case 'card': return pickCard(el.dataset.card);
+    case 'wager': pickWager(Number(el.dataset.base));void notifyChoosing();return;
+    case 'card': pickCard(el.dataset.card);void notifyChoosing();return;
     case 'submit': return act('student:submit',selection());
     case 'retry-art': return retryImages();
     case 'power': return openShopCard(el.dataset.key);
     case 'new':
-      if(state.phase==='ended'){pin='';key='';state=null;lastVersion=0;lastSample=0;local.remove('host-room');stampRoute();showWelcome(true);}return;
+      if(state.phase==='ended'){postToShell('meniti:unavailable');pin='';key='';state=null;lastVersion=0;lastSample=0;local.remove('host-room');stampRoute();showWelcome(true);}return;
   }
 }
 document.addEventListener('click',event=>{
@@ -311,7 +346,6 @@ document.addEventListener('submit',async event=>{
   }
 });
 document.addEventListener('change',event=>{
-  if(event.target.id==='seconds'){seconds=Number(event.target.value);}
   if(event.target.id==='review-question')openReview(Number(event.target.value));
 });
 document.addEventListener('input',event=>{
@@ -333,5 +367,6 @@ setInterval(()=>{
   }
 },160);
 setInterval(()=>{if(!document.hidden&&!busy)refresh();},1000);
-if(key||role==='public'&&pin){renderTools();refresh();}else showWelcome(true);
+if(openTeacherShell) location.replace('/?battle=15&teacher=1'+(validPin(requestedPin)?'&host='+requestedPin:''));
+else if(key||role==='public'&&pin){renderTools();refresh();}else showWelcome(true);
 

@@ -31,7 +31,7 @@ export const powers = {
   shield: {name:'Perisai', cost:2, detail:'Simpan satu perisai untuk membatalkan serangan seterusnya secara automatik.'},
 };
 export const rules = `<ol class="rule-list"><li>Baca soalan yang dipaparkan oleh guru.</li><li>Pilih taruhan 1, 2 atau 3 cip dan satu kad jawapan. Tekan <b>Mainkan Kad</b> untuk mengunci pilihan.</li><li>Jawapan betul menambah cip mengikut taruhan. Jawapan salah menolak jumlah yang sama. Tiada bonus kelajuan.</li><li>Setiap lima soalan, kedai dibuka. Beli paling banyak satu kad dan tinggalkan sekurang-kurangnya satu cip.</li></ol><p class="support">Setiap pasukan bermula dengan 10 cip kelas. Jawapan kosong kehilangan taruhan minimum. Pasukan yang kehabisan cip mendapat satu cip pada awal soalan berikutnya. Baki tertinggi selepas soalan ke-32 menang.</p><p class="credit">Ilustrasi cerita daripada komik kelas Meniti Impian oleh Mr Ren, berdasarkan novel karya Osman Ayob.</p>`;
-export const credit = '<p class="credit"><a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600060" target="_blank" rel="noopener">Thinking Music · Kevin MacLeod</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>';
+export const credit = '<p class="credit"><a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700068" target="_blank" rel="noopener">Backbay Lounge · Kevin MacLeod</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>';
 const art = path => escape(path);
 const HERO = '/battle15/art/hero.webp';
 const fullTitle = 'Meniti <em>Impian</em>';
@@ -70,27 +70,39 @@ export function board(s) {
   if (s.phase==='shop'||s.phase==='shopClosed') return `<section class="screen-section shop-board"><p class="kicker">Selepas soalan ${s.questionId}</p><h1>${s.phase==='shop'?'Kedai sabotaj dibuka':'Kedai sabotaj ditutup'}</h1><p class="support">${s.phase==='shop'?'Pilih kad dan sasaran pada telefon pasukan anda. Satu pembelian bagi setiap pasukan.':'Bersedia untuk soalan berikutnya.'}</p>${s.phase==='shop'?powerCards(null):''}</section>`;
   return `<section class="question-stage">${meta(s)}<div class="question-layout"><div><h1 class="question-text">${escape(s.question.prompt)}</h1><p class="status-line">${icon(s.phase==='closed'?'lock':'book')}${phaseNames[s.phase]}</p></div>${scene(s.question.scene,'Suasana dalam novel Meniti Impian')}</div>${s.phase==='reveal'&&s.reveal?reveal(s.reveal):''}</section>`;
 }
-export function controls(s, seconds) {
+function teacherRoster(s) {
+  if(s.phase==='lobby'||s.phase==='ended') return '';
+  const statusNames={waiting:'Waiting',choosing:'Choosing a card',submitted:'Submitted',unanswered:'Unanswered'};
+  const rows=s.players.map(p=>{
+    const status=p.answerStatus ?? 'waiting';
+    const initials=p.name.trim().split(/\s+/u).slice(0,2).map(part=>Array.from(part)[0]).join('').toLocaleUpperCase();
+    return `<tr data-status="${status}"><th scope="row"><span class="roster-name"><i class="roster-initial" aria-hidden="true">${escape(initials)}</i><span>${escape(p.name)}</span></span></th><td><span class="seat-status">${statusNames[status]}</span></td><td class="seat-chips">${p.balance}</td></tr>`;
+  }).join('');
+  return `<section class="teacher-roster" aria-labelledby="roster-title"><header><h2 id="roster-title">Team status</h2><span>${s.submittedCount}/${s.joinedCount} submitted</span></header><table><thead><tr><th scope="col">Team</th><th scope="col">Status</th><th scope="col">Chips</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+}
+export function controls(s) {
   const b=(label,action,options={})=>button(label,action,{cls:'primary',...options});
   let main='';
   switch(s.phase) {
     case 'question': main=b('Edarkan Kad','deal',{symbol:'cards'}); break;
     case 'answering':
-      main=`<label class="control-label">Tempoh<select id="seconds" ${s.deadline?'disabled':''}>${[5,10,15,20,30,45,60,90,120].map(t=>`<option value="${t}" ${t===seconds?'selected':''}>${t} saat</option>`).join('')}</select></label>${b('Mulakan Kiraan Detik','countdown',{disabled:!!s.deadline,symbol:'clock'})}${button('Tutup Jawapan','close-answer')}`;
+    case 'closed':
+      main=button('Review answers','review')+
+        (s.phase==='answering'?button('Start 10-second countdown','countdown',{disabled:!!s.deadline,symbol:'clock'}):'')+
+        b('Confirm results + reveal','reveal',{symbol:'check'});
       break;
-    case 'closed': main=b('Dedahkan Jawapan','reveal')+button('Semak Jawapan','review'); break;
     case 'reveal': main=(s.shopDue?b('Buka Kedai Sabotaj','open-shop'):b(s.questionId===32?'Paparkan Keputusan Akhir':'Soalan Seterusnya','next'))+button('Semak Jawapan','review'); break;
     case 'shop': main=b('Tutup Kedai Sabotaj','close-shop'); break;
     case 'shopClosed': main=b('Soalan Seterusnya','next');break;
     case 'ended': main= s.history?.length ? b('Semak Soalan Terdahulu','review') : ''; break;
   }
-  return `<section class="controls" aria-label="Kawalan guru">${main?`<div class="tools-row">${main}</div>`:''}<div class="tools-row">${s.phase!=='ended'&&s.phase!=='lobby'?button(s.showLeaderboard?'Kembali ke Meja':'Papan Kedudukan','leaderboard'):''}${button('Kod QR','qr',{cls:'ghost',symbol:'qr'})}<a class="action ghost" href="/battle15/index.html?screen=${s.pin}" target="_blank" rel="noopener">${icon('screen')}Paparan Kelas</a>${button('Tetapkan Semula','reset',{cls:'ghost'})}${s.phase!=='ended'?button('Tamatkan Permainan','end',{cls:'danger ghost'}):button('Bilik Baharu','new',{cls:'ghost'})}</div></section>`;
+  return `<section class="controls" aria-label="Kawalan guru"><div class="desk-actions">${main?`<div class="tools-row">${main}</div>`:''}<div class="tools-row">${s.phase!=='ended'&&s.phase!=='lobby'?button(s.showLeaderboard?'Kembali ke Meja':'Papan Kedudukan','leaderboard'):''}${button('Kod QR','qr',{cls:'ghost',symbol:'qr'})}<a class="action ghost" href="/battle15/index.html?screen=${s.pin}" target="_blank" rel="noopener">${icon('screen')}Paparan Kelas</a>${button('Tetapkan Semula','reset',{cls:'ghost'})}${s.phase!=='ended'?button('Tamatkan Permainan','end',{cls:'danger ghost'}):button('Bilik Baharu','new',{cls:'ghost'})}</div></div>${teacherRoster(s)}</section>`;
 }
 function reveal(r, result) {
   const delta=result?`<strong class="result-delta ${result.delta<0?'loss':''}">${outcomes[result.outcome]} · ${signed(result.delta)} cip</strong>`:'';
   return `<section class="revealed">${scene(r.art,'Ilustrasi jawapan yang betul')}<div><p class="kicker">Jawapan betul</p><h2>${escape(r.caption)}</h2><p>${escape(r.explanation)}</p>${r.nilai?`<p class="nilai"><b>${escape(r.nilai.name)}</b> · ${escape(r.nilai.event)}</p>`:''}${delta}</div></section>`;
 }
-export const outcomes = {correct:'Betul', incorrect:'Salah', unanswered:'Tidak dijawab'};
+export const outcomes = {correct:'Betul', incorrect:'Salah', unanswered:'Tidak dijawab', pending:'Belum menjawab'};
 function signed(n) { return n>0?'+'+n:String(n); }
 function ranking(rows) {
   return `<h2>Papan kedudukan</h2><div class="table-scroll"><table><thead><tr><th>Kedudukan</th><th>Pasukan</th><th>Baki cip</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${p.rank}</td><td class="team-name">${escape(p.name)}</td><td>${p.balance}</td></tr>`).join('')}</tbody></table></div>`;
@@ -135,6 +147,18 @@ export function phone(s) {
   return `<article class="play-table" data-phase="${s.phase}">${hud}${content}</article>`;
 }
 export function reviewView(r,s) {
-  return `<div class="review-detail"><label>Soalan<select id="review-question">${s.history.map(id=>`<option value="${id}" ${r.question.id===id?'selected':''}>Soalan ${id}</option>`).join('')}</select></label><h3>${escape(r.question.prompt)}</h3>${reveal(r)}<p><b>Rujukan komik</b> · ${escape(r.reference)}</p><p>${r.correct} betul · ${r.incorrect} salah · ${r.unanswered} tidak dijawab</p><div class="table-scroll"><table><thead><tr>${['Pasukan','Pilihan','Asal','Sebenar','Perubahan cip','Keputusan','Sabotaj'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${r.entries.map(e=>`<tr><td class="team-name">${escape(e.name)}</td><td>${escape(e.caption??'—')}</td><td>${e.baseWager??'—'}</td><td>${e.actualWager}</td><td>${signed(e.delta)}</td><td>${outcomes[e.outcome]}</td><td>${e.attack?(powers[e.attack.card].name+(e.attack.blocked?' (dihalang)':e.attack.refunded?' (dibatalkan)':'')):'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  const ids=[...s.history];
+  if(s.phase==='answering'&&!ids.includes(s.questionId))ids.push(s.questionId);
+  if(!ids.includes(r.question.id))ids.push(r.question.id);
+  const count=r.live?`${r.pending} belum menjawab`:`${r.unanswered} tidak dijawab`;
+  const refresh=r.live?button('Muat semula semakan','refresh-review'):'';
+  const summary=r.live?'<p class="support">Semakan guru sahaja. Pasukan masih boleh menghantar jawapan.</p>':'';
+  const columns=['Pasukan','Pilihan','Taruhan asal','Taruhan sebenar','Perubahan cip','Keputusan','Sabotaj'];
+  const rows=r.entries.map(e=>{
+    const change=r.settled&&typeof e.delta==='number'?signed(e.delta):'—';
+    const sabotage=e.attack?powers[e.attack.card].name+(e.attack.blocked?' (dihalang)':e.attack.refunded?' (dibatalkan)':''):'—';
+    return `<tr><td class="team-name">${escape(e.name)}</td><td>${escape(e.caption??'—')}</td><td>${e.baseWager??'—'}</td><td>${e.actualWager??'—'}</td><td>${change}</td><td>${outcomes[e.outcome]}</td><td>${sabotage}</td></tr>`;
+  }).join('');
+  return `<div class="review-detail" data-live="${!!r.live}"><div class="review-tools"><label>Soalan<select id="review-question">${ids.map(id=>`<option value="${id}" ${r.question.id===id?'selected':''}>Soalan ${id}</option>`).join('')}</select></label>${refresh}</div>${summary}<h3>${escape(r.question.prompt)}</h3>${reveal(r)}<p><b>Rujukan komik</b> · ${escape(r.reference)}</p><p>${r.correct} betul · ${r.incorrect} salah · ${count}</p><div class="table-scroll"><table><thead><tr>${columns.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 

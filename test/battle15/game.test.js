@@ -136,7 +136,7 @@ test('opponents see the submission count without identifying which team played a
   const s = fixture(2);
   s.host('start');
   s.host('deal');
-  const views = () => [s.view(s.hostToken), s.view(), s.view(s.teams[1].playerToken)];
+  const views = () => [s.view(), s.view(s.teams[1].playerToken)];
   const before = views();
   const ownCards = s.me(0).hand.map(c => c.id);
   s.play(0, QUESTIONS[0].correctId, 3);
@@ -156,6 +156,54 @@ test('opponents see the submission count without identifying which team played a
   s.host('next');
   s.host('deal');
   for (const v of views()) assert.equal(v.submittedCount, 0);
+});
+
+test('teacher roster tracks the first interaction, submission and missed deadline across reconnects', () => {
+  const s = fixture(3);
+  const roster = () => s.view(s.hostToken).players;
+  const statuses = () => s.teams.map(team => roster().find(player => player.id === team.playerId).answerStatus);
+  assert.deepEqual(statuses(), [undefined, undefined, undefined]);
+  s.host('start');
+  assert.deepEqual(statuses(), ['waiting', 'waiting', 'waiting']);
+  rejects(() => s.student(0, 'choosing'), 'WRONG_PHASE');
+  s.host('deal');
+  // Rooms persisted before the teacher roster had no choosing flag.
+  delete s.room().rounds[1].seats[s.teams[0].playerId].choosing;
+  s.restartWorker();
+  assert.deepEqual(statuses(), ['waiting', 'waiting', 'waiting']);
+  assert.ok(roster().every(p => p.balance === 10 && p.rank === 1));
+  const hand = s.me(0).hand;
+  rejects(() => s.student(0, 'choosing', { cardId: hand[0].id, wager: 3 }), 'INVALID_STATUS');
+  s.student(0, 'choosing');
+  assert.deepEqual(statuses(), ['choosing', 'waiting', 'waiting']);
+  const saved = structuredClone(s.room());
+  s.student(0, 'choosing');
+  assert.deepEqual(s.room(), saved);
+  s.restartWorker();
+  s.join(s.clients[0]);
+  assert.deepEqual(statuses(), ['choosing', 'waiting', 'waiting']);
+  assert.deepEqual(s.me(0).hand, hand);
+  for (const state of [s.view(), s.view(s.teams[0].playerToken), s.view(s.teams[1].playerToken)]) {
+    assert.equal(state.submittedCount, 0);
+    assert.ok(state.players.every(p => !Object.hasOwn(p, 'answerStatus')));
+    assert.ok(!JSON.stringify(state).includes('choosing'));
+  }
+  s.play(1, QUESTIONS[0].correctId, 3);
+  s.student(1, 'choosing');
+  assert.deepEqual(statuses(), ['choosing', 'submitted', 'waiting']);
+  assert.equal(s.view().submittedCount, 1);
+  assert.ok(roster().every(p => p.balance === 10 && p.rank === 1));
+  s.host('countdown');
+  s.tick(10000);
+  s.student(0, 'choosing');
+  assert.equal(s.view().phase, 'closed');
+  assert.deepEqual(statuses(), ['unanswered', 'submitted', 'unanswered']);
+  s.host('reveal');
+  assert.deepEqual(s.view().players.map(p => [p.balance,p.rank]), [[13,1],[9,2],[9,2]]);
+  s.host('next');
+  assert.deepEqual(statuses(), ['waiting', 'waiting', 'waiting']);
+  s.host('reset', { confirm: true });
+  assert.deepEqual(statuses(), [undefined, undefined, undefined]);
 });
 
 test('Extra Card is pooled before the shuffle and can occupy every position across repeated deals', () => {
@@ -210,6 +258,54 @@ test('Flash waits for decoded art then provides one synchronized three-second pr
   s.student(1, 'submit', play);
   assert.equal(s.me(1).submitted, true);
   assert.deepEqual(s.me(1).hand, []);
+});
+
+test('teacher can check live answers privately while pending teams can still play', () => {
+  const s = fixture(3);
+  const q = QUESTIONS[0];
+  s.host('start');
+  rejects(() => s.review(1), 'NOT_SETTLED');
+  s.host('deal');
+  assert.equal(s.review(1).pending, 3);
+  s.play(0, q.correctId, 3);
+  s.play(1, q.options[0].id, 2);
+  const before = structuredClone(s.room());
+  const live = s.review(1);
+  assert.equal(live.live, true);
+  assert.equal(live.settled, false);
+  assert.deepEqual([live.correct, live.incorrect, live.unanswered, live.pending], [1, 1, 0, 1]);
+  assert.deepEqual(live.entries.map(e => [e.outcome, e.caption, e.baseWager, e.actualWager, e.delta]), [
+    ['correct', live.caption, 3, 3, null],
+    ['incorrect', q.options[0].caption, 2, 2, null],
+    ['pending', null, null, null, null],
+  ]);
+  assert.deepEqual(s.review(1), live);
+  assert.deepEqual(s.room(), before);
+  rejects(() => s.review(2), 'NOT_SETTLED');
+  rejects(() => s.review(1, null), 'FORBIDDEN');
+  rejects(() => s.review(1, s.teams[1].playerToken), 'FORBIDDEN');
+  assert.deepEqual(s.view(s.hostToken).history, []);
+  for (const v of [s.view(), s.view(s.teams[0].playerToken)]) {
+    assert.equal(v.phase, 'answering');
+    assert.equal(v.reveal, null);
+    assert.equal(v.entries, undefined);
+    assert.ok(v.players.every(p => p.balance === 10));
+    assert.ok(!JSON.stringify(v).includes(q.explanation));
+  }
+  assert.equal(s.me(0).result, null);
+  s.play(2, q.correctId, 1);
+  s.host('reveal');
+  const final = s.review(1);
+  assert.equal(final.live, false);
+  assert.equal(final.settled, true);
+  assert.equal(final.pending, 0);
+  assert.deepEqual(final.entries.map(e => e.delta), [3, -2, 1]);
+  assert.equal(s.view().reveal.caption, live.caption);
+  assert.deepEqual(s.view(s.hostToken).history, [1]);
+  s.host('reveal');
+  assert.deepEqual(s.review(1), final);
+  s.host('next');
+  assert.deepEqual(s.review(1), final);
 });
 
 test('no speed advantage, countdown boundary, duplicate plays and single settlement with read-only review', () => {
