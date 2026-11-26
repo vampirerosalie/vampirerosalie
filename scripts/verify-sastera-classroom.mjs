@@ -53,10 +53,26 @@ async function pretendHidden(frame, hidden) {
   },hidden);
 }
 async function readyToWrite(page) {
-  await page.waitForFunction(() => document.querySelector('.novel-art')?.naturalWidth > 200);
+  const portrait = page.locator('.portrait-slot.active .speaker-portrait');
+  await page.waitForFunction(() => document.querySelector('.portrait-slot.active img')?.naturalWidth > 120);
+  const firstSpeaker = await page.locator('.speech .speaker').innerText();
+  const firstArt = await portrait.getAttribute('src');
   await act(page, 'next-line').click();
+  await page.waitForFunction(() => document.querySelector('.portrait-slot.active img')?.naturalWidth > 120);
+  const nextSpeaker = await page.locator('.speech .speaker').innerText();
+  if(firstSpeaker !== nextSpeaker) assert.notEqual(await portrait.getAttribute('src'),firstArt,'New speaker should have their own portrait');
   await act(page, 'next-line').click();
   await page.waitForFunction(() => [...document.querySelectorAll('.scene-option img')].filter(img => img.naturalWidth > 200).length === 2);
+  const choices = page.locator('button.scene-option');
+  const order = await choices.evaluateAll(nodes=>nodes.map(el=>el.dataset.id));
+  const unrelatedHeader = await page.locator('.task-page').evaluate(el=>{
+    const evidence = new Set([...el.querySelectorAll('.scene-option img')].map(img=>img.currentSrc));
+    return [...el.querySelectorAll('header img,.task-art img')].every(img=>!evidence.has(img.currentSrc));
+  });
+  assert.ok(unrelatedHeader,'The task header reveals a pictured answer');
+  await page.reload();
+  await choices.first().waitFor();
+  assert.deepEqual(await choices.evaluateAll(nodes=>nodes.map(el=>el.dataset.id)),order,'Scene order changed on refresh');
   await act(page, 'choice').click();
 }
 const feedback = 'Nyatakan tempat dan tugas yang dilakukan oleh para pelatih.';

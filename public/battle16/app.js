@@ -1,4 +1,4 @@
-import {EXERCISES} from "./content.js";
+import {CONTENT_EDITION,EXERCISES} from "./content.js";
 import {btn,esc,welcome,publicView,teacher,review,cards,resetPanel,scanner,studentRound} from "./views.js";
 const root=document.getElementById('game'),dialog=document.getElementById('overlay'),panel=document.getElementById('overlay-body');
 const tools=document.getElementById('tools'),notice=document.getElementById('notice'),connection=document.getElementById('link-status');
@@ -133,7 +133,7 @@ function draw(){
  for(const el of document.querySelectorAll('[data-act="start"],[data-act="mark"],[data-act="submit"],[data-act="confirm-reset"],[data-act="create"],#join-form button'))el.disabled=waiting;
 }
 function rememberDraft(){
- if(draftKey)store.put(draftKey,JSON.stringify({text:ui.text,sceneId:ui.sceneId,step:ui.step,beat:ui.beat}));
+ if(draftKey)store.put(draftKey,JSON.stringify({text:ui.text,sceneId:ui.sceneId,step:ui.step,beat:ui.beat,edition:ui.edition}));
 }
 function apply(next){
  if(!next||next.pin!==pin||next.role!==role||state&&next.version<state.version)return;
@@ -146,9 +146,15 @@ function apply(next){
     draftKey=nextKey;
     if(draftKey){
       const saved=store.json(draftKey),st=EXERCISES[state.setId].stations[n-1];
-      const choice=saved?.sceneId||e.sceneId||'',validChoice=st.choices.some(c=>c.id===choice);
+      const edition=e.edition??CONTENT_EDITION;
+      const available=e.legacyTask?.choices??st.choices;
+      const order=state.me.choiceOrder??[];
+      const choices=order.map(id=>available.find(c=>c.id===id)).filter(Boolean);
+      const choice=(saved && (saved.edition??1)===edition ? saved.sceneId : e.sceneId)||'';
+      const validChoice=available.some(c=>c.id===choice);
       ui={...ui,step:e.status==='revise'?(validChoice?'write':'choice'):(['dialogue','choice','write'].includes(saved?.step)?saved.step:'dialogue'),
-        beat:Math.max(0,Math.min(Number(saved?.beat)||0,st.dialogue.length-1)),sceneId:validChoice?choice:'',text:String(saved?.text??e.text??'')};
+        beat:Math.max(0,Math.min(Number(saved?.beat)||0,st.dialogue.length-1)),sceneId:validChoice?choice:'',
+        choices:choices.length===available.length?choices:available,edition,text:String(saved?.text??e.text??'')};
       if(ui.step==='write'&&!validChoice)ui.step='choice';
     }
   }
@@ -281,7 +287,7 @@ document.addEventListener('submit',e=>{
  if(!state?.me)return;
  const n=state.me.activeStation,text=e.target.querySelector('textarea').value.trim();
  if(!text||!ui.sceneId){notify('Pilih satu peristiwa dan tulis perenggan anda.');return;}
- queue('submit',{station:n,revision:state.me.entries[n-1].revision,sceneId:ui.sceneId,text});
+ queue('submit',{station:n,revision:state.me.entries[n-1].revision,sceneId:ui.sceneId,edition:ui.edition,text});
 });
 document.addEventListener('click',event=>{
  const el=event.target.closest('[data-act]');if(!el||el.disabled)return;

@@ -7,10 +7,66 @@ import { TestD1 } from '../battle7/d1-helper.js';
 import { handleSasteraRequest } from '../../app/battle16/http.js';
 import { EXERCISES } from '../../public/battle16/content.js';
 import { MODEL_ANSWERS } from '../../app/battle16/models.js';
+import { SasteraGame } from '../../app/battle16/game.js';
+import previousTasks from '../../app/battle16/previous-tasks.json' with { type:'json' };
 
 const require = createRequire(import.meta.url);
 const sharp = createRequire(require.resolve('next/package.json'))('sharp');
 const origin = 'https://classroom.example';
+
+test('each team keeps its own station order after a refresh or another QR scan', () => {
+  const game = new SasteraGame({secret:'order-test'});
+  const {pin,hostToken} = game.create('pengajaran');
+  const room = game.room(pin);
+  room.gameId = 'same-class';
+  const station = 3;
+  const code = game.stationCode(room, station);
+  game.action(pin,hostToken,{type:'start',gameId:room.gameId,setId:'pengajaran'});
+  const expected = EXERCISES.pengajaran.stations[2].choices.map(c=>c.id);
+  const positions = new Set();
+  for(let i=0;i<16;i++){
+    const {playerToken} = game.join(pin,{clientId:'student-device-number-'+i,name:'Team '+i});
+    room.players[i].id = 'team-'+i;
+    const scan = () => game.action(pin,playerToken,{type:'scan',gameId:room.gameId,station,code}).state.me.choiceOrder;
+    const order=scan();
+    positions.add(order[0]);
+    assert.deepEqual([...order].sort(),[...expected].sort());
+    assert.deepEqual(game.state(pin,playerToken).me.choiceOrder,order);
+    assert.deepEqual(scan(),order);
+  }
+  assert.equal(positions.size,2);
+});
+
+test('existing paragraphs keep the prompt, two pictures and model that were used to write them', () => {
+  const game = new SasteraGame();
+  const {pin,hostToken} = game.create('pengajaran');
+  const room = game.room(pin);
+  const {playerToken,playerId}=game.join(pin,{clientId:'existing-student-device',name:'Delima'});
+  game.action(pin,hostToken,{type:'start',gameId:room.gameId,setId:'pengajaran'});
+  delete room.contentEdition; // Room already playing when the revised tasks were published.
+  const send=(key,type,fields)=>game.action(pin,key,{type,gameId:room.gameId,...fields}).state;
+  const scan=n=>send(playerToken,'scan',{station:n,code:game.stationCode(room,n)});
+  for(const station of [1,2,3]){
+    scan(station);
+    const legacy=station===3;
+    const sceneId=legacy?'poem':EXERCISES.pengajaran.stations[station-1].choices[0].id;
+    send(playerToken,'submit',{station,revision:0,sceneId,text:'Perenggan pasukan.',...(legacy?{}:{edition:2})});
+    send(hostToken,'mark',{teamId:playerId,station,revision:1,status:legacy?'revise':'correct',feedback:legacy?'Berikan bukti.':''});
+  }
+  delete room.players[0].entries[2].edition; // Older stored rows have no edition field.
+  const graded=game.state(pin,hostToken).teams[0].entries[2];
+  const old=previousTasks.sets.pengajaran[2];
+  assert.equal(graded.legacyTask.prompt,old.prompt);
+  assert.equal(graded.legacyModel,old.model);
+  scan(4);
+  const revision=scan(3).me;
+  assert.deepEqual([...revision.choiceOrder].sort(),[...old.scenes].sort());
+  assert.equal(revision.entries[2].legacyModel,undefined);
+  assert.ok(!JSON.stringify(revision).includes(old.model));
+  send(playerToken,'submit',{station:3,revision:1,sceneId:old.scenes[0],edition:1,text:'Perenggan yang telah dibaiki.'});
+  send(hostToken,'mark',{station:3,revision:2,teamId:playerId,status:'correct'});
+  assert.deepEqual(scan(4).me.models,[...MODEL_ANSWERS.pengajaran.slice(0,2),old.model]);
+});
 
 async function setup() {
   const db = new TestD1();

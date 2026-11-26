@@ -1,7 +1,8 @@
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { GameError } from '../rooms/error.js';
-import { EXERCISES } from '../../public/battle16/content.js';
+import { CONTENT_EDITION, EXERCISES } from '../../public/battle16/content.js';
 import { MODEL_ANSWERS } from './models.js';
+import previousTasks from './previous-tasks.json' with { type: 'json' };
 
 const stations = [1, 2, 3];
 const token = () => randomBytes(32).toString('hex');
@@ -24,6 +25,20 @@ function studentEntry(player, entry) {
   const disclosed = player.check?.items.find(item => item.station === entry.station && item.revision === entry.revision);
   return { ...entry, status: disclosed?.status ?? (entry.revision ? 'pending' : 'empty'), feedback: disclosed?.feedback ?? '' };
 }
+
+// Older rooms may still contain paragraphs written against different prompts.
+// Keep their evidence, feedback and sample answer together through revision.
+function previousTask(setId, entry) {
+  if (!entry.revision || (entry.edition ?? 1) !== 1) return null;
+  return previousTasks.sets[setId][entry.station - 1];
+}
+function displayEntry(setId, entry, forTeacher = false) {
+  const task = previousTask(setId, entry);
+  if (!task) return entry;
+  const choices = task.scenes.map(id => ({ id, image: '/battle16/art/' + id + '.webp', caption: previousTasks.scenes[id] }));
+  return { ...entry, edition: 1, legacyTask: { prompt: task.prompt, hint: task.hint, choices },
+    ...(forTeacher ? { legacyModel: task.model } : {}) };
+}
 export function stationHref(pin, station, code) {
   return '/battle16/index.html?' + new URLSearchParams({ join: pin, station, code });
 }
@@ -43,7 +58,7 @@ export class SasteraGame {
     const hostToken = token();
     const createdAt = this.now();
     this.rooms.set(pin, { pin, createdAt, expiresAt: createdAt + 48 * 3600000, hostHash: digest(hostToken),
-      players: [], setId, phase: 'lobby', gameId: randomBytes(12).toString('hex'), version: 1, receipts: {} });
+      players: [], setId, contentEdition: CONTENT_EDITION, phase: 'lobby', gameId: randomBytes(12).toString('hex'), version: 1, receipts: {} });
     return { pin, hostToken };
   }
 
@@ -101,12 +116,24 @@ export class SasteraGame {
         const code = this.stationCode(room, station);
         return { station, href: stationHref(room.pin, station, code), qrUrl: '/api/sastera/rooms/' + room.pin + '/stations/' + station + '/qr.svg?code=' + code };
       });
-      result.teams = room.players.map(player => ({ id: player.id, name: player.name, online: online(player), won: player.won, entries: player.entries }));
+      result.teams = room.players.map(player => ({ id: player.id, name: player.name, online: online(player), won: player.won,
+        entries: player.entries.map(entry => displayEntry(room.setId, entry, true)) }));
       result.models = MODEL_ANSWERS[room.setId];
     } else if (actor.player) {
       const p = actor.player;
-      result.me = { id: p.id, name: p.name, activeStation: p.activeStation, entries: p.entries.map(entry => studentEntry(p, entry)),
-        won: p.won, check: p.check, models: p.won ? MODEL_ANSWERS[room.setId] : null };
+      const entries = p.entries.map(entry => displayEntry(room.setId, studentEntry(p, entry)));
+      const active = entries[p.activeStation - 1];
+      let choiceOrder = [];
+      if (active) {
+        const task = active.legacyTask ?? EXERCISES[room.setId].stations[p.activeStation - 1];
+        choiceOrder = task.choices.map(choice => choice.id);
+        // Each station offers two scenes. Derive a stable coin flip per team and run.
+        const flip = mac(this.secret, [room.gameId, p.id, p.activeStation].join(':'));
+        if (parseInt(flip[0], 16) % 2) choiceOrder.reverse();
+      }
+      result.me = { id: p.id, name: p.name, activeStation: p.activeStation, entries, choiceOrder,
+        won: p.won, check: p.check, models: p.won ? p.entries.map((entry, i) =>
+          previousTask(room.setId, entry)?.model ?? MODEL_ANSWERS[room.setId][i]) : null };
     }
     return result;
   }
@@ -128,20 +155,24 @@ export class SasteraGame {
     player.activeStation = station;
   }
 
-  submit(room, player, { station, revision, text, sceneId }) {
+  submit(room, player, { station, revision, text, sceneId, edition }) {
     if (!stations.includes(station) || player.activeStation !== station) fail('Imbas kod QR stesen ini dahulu.', 'SCAN_REQUIRED');
     const entry = player.entries[station - 1];
     const answer = clean(text);
     if (!answer || answer.length > 800) fail('Tulis jawapan antara 1 hingga 800 aksara.', 'BAD_TEXT', 400);
-    const task = EXERCISES[room.setId].stations[station - 1];
-    if (!task.choices.some(choice => choice.id === sceneId)) fail('Pilih satu peristiwa di stesen ini.', 'BAD_SCENE', 400);
+    const expected = entry.revision ? (entry.edition ?? 1) : (room.contentEdition ?? edition ?? 1);
+    if (![1, CONTENT_EDITION].includes(expected) || (edition !== undefined && edition !== expected))
+      fail('Tugasan telah dikemas kini. Muat semula stesen ini.', 'STALE_TASK');
+    const sceneIds = expected === 1 ? previousTasks.sets[room.setId][station - 1].scenes
+      : EXERCISES[room.setId].stations[station - 1].choices.map(choice => choice.id);
+    if (!sceneIds.includes(sceneId)) fail('Pilih satu peristiwa di stesen ini.', 'BAD_SCENE', 400);
     if (revision !== entry.revision) {
       if (revision === entry.revision - 1 && sceneId === entry.sceneId && answer === entry.text) return false;
       fail('Versi jawapan telah berubah. Muat semula jawapan.', 'STALE_REVISION');
     }
     const canRevise = entry.status === 'revise' && studentEntry(player, entry).status === 'revise';
     if (entry.status !== 'empty' && !canRevise) fail('Jawapan telah dihantar. Semak di QR 4.', 'LOCKED');
-    Object.assign(entry, { revision: revision + 1, status: 'pending', text: answer, sceneId, feedback: '' });
+    Object.assign(entry, { revision: revision + 1, edition: expected, status: 'pending', text: answer, sceneId, feedback: '' });
     return true;
   }
 
@@ -182,11 +213,13 @@ export class SasteraGame {
       if (!isSet(body.setId)) fail('Pilih latihan yang sah.', 'BAD_SET', 400);
       if (room.phase !== 'lobby' && room.setId !== body.setId) fail('Tetapkan semula sebelum menukar latihan.', 'WRONG_PHASE');
       changed = room.phase !== 'playing';
+      if (changed) room.contentEdition = CONTENT_EDITION;
       room.setId = body.setId;
       room.phase = 'playing';
     } else if (body.type === 'reset') {
       for (const player of room.players) Object.assign(player, freshProgress());
       room.phase = 'lobby';
+      room.contentEdition = CONTENT_EDITION;
       room.gameId = randomBytes(12).toString('hex');
       room.receipts = {};
     } else {

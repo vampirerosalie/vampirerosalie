@@ -21,7 +21,6 @@ function paperK(t){return `<p class="kicker">${esc(t)}</p>`;}
 const stateNames={empty:'Belum dihantar',pending:'Menunggu semakan',correct:'Betul',revise:'Perlu dibaiki'};
 function shortTitle(set){return `${set.title} · ${set.label}`;}
 function allSets(){return Object.entries(EXERCISES);}
-function scene(set,st,id){return set.stations[st-1]?.choices.find(c=>c.id===id);}
 function poster(content,cls='',image=HERO_ART){return `<section class="poster ${cls}">${art(image,'poster-art')}<div class="poster-content">${content}</div></section>`;}
 function welcome(role,pin,name){
  const host=role==='host';
@@ -29,7 +28,7 @@ function welcome(role,pin,name){
 }
 function publicView(s){
  const set=EXERCISES[s.setId]??allSets()[0][1],active=s.phase==='playing';
- return `<div class="public-page">${poster(`${paperK('Paparan kelas · PIN '+s.pin)}<h1>Meniti Impian</h1><p class="chapter">${esc(active?shortTitle(set):'Misi 10 Markah')}</p>`,'public-hero',active?set.cover:HERO_ART)}<section class="paper public-info">${paperK('Misi kelas')}<h2>${s.winnerCount?`${s.winnerCount} pasukan berjaya`:active?'Misi sedang berlangsung':'Menunggu cikgu'}</h2><p>${Number(s.teamCount)||0} pasukan menyertai bilik.</p>${s.winners?.length?`<div class="winner-list">${s.winners.map(w=>`<span>${icon('check')}${esc(w.name)}</span>`).join('')}</div>`:''}<p>${active?'Imbas QR di setiap stesen. Setelah tiga perenggan dihantar, imbas QR 4.':'Sediakan pasukan dan imbas kod di stesen pertama anda.'}</p></section></div>`;
+ return `<div class="public-page">${poster(`${paperK('Paparan kelas · PIN '+s.pin)}<h1>Meniti Impian</h1><p class="chapter">${esc(active?shortTitle(set):'Misi 10 Markah')}</p>`,'public-hero',HERO_ART)}<section class="paper public-info">${paperK('Misi kelas')}<h2>${s.winnerCount?`${s.winnerCount} pasukan berjaya`:active?'Misi sedang berlangsung':'Menunggu cikgu'}</h2><p>${Number(s.teamCount)||0} pasukan menyertai bilik.</p>${s.winners?.length?`<div class="winner-list">${s.winners.map(w=>`<span>${icon('check')}${esc(w.name)}</span>`).join('')}</div>`:''}<p>${active?'Imbas QR di setiap stesen. Setelah tiga perenggan dihantar, imbas QR 4.':'Sediakan pasukan dan imbas kod di stesen pertama anda.'}</p></section></div>`;
 }
 function chooseSet(id){
  return `<div class="exercise-grid">${allSets().map(([key,set])=>`<button class="exercise ${id===key?'selected':''}" type="button" data-act="set" data-set="${key}" aria-pressed="${id===key}"><span class="exercise-cover">${art(set.cover)}<span class="exercise-caption"><small>${esc(set.title)}</small><b>${esc(set.label)}</b></span></span><span class="exercise-list">${set.stations.map(st=>`<span><i>${st.number}</i>${esc(st.title)}</span>`).join('')}</span>${id===key?`<span class="tick">${icon('check')}</span>`:''}</button>`).join('')}</div>`;
@@ -48,8 +47,9 @@ function teacher(s,chosen){
 }
 function review(s,teamId,n){
  const team=s.teams.find(t=>t.id===teamId),entry=team?.entries[n-1];if(!entry||entry.status==='empty')return '';
- const set=EXERCISES[s.setId],story=scene(set,n,entry.sceneId);
- return `<div class="modal-head"><div>${paperK(`Stesen ${n} · ${team.name}`)}<h2 id="overlay-title">Semakan cikgu</h2></div>${btn('Tutup','dismiss',{cls:'soft'})}</div><p class="review-prompt">${esc(set.stations[n-1].prompt)}</p>${story?`<div class="review-scene">${art(story.image)}<span>${esc(story.caption)}</span></div>`:''}<h3>Jawapan pasukan</h3><blockquote>${esc(entry.text)}</blockquote><details class="sample"><summary>Jawapan contoh untuk cikgu</summary><p>${esc(s.models?.[n-1])}</p></details>${entry.status==='pending'?`<label for="feedback">Maklum balas cikgu</label><textarea id="feedback" maxlength="320" rows="3" placeholder="Nyatakan perkara yang perlu dibaiki."></textarea><div class="mark-actions">${btn('Perlu dibaiki','mark',{cls:'revise',icon:'retry',attrs:'data-status="revise"'})}${btn('Betul','mark',{cls:'gold',icon:'check',attrs:'data-status="correct"'})}</div>`:`<h3>${esc(stateNames[entry.status])}</h3>${entry.feedback?`<p>${esc(entry.feedback)}</p>`:''}`}`;
+ const set=EXERCISES[s.setId],task={...set.stations[n-1],...entry.legacyTask};
+ const story=task.choices.find(c=>c.id===entry.sceneId);
+ return `<div class="modal-head"><div>${paperK(`Stesen ${n} · ${team.name}`)}<h2 id="overlay-title">Semakan cikgu</h2></div>${btn('Tutup','dismiss',{cls:'soft'})}</div><p class="review-prompt">${esc(task.prompt)}</p>${story?`<div class="review-scene">${art(story.image)}<span>${esc(story.caption)}</span></div>`:''}<h3>Jawapan pasukan</h3><blockquote>${esc(entry.text)}</blockquote><details class="sample"><summary>Jawapan contoh untuk cikgu</summary><p>${esc(entry.legacyModel??s.models?.[n-1])}</p></details>${entry.status==='pending'?`<label for="feedback">Maklum balas cikgu</label><textarea id="feedback" maxlength="320" rows="3" placeholder="Nyatakan perkara yang perlu dibaiki."></textarea><div class="mark-actions">${btn('Perlu dibaiki','mark',{cls:'revise',icon:'retry',attrs:'data-status="revise"'})}${btn('Betul','mark',{cls:'gold',icon:'check',attrs:'data-status="correct"'})}</div>`:`<h3>${esc(stateNames[entry.status])}</h3>${entry.feedback?`<p>${esc(entry.feedback)}</p>`:''}`}`;
 }
 function cards(s){
  return `<div class="cards-head"><div>${paperK('Bilik '+s.pin)}<h1 id="overlay-title">Kad QR stesen</h1><p>Gunakan empat kad ini untuk ketiga-tiga latihan dalam bilik ini.</p></div><div>${btn('Cetak empat kad','print',{cls:'gold',icon:'print'})} ${btn('Tutup','dismiss',{cls:'soft'})}</div></div><section class="print-sheet">${s.stationLinks.map(l=>`<article class="qr-card"><div>${paperK('Meniti Impian · Bilik '+s.pin)}<h2>${l.station===4?'QR 4 · Semakan akhir':`Stesen ${l.station}`}</h2></div><img src="${esc(l.qrUrl)}" alt="Kod QR stesen ${l.station}" class="qr-code"><p>${l.station===4?'Imbas untuk menerima keputusan cikgu.':'Imbas untuk menulis atau membaiki perenggan.'}</p></article>`).join('')}</section>`;
@@ -60,24 +60,66 @@ function stampProgress(me){
  return `<div class="stamps">${me.entries.map(e=>`<span class="stamp ${e.status}">${e.status!=='empty'?icon(e.status==='revise'?'retry':'check'):''} Stesen ${e.station}</span>`).join('')}</div>`;
 }
 function studentMap(s,set){
- return `<div class="student-home">${poster(`${paperK(s.me.name)}<h1>${esc(s.phase==='playing'?shortTitle(set):'Meniti Impian')}</h1>`,'student-cover',s.phase==='playing'?set.cover:HERO_ART)}<div class="paper student-note">${paperK('PIN '+s.pin)}<h2>${s.phase==='playing'?'Imbas kod di stesen':'Menunggu cikgu'}</h2><p>${s.phase==='playing'?'Gunakan kamera untuk membuka kod QR di stesen anda.':'Latihan akan dibuka apabila cikgu memulakannya.'}</p>${s.phase==='playing'?`${stampProgress(s.me)}${btn('Imbas QR stesen','scanner',{cls:'gold wide',icon:'scan'})}`:''}</div></div>`;
+ return `<div class="student-home">${poster(`${paperK(s.me.name)}<h1>${esc(s.phase==='playing'?shortTitle(set):'Meniti Impian')}</h1>`,'student-cover',HERO_ART)}<div class="paper student-note">${paperK('PIN '+s.pin)}<h2>${s.phase==='playing'?'Imbas kod di stesen':'Menunggu cikgu'}</h2><p>${s.phase==='playing'?'Gunakan kamera untuk membuka kod QR di stesen anda.':'Latihan akan dibuka apabila cikgu memulakannya.'}</p>${s.phase==='playing'?`${stampProgress(s.me)}${btn('Imbas QR stesen','scanner',{cls:'gold wide',icon:'scan'})}`:''}</div></div>`;
 }
+const settings={
+ nilai:['cafe','campus','workshop'],
+ pengajaran:['workshop','kamunting','campus'],
+ persoalan:['workshop','workshop','campus'],
+};
+const portraits={
+ 'Zahar':'zahar','Ramli':'ramli','Suhaili':'suhaili','Norimi':'norimi',
+ 'Pak Yusuf':'pak-yusuf','Cikgu Baharum':'cikgu-baharum',
+};
+
+function dialogue(st,beat,setId,station){
+ const i=Math.min(beat,st.dialogue.length-1);
+ const line=st.dialogue[i],previous=st.dialogue[i-1];
+ const cast=[...new Set(st.dialogue.map(turn=>turn.speaker))];
+ const activeSide=cast.indexOf(line.speaker)===0?'left':'right';
+ const figures=cast.map((name,index)=>{
+   const active=name===line.speaker;
+   const side=index===0?'left':'right';
+   const motion=active ? (previous&&previous.speaker!==name?'comes-forward':'arrives') :
+     (previous?.speaker===name?'steps-back':'');
+   return `<div class="portrait-slot ${side} ${active?'active':'listening'} ${motion}">
+     <img src="/battle16/art/speakers/${portraits[name]}.webp" class="speaker-portrait" alt="" draggable="false">
+   </div>`;
+ }).join('');
+ const setting=settings[setId][station-1];
+ return `<article class="visual-novel" data-speaking="${esc(line.speaker)}" data-beat="${i}" data-side="${activeSide}">
+   ${art('/battle16/art/settings/'+setting+'.webp','novel-art')}
+   <header class="scene-banner">${paperK('Stesen '+station)}<h1>${esc(st.title)}</h1></header>
+   <div class="cast-stage ${cast.length===1?'solo':''}" aria-hidden="true">${figures}</div>
+   <div class="conversation">
+     <div class="speech"><span class="speaker">${esc(line.speaker)}</span><p>${esc(line.text)}</p></div>
+     ${btn(i===st.dialogue.length-1?'Mulakan tugasan':'Teruskan','next-line',{cls:'gold'})}
+   </div>
+ </article>`;
+}
+
+function taskHeading(st,step,station){
+ return `<header class="task-heading">
+   <div>${paperK('Stesen '+station+' · '+st.title)}<h1>${step==='write'?'Tulis satu perenggan':'Pilih peristiwa'}</h1></div>
+   ${icon('book')}
+ </header>`;
+}
+
 function studentRound(s,ui){
  const set=EXERCISES[s.setId]??allSets()[0][1],me=s.me;
  if(s.phase!=='playing')return studentMap(s,set);
  if(me.won||me.activeStation===4)return finalView(s,set,ui.compare);
  const n=me.activeStation;
  if(!n)return studentMap(s,set);
- const st=set.stations[n-1],entry=me.entries[n-1];
+ const entry=me.entries[n-1],st={...set.stations[n-1],...entry.legacyTask};
  const heading=`<div class="chapter-nav"><span>${icon('book')}${esc(me.name)}</span><span>${esc(set.title)} · Stesen ${n}/3</span></div>`;
  if(entry.status==='pending'||entry.status==='correct')return `${heading}<div class="student-home">${poster(`${paperK('Stesen '+n)}<h1>${entry.status==='correct'?'Perenggan diluluskan':'Perenggan dihantar'}</h1>`,'student-cover',st.opening)}<div class="paper student-note">${stampProgress(me)}<p>${me.entries.every(e=>e.status!=='empty')?'Tiga perenggan telah dihantar. Pergi ke QR 4 untuk semakan akhir.':'Teruskan ke stesen lain dan imbas kod QR yang dipamerkan.'}</p>${btn('Imbas QR seterusnya','scanner',{cls:'gold wide',icon:'scan'})}</div></div>`;
  if(ui.step==='write'||ui.step==='choice'){
   const current=st.choices.find(c=>c.id===ui.sceneId);
-  return `${heading}<div class="task-page">${poster(`${paperK('Stesen '+n+' · '+st.title)}<h1>${ui.step==='write'?'Tulis satu perenggan':'Pilih peristiwa'}</h1>`,'task-art',st.opening)}<section class="paper task-sheet"><p class="prompt">${esc(st.prompt)}</p>${entry.status==='revise'?`<aside class="teacher-note"><b>Maklum balas cikgu</b><p>${esc(entry.feedback)}</p></aside>`:''}
-  ${ui.step==='choice'?`<div class="scene-options">${st.choices.map(c=>`<button type="button" data-act="choice" data-id="${esc(c.id)}" class="scene-option">${art(c.image,'',c.caption)}<span>${esc(c.caption)}</span></button>`).join('')}</div>`:`${current?`<div class="selected-scene">${art(current.image)}<span>${esc(current.caption)}</span>${btn('Tukar','choose-again',{cls:'soft'})}</div>`:''}<form id="answer-form"><label for="answer">Jawapan pasukan</label><textarea id="answer" required maxlength="800" rows="5" placeholder="Tulis isi dahulu, kemudian contoh peristiwa."></textarea><div class="submit-row"><small>${esc(st.hint||'Satu isi dan satu contoh peristiwa.')}</small><button type="submit" class="btn gold" data-act="submit">${icon('send')}${entry.revision?'Hantar semula':'Hantar kepada cikgu'}</button></div></form>`}</section></div>`;
+  return `${heading}<div class="task-page">${taskHeading(st,ui.step,n)}<section class="paper task-sheet"><p class="prompt">${esc(st.prompt)}</p>${entry.status==='revise'?`<aside class="teacher-note"><b>Maklum balas cikgu</b><p>${esc(entry.feedback)}</p></aside>`:''}
+  ${ui.step==='choice'?`<div class="scene-options">${(ui.choices??st.choices).map(c=>`<button type="button" data-act="choice" data-id="${esc(c.id)}" class="scene-option">${art(c.image)}<span>${esc(c.caption)}</span></button>`).join('')}</div>`:`${current?`<div class="selected-scene">${art(current.image)}<span>${esc(current.caption)}</span>${btn('Tukar','choose-again',{cls:'soft'})}</div>`:''}<form id="answer-form"><label for="answer">Jawapan pasukan</label><textarea id="answer" required maxlength="800" rows="5" placeholder="Tulis isi dahulu, kemudian contoh peristiwa."></textarea><div class="submit-row"><small>${esc(st.hint||'Satu isi dan satu contoh peristiwa.')}</small><button type="submit" class="btn gold" data-act="submit">${icon('send')}${entry.revision?'Hantar semula':'Hantar kepada cikgu'}</button></div></form>`}</section></div>`;
  }
- const line=st.dialogue[Math.min(ui.beat,st.dialogue.length-1)];
- return `${heading}<article class="visual-novel" style="--opening:url('${esc(st.opening)}')">${art(st.opening,'novel-art')}<div class="scene-banner">${paperK('Stesen '+n)}<h1>${esc(st.title)}</h1></div><div class="conversation"><div class="speech"><span class="speaker">${esc(line.speaker)}</span><p>${esc(line.text)}</p></div>${btn(ui.beat>=st.dialogue.length-1?'Mulakan tugasan':'Teruskan','next-line',{cls:'gold'})}</div></article>`;
+ return heading+dialogue(st,ui.beat,s.setId,n);
 }
 function finalView(s,set,compare){
  const me=s.me,won=me.won;
