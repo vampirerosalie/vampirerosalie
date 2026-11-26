@@ -1,0 +1,978 @@
+[
+  {
+    "id": 1,
+    "title": "Cita-cita",
+    "prompt": "Apakah perabot yang dibantu oleh Zahar untuk disiapkan di bengkel Pak Yusuf pada permulaan cerita?",
+    "options": [
+      {
+        "id": "0d0ce6138945",
+        "caption": "Rak buku"
+      },
+      {
+        "id": "e90f6a816c4a",
+        "caption": "Rak kasut"
+      },
+      {
+        "id": "4a9c8bfc4f4f",
+        "caption": "Almari pakaian"
+      },
+      {
+        "id": "4c2c3d34dcb3",
+        "caption": "Meja tempahan"
+      },
+      {
+        "id": "772034471d6b",
+        "caption": "Kerusi kayu"
+      }
+    ],
+    "correctId": "e90f6a816c4a",
+    "explanation": "Zahar membantu Pak Yusuf menyiapkan rak kasut untuk kegunaan masjid sebelum hari Jumaat.",
+    "reference": "Bab 1, halaman 1–2."
+  },
+  {
+    "id": 2,
+    "title": "Tawaran",
+    "prompt": "Apakah berita yang diterima oleh Zahar melalui surat yang diserahkan oleh Mak Kiah?",
+    "options": [
+      {
+        "id": "6832aeafd284",
+        "caption": "Tawaran pekerjaan di sebuah kilang perabot"
+      },
+      {
+        "id": "f7e34a0e13ff",
+        "caption": "Kelulusan pinjaman perniagaan daripada MARA"
+      },
+      {
+        "id": "6330a598296a",
+        "caption": "Tawaran mengikuti Kursus Pertukangan Perabot di IKM Sungai Petani"
+      },
+      {
+        "id": "ce54bfba5020",
+        "caption": "Tawaran melanjutkan pengajian di ITM"
+      },
+      {
+        "id": "d0a627d22a0d",
+        "caption": "Tawaran mengikuti Kursus Lukisan Seni Bina"
+      }
+    ],
+    "correctId": "6330a598296a",
+    "explanation": "Zahar diterima untuk mengikuti Kursus Pertukangan Perabot di IKM Sungai Petani.",
+    "reference": "Bab 2, halaman 3–4."
+  },
+  {
+    "id": 3,
+    "title": "Imbas Kembali",
+    "prompt": "Apakah masalah yang dihadapi oleh Zahar ketika menduduki peperiksaan SPM?",
+    "options": [
+      {
+        "id": "78f490aba3cb",
+        "caption": "Dia demam ketika menduduki peperiksaan."
+      },
+      {
+        "id": "19747e55d2f9",
+        "caption": "Dia perlu menjaga ibunya yang sakit."
+      },
+      {
+        "id": "db019cb153a4",
+        "caption": "Dia terpaksa bekerja di bengkel Pak Yusuf."
+      },
+      {
+        "id": "642339b228cb",
+        "caption": "Dia perlu menghadiri temu duga IKM."
+      },
+      {
+        "id": "158970b98965",
+        "caption": "Dia terlibat dalam latihan bola sepak."
+      }
+    ],
+    "correctId": "78f490aba3cb",
+    "explanation": "Zahar jatuh sakit ketika menduduki peperiksaan SPM. Peristiwa ini dikenangnya ketika mengingati zaman persekolahan bersama Suhaili.",
+    "reference": "Bab 3, halaman 5–6."
+  },
+  {
+    "id": 4,
+    "title": "Kegigihan",
+    "prompt": "Apakah tindakan Zahar selepas Suhaili memperlekehkan pilihannya untuk belajar di IKM?",
+    "options": [
+      {
+        "id": "23816c059e56",
+        "caption": "Memohon pekerjaan di Petaling Jaya"
+      },
+      {
+        "id": "8c9bac47f0f1",
+        "caption": "Menangguhkan pengajiannya di IKM"
+      },
+      {
+        "id": "efd2d46aa641",
+        "caption": "Menukar kursus pengajiannya kepada Lukisan Seni Bina"
+      },
+      {
+        "id": "22f0e40c53a6",
+        "caption": "Tetap melanjutkan pengajian di IKM"
+      },
+      {
+        "id": "3be2cdd44569",
+        "caption": "Mencari pekerjaan tetap di kilang perabot"
+      }
+    ],
+    "correctId": "22f0e40c53a6",
+    "explanation": "Walaupun dipandang rendah oleh Suhaili, Zahar tetap meneruskan pengajian di IKM untuk mencapai cita-citanya.",
+    "reference": "Bab 4–5, halaman 7–9.",
+    "nilai": {
+      "name": "Kegigihan",
+      "event": "Zahar tetap melanjutkan pengajian di IKM walaupun Suhaili memperlekehkan pilihannya, lalu berjaya membuka bengkel sendiri."
+    }
+  },
+  {
+    "id": 5,
+    "title": "Kasih Sayang",
+    "prompt": "Apakah bantuan yang dijanjikan oleh Pak Yusuf kepada Zahar selepas Zahar pulang dalam keadaan kecewa?",
+    "options": [
+      {
+        "id": "774069bba6d6",
+        "caption": "Membantu persekolahan adik-adik Zahar"
+      },
+      {
+        "id": "823d5ed1ca76",
+        "caption": "Menyumbangkan modal sebanyak RM5,000"
+      },
+      {
+        "id": "54135c23c5be",
+        "caption": "Memindahkan peralatan bengkel ke bengkel baharu"
+      },
+      {
+        "id": "84930448efa8",
+        "caption": "Membantu memasarkan perabot Zahar"
+      },
+      {
+        "id": "246d70f1b05e",
+        "caption": "Mendapatkan pekerjaan tetap untuk Zahar"
+      }
+    ],
+    "correctId": "774069bba6d6",
+    "explanation": "Pak Yusuf mengambil berat tentang keluarga Zahar dan berjanji membantu persekolahan adik-adiknya.",
+    "reference": "Bab 5, halaman 9.",
+    "nilai": {
+      "name": "Kasih sayang",
+      "event": "Pak Yusuf mengambil berat tentang keluarga Zahar dengan membantu persekolahan adik-adiknya."
+    }
+  },
+  {
+    "id": 6,
+    "title": "Pendaftaran di IKM",
+    "prompt": "Dengan siapakah Zahar berkenalan semasa pendaftaran di IKM sebelum menerima kunci asramanya?",
+    "options": [
+      {
+        "id": "894957b66d69",
+        "caption": "Ramli dan Habsah"
+      },
+      {
+        "id": "12f30934a6d0",
+        "caption": "Miss Ooi dan Encik Manaf"
+      },
+      {
+        "id": "97d4f2335a12",
+        "caption": "Pak Kamil dan Norimi"
+      },
+      {
+        "id": "83a3b6e8c604",
+        "caption": "Bakar dan Rahim"
+      },
+      {
+        "id": "9fb86aed11a9",
+        "caption": "Razali dan Maarof"
+      }
+    ],
+    "correctId": "97d4f2335a12",
+    "explanation": "Zahar berkenalan dengan Pak Kamil dan anaknya, Norimi, yang mengikuti Kursus Lukisan Seni Bina.",
+    "reference": "Bab 6, halaman 10–11."
+  },
+  {
+    "id": 7,
+    "title": "Kerjasama",
+    "prompt": "Apakah tugas yang dilakukan oleh Zahar bersama pelatih baharu semasa program suai kenal?",
+    "options": [
+      {
+        "id": "f572cee47266",
+        "caption": "Membina bengkel perabot di kampung"
+      },
+      {
+        "id": "17480ce16154",
+        "caption": "Membersihkan kawasan belakang IKM"
+      },
+      {
+        "id": "3895ca42cae9",
+        "caption": "Menyiapkan tempahan perabot Tauke Lim"
+      },
+      {
+        "id": "c6142813ae63",
+        "caption": "Menyediakan jamuan untuk pemain bola sepak"
+      },
+      {
+        "id": "55619b51d7e9",
+        "caption": "Membersihkan bahagian pengeluaran kilang perabot"
+      }
+    ],
+    "correctId": "17480ce16154",
+    "explanation": "Zahar bersama pelatih baharu membersihkan kawasan belakang IKM untuk pembinaan asrama baharu.",
+    "reference": "Bab 7, halaman 12.",
+    "nilai": {
+      "name": "Kerjasama",
+      "event": "Zahar bersama pelatih baharu membersihkan kawasan belakang IKM."
+    }
+  },
+  {
+    "id": 8,
+    "title": "Malam Suai Kenal",
+    "prompt": "Apakah persembahan yang dilakukan oleh Zahar dan Norimi pada malam penutupan minggu suai kenal?",
+    "options": [
+      {
+        "id": "5f4705d0b47e",
+        "caption": "Menyanyikan lagu secara duet"
+      },
+      {
+        "id": "b6e85cd6c0e0",
+        "caption": "Menyampaikan ucapan perasmian"
+      },
+      {
+        "id": "e2ef6aaa8bc1",
+        "caption": "Melakonkan sebuah drama pendek"
+      },
+      {
+        "id": "50a26871cbf6",
+        "caption": "Mendeklamasikan sajak ciptaan sendiri"
+      },
+      {
+        "id": "8c7a0fa5ad73",
+        "caption": "Mendeklamasikan sajak karya orang lain"
+      }
+    ],
+    "correctId": "50a26871cbf6",
+    "explanation": "Zahar dan Norimi masing-masing berani mendeklamasikan sajak ciptaan sendiri di hadapan khalayak.",
+    "reference": "Halaman 13, penutupan minggu suai kenal."
+  },
+  {
+    "id": 9,
+    "title": "Kemahiran",
+    "prompt": "Apakah perkara yang ditekankan oleh Cikgu Baharum pada permulaan kursus pertukangan?",
+    "options": [
+      {
+        "id": "cdb501c8c09f",
+        "caption": "Menguasai alatan tangan sebelum menggunakan mesin"
+      },
+      {
+        "id": "2b9274f2f2a7",
+        "caption": "Menggunakan mesin sebelum mempelajari alatan tangan"
+      },
+      {
+        "id": "35399d2a6682",
+        "caption": "Mempelajari pemasaran sebelum membuat perabot"
+      },
+      {
+        "id": "557c5284ae57",
+        "caption": "Menjalani latihan industri sebelum mempelajari pertukangan"
+      },
+      {
+        "id": "8616c49366c0",
+        "caption": "Membuka bengkel sebelum mengikuti latihan praktikal"
+      }
+    ],
+    "correctId": "cdb501c8c09f",
+    "explanation": "Cikgu Baharum menekankan kepentingan menguasai penggunaan alatan tangan terlebih dahulu sebelum menggunakan mesin.",
+    "reference": "Bab 8, halaman 14."
+  },
+  {
+    "id": 10,
+    "title": "Kepulangan",
+    "prompt": "Mengapakah kenduri diadakan di rumah Pak Karim ketika Zahar pulang ke kampung pada hujung minggu?",
+    "options": [
+      {
+        "id": "445c6b3811fb",
+        "caption": "Suhaili berjaya menamatkan pengajiannya di IKM."
+      },
+      {
+        "id": "a1ed54c05d9e",
+        "caption": "Suhaili akan membuka sebuah perniagaan."
+      },
+      {
+        "id": "e2bb00958692",
+        "caption": "Suhaili mendapat pekerjaan di Petaling Jaya."
+      },
+      {
+        "id": "0090fe498143",
+        "caption": "Suhaili akan menjalani latihan industri di Kamunting."
+      },
+      {
+        "id": "78259633b159",
+        "caption": "Suhaili menerima tawaran melanjutkan pengajian di luar negara."
+      }
+    ],
+    "correctId": "e2bb00958692",
+    "explanation": "Zakri memberitahu Zahar bahawa kenduri tersebut diadakan sempena Suhaili mendapat pekerjaan di Petaling Jaya.",
+    "reference": "Bab 9, halaman 15."
+  },
+  {
+    "id": 11,
+    "title": "Surat Suhaili",
+    "prompt": "Apakah maksud utama surat yang dihantar oleh Suhaili kepada Zahar ketika Zahar belajar di IKM?",
+    "options": [
+      {
+        "id": "d43b667b8745",
+        "caption": "Suhaili mahu bertemu semula dengan Zahar."
+      },
+      {
+        "id": "5014f1bd2d83",
+        "caption": "Suhaili mahu membawa haluan sendiri."
+      },
+      {
+        "id": "201cd772f915",
+        "caption": "Suhaili mahu membantu Zahar mendapatkan pekerjaan."
+      },
+      {
+        "id": "ec2c554300de",
+        "caption": "Suhaili mahu meminta maaf atas sikapnya dahulu."
+      },
+      {
+        "id": "afd5cd636acb",
+        "caption": "Suhaili mahu mengucapkan tahniah atas kejayaan Zahar."
+      }
+    ],
+    "correctId": "5014f1bd2d83",
+    "explanation": "Surat tersebut menyatakan bahawa Suhaili mahu membawa haluan sendiri. Norimi kemudian salah faham tentang hubungan Zahar dengan Suhaili.",
+    "reference": "Bab 10, halaman 16."
+  },
+  {
+    "id": 12,
+    "title": "Salah Faham Norimi",
+    "prompt": "Bagaimanakah Zahar menyelesaikan salah faham Norimi tentang surat Suhaili?",
+    "options": [
+      {
+        "id": "56591cb945d2",
+        "caption": "Meminta Habsah menulis surat penjelasan"
+      },
+      {
+        "id": "adc4f01e9487",
+        "caption": "Menghubungi Suhaili di hadapan Norimi"
+      },
+      {
+        "id": "148542902bfa",
+        "caption": "Meminta Ramli menjelaskan hubungannya"
+      },
+      {
+        "id": "75b73f424ce6",
+        "caption": "Menyerahkan surat tersebut kepada Norimi untuk dibaca"
+      },
+      {
+        "id": "930e326f83ab",
+        "caption": "Meminta bantuan Cikgu Baharum"
+      }
+    ],
+    "correctId": "75b73f424ce6",
+    "explanation": "Zahar membenarkan Norimi membaca surat Suhaili. Setelah mengetahui perkara sebenar, Norimi meminta maaf.",
+    "reference": "Bab 11, halaman 17."
+  },
+  {
+    "id": 13,
+    "title": "Perlawanan Pertama",
+    "prompt": "Bagaimanakah Zahar membantu pasukannya meraih kemenangan ketika menentang IKM Alor Setar di tempat lawan?",
+    "options": [
+      {
+        "id": "0758f2d32e1f",
+        "caption": "Menjaringkan gol kemenangan"
+      },
+      {
+        "id": "568c11825354",
+        "caption": "Membuat hantaran kepada Ramli untuk menjaringkan gol kemenangan"
+      },
+      {
+        "id": "53223d9d30a5",
+        "caption": "Menyelamatkan percubaan gol pihak lawan"
+      },
+      {
+        "id": "506029bdb363",
+        "caption": "Menjaringkan gol penyamaan sahaja"
+      },
+      {
+        "id": "07f68d04819e",
+        "caption": "Membantu mengatur strategi tanpa bermain"
+      }
+    ],
+    "correctId": "0758f2d32e1f",
+    "explanation": "Zahar menjaringkan gol kemenangan dalam perlawanan di tempat lawan.",
+    "reference": "Bab 12, halaman 18."
+  },
+  {
+    "id": 14,
+    "title": "Perlawanan Balas",
+    "prompt": "Siapakah yang menjaringkan gol hasil hantaran Zahar dalam perlawanan balas di IKM Sungai Petani?",
+    "options": [
+      {
+        "id": "0f844aebed3e",
+        "caption": "Redzuan"
+      },
+      {
+        "id": "c8750d38d701",
+        "caption": "Maarof"
+      },
+      {
+        "id": "6a0f4ac87af8",
+        "caption": "Ramli"
+      },
+      {
+        "id": "89f6b7e5d3cb",
+        "caption": "Zahar"
+      },
+      {
+        "id": "a22445633b62",
+        "caption": "Pemain lawan melalui gol sendiri"
+      }
+    ],
+    "correctId": "6a0f4ac87af8",
+    "explanation": "Ramli menyudahkan hantaran Zahar. IKM Sungai Petani menang 1–0, manakala Redzuan mempertahankan gawang.",
+    "reference": "Bab 13, halaman 19."
+  },
+  {
+    "id": 15,
+    "title": "Peperiksaan Asas",
+    "prompt": "Apakah perabot yang dihasilkan oleh Zahar dalam peperiksaan asas di IKM?",
+    "options": [
+      {
+        "id": "260cc67a8b3d",
+        "caption": "Rak kasut"
+      },
+      {
+        "id": "282a9f4bdf6c",
+        "caption": "Rak buku"
+      },
+      {
+        "id": "482202294e42",
+        "caption": "Almari"
+      },
+      {
+        "id": "687077c456f8",
+        "caption": "Meja makan"
+      },
+      {
+        "id": "5df9b1fc4848",
+        "caption": "Kerusi"
+      }
+    ],
+    "correctId": "282a9f4bdf6c",
+    "explanation": "Zahar mengetepikan kegiatan lain dan memberikan tumpuan kepada tugasan menghasilkan rak buku.",
+    "reference": "Bab 14, halaman 20."
+  },
+  {
+    "id": 16,
+    "title": "Cuti Semester",
+    "prompt": "Apakah tempahan Tauke Lim yang dibantu oleh Zahar untuk disiapkan semasa cuti semester selepas peperiksaan asas?",
+    "options": [
+      {
+        "id": "28a7f7f42b12",
+        "caption": "Rak kasut"
+      },
+      {
+        "id": "aff48a7fa9fa",
+        "caption": "Rak buku"
+      },
+      {
+        "id": "825808c403b8",
+        "caption": "Almari"
+      },
+      {
+        "id": "e9b93b7d4308",
+        "caption": "Meja"
+      },
+      {
+        "id": "e54a6b032746",
+        "caption": "Kerusi"
+      }
+    ],
+    "correctId": "e9b93b7d4308",
+    "explanation": "Zahar menggunakan kemahiran yang dipelajarinya untuk membantu Pak Yusuf menyiapkan meja tempahan Tauke Lim.",
+    "reference": "Bab 15, halaman 21."
+  },
+  {
+    "id": 17,
+    "title": "Keputusan Peperiksaan",
+    "prompt": "Apakah keputusan yang diperoleh oleh Zahar dan Norimi selepas cuti semester?",
+    "options": [
+      {
+        "id": "8823f8814a74",
+        "caption": "Kedua-duanya memperoleh keputusan cemerlang."
+      },
+      {
+        "id": "80801bb32adb",
+        "caption": "Hanya Zahar memperoleh keputusan cemerlang."
+      },
+      {
+        "id": "16032d4d985b",
+        "caption": "Hanya Norimi memperoleh keputusan cemerlang."
+      },
+      {
+        "id": "3cb142e95407",
+        "caption": "Kedua-duanya perlu mengulangi peperiksaan."
+      },
+      {
+        "id": "95a14f60662a",
+        "caption": "Keputusan kedua-duanya ditangguhkan."
+      }
+    ],
+    "correctId": "8823f8814a74",
+    "explanation": "Zahar dan Norimi memperoleh keputusan cemerlang, tetapi mereka masih perlu menghadapi latihan yang lebih mencabar.",
+    "reference": "Bab 16, halaman 22."
+  },
+  {
+    "id": 18,
+    "title": "Ujian Pertengahan",
+    "prompt": "Apakah perabot yang dihasilkan oleh Zahar dalam ujian praktikal peringkat pertengahan?",
+    "options": [
+      {
+        "id": "ed79b1b0086e",
+        "caption": "Rak buku"
+      },
+      {
+        "id": "6881d319714e",
+        "caption": "Meja makan"
+      },
+      {
+        "id": "cd7e1a678ad5",
+        "caption": "Almari"
+      },
+      {
+        "id": "4fd3fb97bf7e",
+        "caption": "Rak kasut"
+      },
+      {
+        "id": "49d7362eeb28",
+        "caption": "Kerusi"
+      }
+    ],
+    "correctId": "cd7e1a678ad5",
+    "explanation": "Zahar menyiapkan sebuah almari dalam ujian praktikal peringkat pertengahan sebelum menjalani latihan industri.",
+    "reference": "Bab 17, halaman 23."
+  },
+  {
+    "id": 19,
+    "title": "Latihan Industri",
+    "prompt": "Di manakah Zahar menjalani latihan industri selama enam bulan?",
+    "options": [
+      {
+        "id": "be695424e6a1",
+        "caption": "Bengkel Pak Yusuf di kampung"
+      },
+      {
+        "id": "0202e26d04c3",
+        "caption": "Kilang Perabot Usaha Bersatu di Kamunting"
+      },
+      {
+        "id": "2d61eb5a38eb",
+        "caption": "IKM Alor Setar"
+      },
+      {
+        "id": "60f8859402c6",
+        "caption": "Bengkel Perabot Meniti Impian"
+      },
+      {
+        "id": "4a173613c00e",
+        "caption": "Sebuah kilang perabot di Petaling Jaya"
+      }
+    ],
+    "correctId": "0202e26d04c3",
+    "explanation": "Zahar menjalani latihan industri selama enam bulan di Kilang Perabot Usaha Bersatu, Kamunting, Perak.",
+    "reference": "Bab 17–18, halaman 23–25."
+  },
+  {
+    "id": 20,
+    "title": "Rakan Sekerja",
+    "prompt": "Siapakah yang menawarkan Zahar untuk tinggal bersama-sama di rumah sewa semasa latihan industri?",
+    "options": [
+      {
+        "id": "c84062ddd742",
+        "caption": "Ramli"
+      },
+      {
+        "id": "e52a0e21d0ab",
+        "caption": "Encik Manaf"
+      },
+      {
+        "id": "4674b7fc834a",
+        "caption": "Rahim"
+      },
+      {
+        "id": "9a60a044b9b3",
+        "caption": "Razali"
+      },
+      {
+        "id": "914c78ad3059",
+        "caption": "Pak Usin"
+      }
+    ],
+    "correctId": "9a60a044b9b3",
+    "explanation": "Razali menawarkan Zahar tempat tinggal di rumah sewanya semasa Zahar menjalani latihan industri.",
+    "reference": "Bab 18, halaman 25."
+  },
+  {
+    "id": 21,
+    "title": "Kekesalan Suhaili",
+    "prompt": "Mengapakah Suhaili berasa kesal apabila terlihat Zahar bekerja di kilang perabot?",
+    "options": [
+      {
+        "id": "7d78405afc34",
+        "caption": "Dia pernah memperlekehkan pilihan Zahar untuk belajar di IKM."
+      },
+      {
+        "id": "0015dd327941",
+        "caption": "Dia pernah menolak permintaan Zahar untuk tinggal di rumah sewanya."
+      },
+      {
+        "id": "1120ea378b95",
+        "caption": "Dia gagal membantu Zahar mendapatkan pinjaman MARA."
+      },
+      {
+        "id": "32b28da01303",
+        "caption": "Dia gagal menghadiri majlis penyampaian sijil Zahar."
+      },
+      {
+        "id": "7ee66cbb4bda",
+        "caption": "Dia pernah menghalang Zahar daripada menyertai pasukan bola sepak."
+      }
+    ],
+    "correctId": "7d78405afc34",
+    "explanation": "Suhaili mengenang kembali sikapnya yang sombong dan kata-katanya yang pernah melukakan hati Zahar.",
+    "reference": "Bab 19, halaman 26."
+  },
+  {
+    "id": 22,
+    "title": "Pendirian Zahar",
+    "prompt": "Mengapakah Zahar menolak bantuan Suhaili untuk mendapatkan pekerjaan di kilang perabot?",
+    "options": [
+      {
+        "id": "9dad35604465",
+        "caption": "Dia mahu mengikuti Kursus Lukisan Seni Bina."
+      },
+      {
+        "id": "a4f9c3eb44f4",
+        "caption": "Dia mahu berpindah ke Petaling Jaya."
+      },
+      {
+        "id": "c4ff94b707c5",
+        "caption": "Dia mahu berjaya melalui usahanya sendiri."
+      },
+      {
+        "id": "9c1e9cfe9e1c",
+        "caption": "Dia mahu kembali menyertai pasukan bola sepak."
+      },
+      {
+        "id": "8617bea3aa73",
+        "caption": "Dia mahu berhenti daripada bidang pertukangan perabot."
+      }
+    ],
+    "correctId": "c4ff94b707c5",
+    "explanation": "Zahar mahu mencapai cita-citanya melalui usaha sendiri dan tidak mahu bergantung pada bantuan Suhaili untuk mendapatkan pekerjaan.",
+    "reference": "Bab 20, halaman 27."
+  },
+  {
+    "id": 23,
+    "title": "Perbualan di Rumah Sewa",
+    "prompt": "Apakah tindakan Zahar apabila Razali mula menceritakan hal peribadi Suhaili?",
+    "options": [
+      {
+        "id": "e512d46f00fe",
+        "caption": "Meminta Razali menyampaikan berita tersebut kepada Norimi"
+      },
+      {
+        "id": "c01ecd6fc334",
+        "caption": "Menghentikan perbualan supaya mereka tidak mengumpat"
+      },
+      {
+        "id": "e298d5daec69",
+        "caption": "Meminta Razali menyiasat kehidupan Suhaili"
+      },
+      {
+        "id": "395a16ad535c",
+        "caption": "Menghubungi Suhaili untuk mendapatkan penjelasan"
+      },
+      {
+        "id": "a08d90383546",
+        "caption": "Meminta Razali menceritakan perkara itu kepada Miss Ooi"
+      }
+    ],
+    "correctId": "c01ecd6fc334",
+    "explanation": "Zahar tidak mahu mengumpat tentang Suhaili walaupun sikap Suhaili pernah melukakan hatinya.",
+    "reference": "Bab 21, halaman 28."
+  },
+  {
+    "id": 24,
+    "title": "Surat dari Kamunting",
+    "prompt": "Kepada siapakah Zahar menulis surat ketika berada di rumah sewa Razali?",
+    "options": [
+      {
+        "id": "e428f9aa49d2",
+        "caption": "Suhaili"
+      },
+      {
+        "id": "5b0a988ca636",
+        "caption": "Mak Kiah"
+      },
+      {
+        "id": "f887351a7c34",
+        "caption": "Habsah"
+      },
+      {
+        "id": "31b609eae22e",
+        "caption": "Norimi"
+      },
+      {
+        "id": "bc637e613aa4",
+        "caption": "Ramli"
+      }
+    ],
+    "correctId": "31b609eae22e",
+    "explanation": "Zahar menulis surat kepada Norimi ketika menjalani latihan industri di Kamunting.",
+    "reference": "Bab 21, halaman 28."
+  },
+  {
+    "id": 25,
+    "title": "Keputusan Pertengahan",
+    "prompt": "Apakah keputusan yang diperoleh oleh Zahar dalam peperiksaan peringkat pertengahan?",
+    "options": [
+      {
+        "id": "30d7b631967c",
+        "caption": "Pangkat 1"
+      },
+      {
+        "id": "3fd5c287cdda",
+        "caption": "Pangkat 2"
+      },
+      {
+        "id": "8252592f0876",
+        "caption": "Pangkat 3"
+      },
+      {
+        "id": "985aee92d3e2",
+        "caption": "Keputusannya ditangguhkan."
+      },
+      {
+        "id": "43dfe6455cfa",
+        "caption": "Dia tidak lulus peperiksaan."
+      }
+    ],
+    "correctId": "30d7b631967c",
+    "explanation": "Zahar memperoleh Pangkat 1 dalam peperiksaan peringkat pertengahan.",
+    "reference": "Bab 22, halaman 29."
+  },
+  {
+    "id": 26,
+    "title": "Cita-cita Zahar",
+    "prompt": "Mengapakah Zahar menolak tawaran pekerjaan tetap selepas menamatkan latihan industrinya?",
+    "options": [
+      {
+        "id": "1f26399eecfc",
+        "caption": "Dia mahu melanjutkan pengajian di ITM."
+      },
+      {
+        "id": "be7c5b153b68",
+        "caption": "Dia mahu bekerja dalam bidang pemasaran."
+      },
+      {
+        "id": "3207651830a0",
+        "caption": "Dia mahu membuka bengkel perabot sendiri."
+      },
+      {
+        "id": "168386bad852",
+        "caption": "Dia mahu menjadi tenaga pengajar di IKM."
+      },
+      {
+        "id": "7129dfffcd28",
+        "caption": "Dia mahu bekerja di Petaling Jaya."
+      }
+    ],
+    "correctId": "3207651830a0",
+    "explanation": "Zahar mempunyai cita-cita untuk membuka bengkel perabot sendiri dan menjadi seorang usahawan.",
+    "reference": "Bab 22, halaman 29."
+  },
+  {
+    "id": 27,
+    "title": "Permohonan Maaf",
+    "prompt": "Bagaimanakah Zahar memberikan respons apabila Suhaili meminta maaf sebelum dia pulang ke kampung?",
+    "options": [
+      {
+        "id": "9e1c39f80c26",
+        "caption": "Menerima permohonan maaf dan menyambung semula hubungan cinta mereka"
+      },
+      {
+        "id": "44223ca05167",
+        "caption": "Memaafkan Suhaili dan bersetuju untuk kekal sebagai kawan"
+      },
+      {
+        "id": "67d667718c5b",
+        "caption": "Menolak permohonan maaf Suhaili"
+      },
+      {
+        "id": "7a7d725c4b81",
+        "caption": "Bersetuju untuk terus bekerja bersama Suhaili di kilang"
+      },
+      {
+        "id": "9e8d5f3ddb2a",
+        "caption": "Meminta Suhaili membantunya membuka bengkel"
+      }
+    ],
+    "correctId": "44223ca05167",
+    "explanation": "Zahar memaafkan Suhaili tetapi tidak menghidupkan semula hubungan cinta mereka. Mereka boleh kekal sebagai kawan.",
+    "reference": "Bab 22, halaman 30."
+  },
+  {
+    "id": 28,
+    "title": "Tapak Bengkel",
+    "prompt": "Di atas tanah milik siapakah bengkel perabot baharu Zahar dibina?",
+    "options": [
+      {
+        "id": "b3de220f933b",
+        "caption": "Pak Yusuf"
+      },
+      {
+        "id": "9ebad3a9350d",
+        "caption": "Pak Karim"
+      },
+      {
+        "id": "0c7863cbbd44",
+        "caption": "Tauke Lim"
+      },
+      {
+        "id": "6a6380cc1821",
+        "caption": "Mak Kiah"
+      },
+      {
+        "id": "4ac41ab54ce2",
+        "caption": "Pak Kamil"
+      }
+    ],
+    "correctId": "6a6380cc1821",
+    "explanation": "Zahar merancang untuk membina bengkel baharunya di atas tanah milik ibunya, Mak Kiah.",
+    "reference": "Bab 23, halaman 31."
+  },
+  {
+    "id": 29,
+    "title": "Pinjaman MARA",
+    "prompt": "Berapakah jumlah pinjaman MARA yang diluluskan untuk projek bengkel perabot Zahar?",
+    "options": [
+      {
+        "id": "4d9f03576d58",
+        "caption": "RM10,000"
+      },
+      {
+        "id": "d601e9cb64da",
+        "caption": "RM5,000"
+      },
+      {
+        "id": "c6f73b822ec0",
+        "caption": "RM15,000"
+      },
+      {
+        "id": "d1b5f5fa8b3b",
+        "caption": "RM8,000"
+      },
+      {
+        "id": "50c9088c9cc0",
+        "caption": "RM20,000"
+      }
+    ],
+    "correctId": "4d9f03576d58",
+    "explanation": "MARA meluluskan pinjaman sebanyak RM10,000. Pak Yusuf pula menyumbangkan RM5,000, di samping wang simpanan Zahar sendiri.",
+    "reference": "Bab 23, halaman 31."
+  },
+  {
+    "id": 30,
+    "title": "Pembinaan Bengkel",
+    "prompt": "Siapakah yang bergotong-royong membantu membina bengkel perabot Zahar?",
+    "options": [
+      {
+        "id": "75af989d5d72",
+        "caption": "Norimi, Habsah dan pelatih IKM"
+      },
+      {
+        "id": "24e2848f24fd",
+        "caption": "Razali, Miss Ooi dan pekerja kilang"
+      },
+      {
+        "id": "dcf4250fade1",
+        "caption": "Bakar, Rahim dan penduduk kampung"
+      },
+      {
+        "id": "ce4aaa424f99",
+        "caption": "Suhaili, Pak Karim dan rakan sekerja Suhaili"
+      },
+      {
+        "id": "fc3895bc3876",
+        "caption": "Ramli, Maarof dan pasukan bola sepak IKM"
+      }
+    ],
+    "correctId": "dcf4250fade1",
+    "explanation": "Bakar, Rahim dan penduduk kampung bekerjasama membantu membina bengkel perabot Zahar.",
+    "reference": "Bab 23, halaman 32.",
+    "nilai": {
+      "name": "Kerjasama",
+      "event": "Bakar, Rahim dan penduduk kampung bergotong-royong membina bengkel Zahar."
+    }
+  },
+  {
+    "id": 31,
+    "title": "Impian Terlaksana",
+    "prompt": "Apakah perkembangan yang berlaku selepas Bengkel Perabot Meniti Impian diperkenalkan melalui laporan akhbar?",
+    "options": [
+      {
+        "id": "35dc1b7f80c9",
+        "caption": "Zahar menutup bengkel untuk meneruskan latihan industri."
+      },
+      {
+        "id": "fc682b02a240",
+        "caption": "Tempahan meningkat dan Zahar menerima tiga pelatih industri."
+      },
+      {
+        "id": "79bc9b442a11",
+        "caption": "Zahar kembali bekerja di kilang perabot di Kamunting."
+      },
+      {
+        "id": "d7443158dccf",
+        "caption": "Bengkel dipindahkan ke IKM Sungai Petani."
+      },
+      {
+        "id": "49087dfb123d",
+        "caption": "Zahar menghentikan pengeluaran untuk mengikuti kursus lain."
+      }
+    ],
+    "correctId": "fc682b02a240",
+    "explanation": "Bengkel Zahar semakin dikenali. Tempahan meningkat dan Zahar menerima tiga orang pelatih industri di bengkelnya.",
+    "reference": "Bab 24, halaman 33."
+  },
+  {
+    "id": 32,
+    "title": "Pengakhiran",
+    "prompt": "Apakah rancangan Norimi yang dinyatakan dalam suratnya kepada Zahar pada akhir cerita?",
+    "options": [
+      {
+        "id": "472c3166fea4",
+        "caption": "Menjalani latihan industri di bengkel Zahar"
+      },
+      {
+        "id": "5d831e3f595a",
+        "caption": "Membantu Zahar mendapatkan pinjaman MARA"
+      },
+      {
+        "id": "d3b4040d0597",
+        "caption": "Membuka sebuah bengkel bersama Habsah"
+      },
+      {
+        "id": "53a2fb46ddad",
+        "caption": "Menghadiri majlis penyampaian sijil IKM bersama ayahnya"
+      },
+      {
+        "id": "33e64fa2aa56",
+        "caption": "Mengunjungi Zahar di kilang perabot di Kamunting"
+      }
+    ],
+    "correctId": "53a2fb46ddad",
+    "explanation": "Norimi merancang menghadiri majlis penyampaian sijil IKM bersama ayahnya. Zahar menantikan peluang untuk bertemu dengannya.",
+    "reference": "Bab 24, halaman 34."
+  }
+]

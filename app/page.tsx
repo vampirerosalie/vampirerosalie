@@ -846,6 +846,7 @@ export default function Home() {
   const [museumStatus, setMuseumStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [treasureStatus, setTreasureStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [territoryStatus, setTerritoryStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
+  const [menitiFrameUrl, setMenitiFrameUrl] = useState('/battle15/index.html?teacher=1&embedded=1');
   const [paintballStatus, setPaintballStatus] = useState({ pin: '', phase: 'lobby', onlineCount: 0 });
   const [paintballFrameUrl, setPaintballFrameUrl] = useState('/battle14/index.html?teacher=1&embedded=1');
   const [territoryFrameUrl, setTerritoryFrameUrl] = useState('/battle13/?teacher=1&embedded=1');
@@ -876,6 +877,24 @@ export default function Home() {
     };
     const readRoute = () => {
       const marketParams = new URLSearchParams(window.location.search);
+      const meniti = marketParams.get('battle') === '15';
+      let menitiStudent = '';
+      try { menitiStudent = sessionStorage.getItem('meniti:student-room') || ''; } catch {}
+      if ((meniti && ['join', 'student', 'room'].some(key => marketParams.has(key))) ||
+          (!window.location.search && /^\d{5}$/.test(menitiStudent))) {
+        const pin = marketParams.get('join') || marketParams.get('room') || menitiStudent;
+        window.location.replace('/battle15/index.html?' + (/^\d{5}$/.test(pin) ? 'join=' + pin : 'student=1'));
+        return;
+      }
+      if (meniti) {
+        const screen = marketParams.get('screen');
+        if (screen !== null) {
+          window.location.replace('/battle15/index.html?screen=' + (/^\d{5}$/.test(screen) ? screen : ''));
+          return;
+        }
+        const pin = marketParams.get('host') || '';
+        setMenitiFrameUrl('/battle15/index.html?teacher=1&embedded=1' + (/^\d{5}$/.test(pin) ? '&host=' + pin : ''));
+      }
       const paintball = marketParams.get('battle') === '14';
       let paintballStudent = '';
       try { paintballStudent = window.sessionStorage.getItem('paintball:student-room') || ''; } catch {}
@@ -1044,6 +1063,18 @@ export default function Home() {
       if (!/^\d{5}$/.test(pin) || !['lobby', 'active', 'ended'].includes(phase) || !Number.isInteger(onlineCount) || onlineCount < 0 || onlineCount > 12) return;
       setTerritoryStatus(current => current.pin === pin && current.phase === phase && current.onlineCount === onlineCount ? current : { pin, phase, onlineCount });
     };
+    const syncMeniti = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || routeRef.current?.mode !== 'meniti') return;
+      if (event.data?.type === 'meniti:unavailable') {
+        window.history.replaceState(window.history.state, '', '/?battle=15&teacher=1');
+        return;
+      }
+      if (event.data?.type !== 'meniti:status') return;
+      const { pin, phase, onlineCount } = event.data;
+      if (!/^\d{5}$/.test(pin) || typeof phase !== 'string' || !Number.isInteger(onlineCount) || onlineCount < 0 || onlineCount > 12) return;
+      const search = '?battle=15&teacher=1&host=' + pin;
+      if (window.location.search !== search) window.history.replaceState(window.history.state, '', '/' + search);
+    };
     const syncPaintball = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || routeRef.current?.mode !== 'paintball' || event.data?.type !== 'paintball:status') return;
       const { pin, phase, onlineCount } = event.data;
@@ -1062,6 +1093,7 @@ export default function Home() {
     window.addEventListener('message', syncMuseum);
     window.addEventListener('message', syncTreasure);
     window.addEventListener('message', syncTerritory);
+    window.addEventListener('message', syncMeniti);
     window.addEventListener('message', syncPaintball);
     return () => {
       window.removeEventListener('popstate', readRoute);
@@ -1073,6 +1105,7 @@ export default function Home() {
       window.removeEventListener('message', syncMuseum);
       window.removeEventListener('message', syncTreasure);
       window.removeEventListener('message', syncTerritory);
+      window.removeEventListener('message', syncMeniti);
       window.removeEventListener('message', syncPaintball);
     };
   }, []);
@@ -1124,6 +1157,11 @@ export default function Home() {
   const isMuseum = route.mode === 'museum';
   const isTreasure = route.mode === 'treasure';
   const isTerritory = route.mode === 'territory';
+  // The card table has its own room, projection and fullscreen controls.
+  if (route.mode === 'meniti') return <main style={{ height: '100dvh', background: '#102c24' }}>
+    <iframe ref={frameRef} title="Meniti Impian: Card Battle" src={menitiFrameUrl} allow="fullscreen; autoplay"
+      style={{ display: 'block', width: '100%', height: '100%', border: 0 }} />
+  </main>;
   const isPaintball = route.mode === 'paintball';
   const standaloneStatus = isPaintball ? paintballStatus : isTerritory ? territoryStatus : isTreasure ? treasureStatus : isMuseum ? museumStatus : isLantern ? lanternStatus : isMarket ? marketStatus : demolitionStatus;
   const standaloneBattle = isPaintball ? 14 : isTerritory ? 13 : isTreasure ? 12 : isMuseum ? 11 : isLantern ? 10 : isMarket ? 9 : 8;

@@ -2,7 +2,8 @@ import {createHash,createHmac,randomBytes,randomInt,timingSafeEqual} from 'node:
 import {lockBoard} from './board.js';
 import {SETS,publicQuestion,mark,setList} from './sets.js';
 import {MAP,COLORS,COLOR_NAMES,RULES} from '../../public/battle13/map-data.js';
-export class GameError extends Error{constructor(message,code='INVALID_ACTION',status=409){super(message);this.code=code;this.status=status;}}
+import { GameError } from '../rooms/error.js';
+export { GameError };
 const fail=(m,c,s)=>{throw new GameError(m,c,s);};
 const hash=v=>createHash('sha256').update(String(v)).digest('hex');
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));

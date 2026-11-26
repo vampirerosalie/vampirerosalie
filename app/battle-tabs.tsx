@@ -5,7 +5,7 @@ export const BATTLE_CHOICES = [
   [4, 'BM board game'], [5, 'The Grammar Room'], [6, 'Witch’s Potion'],
   [7, 'Crazy Kitchen'], [8, 'Demolition Dash'], [9, 'English Black Market'],
   [10, 'Lantern Keeper’s Secret'], [11, 'The Missing Museum Jewel'], [12, 'Treasure Raid'], [13, 'Territory Wars'],
-  [14, 'Paintball Showdown'],
+  [14, 'Paintball Showdown'], [15, 'Meniti Impian: Card Battle'],
 ] as const;
 
 export function BattleTabs({ selected, busy = false, onSelect }: {

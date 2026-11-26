@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#092e27">
+  <meta name="referrer" content="same-origin">
+  <title>MENITI IMPIAN: CARD BATTLE</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i></span><span>MENITI IMPIAN<span class="brand-sub">CARD BATTLE</span></span></div>
+    <div id="tools" class="header-tools"></div>
+  </header>
+  <main id="table" aria-busy="true"><p class="loading">Membuka meja permainan…</p></main>
+  <div id="connection" role="status" hidden></div>
+  <div id="notice" role="status" hidden></div>
+  <dialog id="dialog" aria-labelledby="dialog-title"><div id="modal"></div></dialog>
+  <div id="animation-layer" aria-hidden="true"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
