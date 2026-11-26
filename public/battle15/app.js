@@ -77,7 +77,9 @@ function renderTools(){
   const html=(pin && !(role==='host' && embedded)?`<span class="room-tag">PIN <b>${pin}</b></span>`:'')+
     (role!=='student'?iconButton(playing?'sound':'mute','music','Tetapan muzik'):'')+
     iconButton('help','rules','Cara bermain')+
-    (role==='public'?iconButton('full','fullscreen','Skrin penuh'):'');
+    (role==='public'?(document.body.classList.contains('projector-fullscreen')
+      ?button('Exit full screen','fullscreen',{cls:'primary',attrs:'aria-pressed="true"',symbol:'full'})
+      :iconButton('full','fullscreen','Skrin penuh')):'');
   if(lastTools!==html){tools.innerHTML=html;lastTools=html;}
 }
 function showWelcome(force=false) {
@@ -302,21 +304,38 @@ window.addEventListener('storage',event=>{if(event.key===prefix+'music-owner'&&p
 function musicDialog(){
   openDialog('music','Muzik meja',`<div class="actions">${button(playing?'Hentikan Muzik':'Mainkan Muzik','toggle-music',{cls:'primary'})}</div><label class="volume">Kelantangan<input type="range" id="volume" min="0" max="100" value="${Math.round(volume*100)}"></label>${credit}`);
 }
+function setProjectorFullscreen(active){
+  const focused=document.activeElement?.dataset.act==='fullscreen';
+  document.body.classList.toggle('projector-fullscreen',active);
+  renderTools();
+  if(focused)tools.querySelector('[data-act="fullscreen"]')?.focus({preventScroll:true});
+}
+async function toggleProjectorFullscreen(){
+  if(document.fullscreenElement){
+    await document.exitFullscreen();
+  }else if(document.body.classList.contains('projector-fullscreen')){
+    setProjectorFullscreen(false);
+  }else if(navigator.maxTouchPoints>0||!document.fullscreenEnabled){
+    setProjectorFullscreen(true);
+  }else{
+    try{await document.documentElement.requestFullscreen();}
+    catch{setProjectorFullscreen(true);}
+  }
+}
+if(role==='public'){
+  document.addEventListener('fullscreenchange',()=>setProjectorFullscreen(Boolean(document.fullscreenElement)));
+}
 async function handle(action,el) {
   if(action==='create')return create();
   if(action==='rules')return openDialog('rules','Cara bermain',rules);
   if(action==='music')return musicDialog();
   if(action==='toggle-music'){enabled=!playing;local.write('music',enabled?'on':'off');if(enabled)await startMusic();else stopMusic();return;}
   if(action==='dismiss'){closeDialog();return;}
-  if(action==='fullscreen'){
-    try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else if(document.documentElement.webkitRequestFullscreen)document.documentElement.webkitRequestFullscreen();else notice('Gunakan paparan kelas atau mod skrin penuh pelayar.');}catch{notice('Buka Paparan Kelas untuk menggunakan skrin penuh.');}
-    return;
-  }
+  if(action==='fullscreen'&&role==='public')return toggleProjectorFullscreen();
   if(!state)return;
   switch(action){
     case 'qr': return openQR();
     case 'start': { const request=act('host:start');if(enabled)startMusic();if(!await request)stopMusic();return; }
-    case 'deal': return act('host:deal');
     case 'countdown': return act('host:countdown',{seconds:10});
     case 'review': return openReview();
     case 'refresh-review': return openReview(Number(modal.querySelector('#review-question').value));

@@ -42,7 +42,7 @@ async function setup(size = 3) {
   const toShop = async () => {
     await host('start');
     for(let i=1;i<=5;i++) {
-      await host('deal'); await host('close'); await host('reveal');
+      await host('close'); await host('reveal');
       if(i<5) await host('next');
     }
     await host('openShop');
@@ -62,9 +62,10 @@ test('QR image decodes to the room join link; twelve simultaneous joins survive 
   assert.equal((await s.state(s.hostToken)).onlineCount,12);
   const overflow=await s.request('join',{clientId:randomUUID(),name:'Tambahan'});
   assert.equal((await overflow.json()).code,'ROOM_FULL');
-  await s.host('start'); await s.host('deal');
+  await s.host('start');
   for(const [i,client] of s.clients.entries()) {
     const before=await s.state(s.teams[i].playerToken);
+    assert.equal(before.me.hand.length,4);
     assert.equal(before.me.name,client.name);
     assert.deepEqual(await s.data('join',client),s.teams[i]);
     const after=await s.state(s.teams[i].playerToken);
@@ -72,10 +73,48 @@ test('QR image decodes to the room join link; twelve simultaneous joins survive 
   }
 });
 
+test('start and next atomically deal once, including retries through separate Worker instances', async () => {
+  const s = await setup(3);
+  for (const [index, type] of ['host:start', 'host:next'].entries()) {
+    const action = s.command(type);
+    const results = await Promise.all([1, 2].map(() => s.data('action', action, s.hostToken)));
+    assert.equal(results.filter(r => r.replayed).length, 1);
+    assert.ok(results.every(r => r.state.phase === 'answering' && r.state.questionId === index + 1 && r.state.deadline === null));
+    const saved = s.saved();
+    const hands = await Promise.all(s.teams.map(async player => (await s.state(player.playerToken)).me.hand));
+    for (const [i, team] of s.teams.entries()) {
+      assert.equal(hands[i].length, 4);
+      assert.deepEqual(hands[i].map(card => card.id), saved.rounds[index + 1].seats[team.playerId].hand.map(card => card.id));
+    }
+    // A cached teacher tab can still send the old command after receiving this question.
+    await s.host('deal');
+    assert.deepEqual(s.saved(), saved);
+    await s.host('reveal');
+  }
+});
+
+test('concurrent phone refreshes open an older saved question and receive the same persisted deal', async () => {
+  const s = await setup(2);
+  await s.host('start');
+  const previous = s.saved();
+  previous.phase = 'question';
+  for (const seat of Object.values(previous.rounds[1].seats)) seat.hand = [];
+  s.db.sqlite.prepare('UPDATE meniti_rooms SET state_json = ? WHERE pin = ?').run(JSON.stringify(previous), s.pin);
+  const a = s.teams[0].playerToken, b = s.teams[1].playerToken;
+  const [first, other, reconnect] = await Promise.all([s.state(a), s.state(b), s.state(a)]);
+  assert.deepEqual(first.me.hand, reconnect.me.hand);
+  for (const state of [first, other, reconnect]) {
+    assert.equal(state.phase, 'answering');
+    assert.equal(state.me.hand.length, 4);
+    assert.equal(state.me.balance, 10);
+  }
+  assert.equal(s.saved().version, previous.version + 1);
+});
+
 test('simultaneous submissions, lost acknowledgements, concurrent timeout checks and phase/reset guards', async () => {
   const s=await setup();
   const [a,b]=s.teams.map(t=>t.playerToken);
-  await s.host('start'); await s.host('deal');
+  await s.host('start');
   const q=QUESTIONS[0];
   const caption=q.options.find(o=>o.id===q.correctId).caption;
   const hand=(await s.state(a)).me.hand;
@@ -121,7 +160,6 @@ test('only the host sees choosing or submitted status; duplicate and racing requ
   const s = await setup(3);
   const [a,b,c] = s.teams;
   await s.host('start');
-  await s.host('deal');
   const choosing = s.command('student:choosing');
   const roster = async () => (await s.state(s.hostToken)).players;
   const status = (rows, team) => rows.find(row => row.id === team.playerId).answerStatus;
@@ -165,7 +203,6 @@ test('live review stays private and read-only; concurrent reveal confirmations s
   const q = QUESTIONS[0];
   const answer = q.options.find(option => option.id === q.correctId);
   await s.host('start');
-  await s.host('deal');
   const team = await s.state(first);
   const cardId = team.me.hand.find(card => card.caption === answer.caption).id;
   await s.data('action', s.command('student:submit', { cardId, wager: 3 }), first);
@@ -229,7 +266,7 @@ test('competing attacks atomically reserve a target; loser can buy elsewhere, du
   const retry=s.command('student:buy',{card:'extra',targetId:s.teams[3].playerId});
   await s.data('action',retry,s.teams[loser].playerToken);
   const late=s.command('student:buy',{card:'shield'});
-  await s.host('closeShop'); await s.host('next'); await s.host('deal');
+  await s.host('closeShop'); await s.host('next');
   assert.equal((await (await s.request('action',late,s.teams[2].playerToken)).json()).code,'STALE_ROUND');
   const four=s.teams[loser].playerToken, five=s.teams[3].playerToken;
   const hand=(await s.state(five)).me.hand;

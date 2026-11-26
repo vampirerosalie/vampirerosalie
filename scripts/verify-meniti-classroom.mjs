@@ -14,6 +14,7 @@ assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(base.hostname), 'Use a lo
 assert.ok(['chrome', 'webkit'].includes(engine), 'Choose chrome or webkit.');
 const browser = engine === 'webkit' ? await webkit.launch() : await chromium.launch({ channel: 'chrome' });
 const mobile = devices[engine === 'webkit' ? 'iPhone 13' : 'Pixel 7'];
+const tablet = devices['iPad (gen 7) landscape'];
 const errors = [];
 const failedImages = [];
 const studentAudioRequests = [];
@@ -93,6 +94,18 @@ async function waitHand(page, count) {
   await page.waitForFunction(n => document.querySelectorAll('button[data-act=card]').length === n, count);
 }
 
+async function checkTabletExit(page, enterName) {
+  await page.getByRole('button',{name:enterName,exact:true}).tap();
+  const exit=page.getByRole('button',{name:/^exit full screen$/i});
+  await exit.waitFor();
+  assert.ok(await exit.evaluate(el=>{
+    const r=el.getBoundingClientRect();
+    return r.height>=44 && r.top>=0 && r.bottom<=innerHeight && !document.fullscreenElement && !document.webkitFullscreenElement;
+  }), 'The tablet exit button must stay in the viewport while the game owns fullscreen.');
+  await exit.tap();
+  await page.getByRole('button',{name:enterName,exact:true}).waitFor();
+}
+
 async function decodedHand(page) {
   assert.ok(await cards(page).evaluateAll(nodes => nodes.every(node => {
     const img = node.querySelector('img');
@@ -122,7 +135,7 @@ async function checkSideSeats(page) {
 }
 
 try {
-  const host = await newPage({viewport:{width:1440,height:900}});
+  const host = await newPage(tablet);
   const selected = (name) => host.getByRole('tab',{name,selected:true});
   const selectBattle = (name) => host.getByRole('tab',{name}).click();
   const menitiShell = url => url.pathname === '/' && url.searchParams.get('battle') === '15' && url.searchParams.get('teacher') === '1';
@@ -155,11 +168,15 @@ try {
   await host.evaluate(()=>localStorage.setItem('meniti:music','off'));
   await host.reload();
   await shellPin.waitFor();
-  const screen = await newPage({viewport:{width:1366,height:768}});
+  const screen = await newPage(tablet);
   await screen.goto(new URL('/battle15/index.html?screen=' + pin,base).href);
   await host.bringToFront();
   await action(teacher,'start').click();
-  await action(teacher,'deal').waitFor();
+  await action(teacher,'countdown').waitFor();
+  assert.equal(await action(teacher,'deal').count(),0);
+  await waitHand(extra.page,4);
+  await waitHand(flash.page,4);
+  assert.equal((await api('state',teacherToken)).deadline,null);
   await action(teacher,'music').click();
   const musicPanel = teacher.locator('dialog[open]');
   await musicPanel.getByRole('link',{name:/Backbay Lounge.*Kevin MacLeod/i}).waitFor();
@@ -179,8 +196,10 @@ try {
   assert.equal(await cards(screen).count(),0);
   note(engine + ' opened Battle 15 from Battle 12. QR and typed PIN joins populated the shared header; the legacy teacher URL and refresh restored the same room.');
 
-  await action(teacher,'deal').click();
-  await action(teacher,'countdown').waitFor();
+  await checkTabletExit(host,'FULL SCREEN');
+  await checkTabletExit(screen,'Skrin penuh');
+  await host.bringToFront();
+  note('Start dealt complete hands immediately. Both tablet displays offered a visible, tappable exit and preserved the room.');
   await selected(/Meniti Impian/).waitFor();
   await selectBattle(/Treasure Raid/);
   await selected(/Treasure Raid/).waitFor();
@@ -291,7 +310,9 @@ try {
   note('A second phone submitted during private review. Refresh showed both answers while scores stayed private. One confirmation revealed the answer and settled the +3 and −1 wagers.');
 
   for (let n = 2; n <= 5; n++) {
-    await teacherAction('next'); await teacherAction('deal');
+    const next=await teacherAction('next');
+    assert.equal(next.state.phase,'answering');
+    assert.equal(next.state.deadline,null);
     await teacherAction('close'); await teacherAction('reveal');
   }
   await action(teacher,'open-shop').click();
@@ -301,8 +322,6 @@ try {
   await extraSeat.locator('.seat-chips').filter({hasText:/^6$/}).waitFor();
   await flashSeat.locator('.seat-chips').filter({hasText:/^3$/}).waitFor();
   await action(teacher,'close-shop').click();
-  await action(teacher,'next').click();
-  await action(teacher,'deal').waitFor();
   await flash.page.bringToFront();
   // Record changes in the rendered card faces even if the host or another phone is active.
   await flash.page.evaluate(() => {
@@ -319,7 +338,8 @@ try {
     };
     new MutationObserver(sample).observe(document.querySelector('#table'), {childList:true,subtree:true,attributes:true});
   });
-  await teacherAction('deal');
+  await action(teacher,'next').click();
+  await flash.page.bringToFront();
   await flash.page.waitForFunction(() => window.menitiPreviewEvents.some(e=>e.showing), null, {polling:50});
   await flash.page.waitForFunction(() => window.menitiPreviewEvents.some(e=>!e.showing), null, {polling:50});
   const preview = await flash.page.evaluate(() => window.menitiPreviewEvents);

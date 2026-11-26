@@ -85,7 +85,6 @@ export function controls(s) {
   const b=(label,action,options={})=>button(label,action,{cls:'primary',...options});
   let main='';
   switch(s.phase) {
-    case 'question': main=b('Edarkan Kad','deal',{symbol:'cards'}); break;
     case 'answering':
     case 'closed':
       main=button('Review answers','review')+
@@ -139,7 +138,7 @@ export function phone(s) {
   else if(s.phase==='lobby') content=`<div class="waiting">${heroCard()}<h2>Anda sudah menyertai meja.</h2><p class="support">Guru akan memaparkan soalan pertama sebentar lagi.</p>${button('Cara bermain','rules',{cls:'ghost'})}</div>`;
   else if(s.phase==='shopClosed') content=`<div class="waiting">${back('mini-deck')}<h2>Kedai telah ditutup.</h2><p class="support">Tunggu soalan seterusnya.</p></div>`;
   else {
-    const reason=s.phase==='question'?'Guru akan mengedarkan kad.':s.phase==='closed'?'Guru akan mendedahkan jawapan.':'Pilihan dan taruhan anda telah dikunci.';
+    const reason=s.phase==='question'?'Kad jawapan sedang disediakan.':s.phase==='closed'?'Guru akan mendedahkan jawapan.':'Pilihan dan taruhan anda telah dikunci.';
     content=`<section class="phone-question"><div class="question-number"><i></i><span>Soalan ${s.questionId} / ${s.questionCount}</span><i></i></div><h1 class="question-text">${escape(s.question.prompt)}</h1><span data-clock class="clock" ${s.phase==='answering'&&s.deadline?'':'hidden'}>${icon('clock')}<span></span></span></section>${attackNotice(s)}${
       s.phase==='reveal'?reveal(s.reveal,s.me.result):
       s.phase==='answering'&&!s.me.submitted?'<div id="play-area"></div>':

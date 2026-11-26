@@ -152,7 +152,6 @@ export class MenitiGame {
       }
     }
     room.shop = null;
-    room.phase = 'question';
     room.showLeaderboard = false;
     room.questionId++;
     const seats = {};
@@ -164,10 +163,10 @@ export class MenitiGame {
         hand: [], previewStart: null, previewEnd: null, choosing: false, submission: null, result: null };
     }
     room.rounds[room.questionId] = { deadline: null, settled: false, revealed: false, seats };
+    this.deal(room);
   }
 
   deal(room) {
-    requirePhase(room, 'question');
     const q = questionFor(room);
     for (const p of room.players) {
       const seat = roundFor(room).seats[p.id];
@@ -200,6 +199,11 @@ export class MenitiGame {
   }
 
   tick(room) {
+    // Resume rooms saved by an earlier release while the teacher was still reading the question.
+    if (room.phase === 'question') {
+      this.deal(room);
+      room.version++;
+    }
     if (room.phase === 'answering' && roundFor(room).deadline !== null && this.now() >= roundFor(room).deadline) {
       this.settle(room);
       room.version++;
@@ -334,7 +338,9 @@ export class MenitiGame {
         if (!room.players.length) fail('Tunggu sekurang-kurangnya satu pasukan.', 'NO_TEAMS');
         return this.startQuestion(room);
       case 'host:deal':
-        return this.deal(room);
+        // An older teacher tab may have already queued a deal for this question.
+        requirePhase(room, 'answering');
+        return false;
       case 'host:countdown': {
         requirePhase(room, 'answering');
         const seconds = body.seconds ?? 10;
@@ -443,8 +449,7 @@ export class MenitiGame {
       fail('Permainan atau soalan telah berubah. Semak skrin semasa.', 'STALE_ROUND');
     }
     if (room.phase === 'ended' && body.type !== 'host:reset') fail('Keputusan telah dimuktamadkan.', 'GAME_ENDED');
-    // Reconnects can report the first interaction again. No extra receipt or version
-    // is needed when its flag is already present or the team has already submitted.
+    // An action that was already applied needs no new receipt or version.
     if (this.apply(room, actor, body) === false) return { ok: true, state: this.view(room, actor) };
     room.receipts[receiptKey] = signature;
     room.version++;

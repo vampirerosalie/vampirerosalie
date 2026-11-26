@@ -39,7 +39,6 @@ function fixture(size = 3) {
   const toShop = () => {
     host('start');
     for (let n = 1; n <= 5; n++) {
-      host('deal');
       for (let i = 0; i < size; i++) play(i, QUESTIONS[n - 1].correctId);
       finish();
       if (n < 5) host('next');
@@ -78,9 +77,9 @@ test('32 supplied answer keys, every fifth distractor, and student and projector
     assert.equal(q.correctId, q.options['ABCD'.indexOf(normalKey[i])].id);
     assert.equal(q.options[4].caption, extras[i]);
     assert.equal(new Set(q.options.map(o => o.id)).size, 5);
-    assert.equal(s.me(0).hand.length, 0);
-    s.host('deal');
     const projected = s.view();
+    assert.equal(projected.phase, 'answering');
+    assert.equal(projected.deadline, null);
     assert.equal(projected.me, undefined);
     for (const opt of q.options) {
       assert.ok(!projected.preload.includes(opt.art));
@@ -135,7 +134,6 @@ test('32 supplied answer keys, every fifth distractor, and student and projector
 test('opponents see the submission count without identifying which team played a card', () => {
   const s = fixture(2);
   s.host('start');
-  s.host('deal');
   const views = () => [s.view(), s.view(s.teams[1].playerToken)];
   const before = views();
   const ownCards = s.me(0).hand.map(c => c.id);
@@ -154,7 +152,6 @@ test('opponents see the submission count without identifying which team played a
   }
   s.finish();
   s.host('next');
-  s.host('deal');
   for (const v of views()) assert.equal(v.submittedCount, 0);
 });
 
@@ -163,10 +160,9 @@ test('teacher roster tracks the first interaction, submission and missed deadlin
   const roster = () => s.view(s.hostToken).players;
   const statuses = () => s.teams.map(team => roster().find(player => player.id === team.playerId).answerStatus);
   assert.deepEqual(statuses(), [undefined, undefined, undefined]);
+  rejects(() => s.student(0, 'choosing'), 'WRONG_PHASE');
   s.host('start');
   assert.deepEqual(statuses(), ['waiting', 'waiting', 'waiting']);
-  rejects(() => s.student(0, 'choosing'), 'WRONG_PHASE');
-  s.host('deal');
   // Rooms persisted before the teacher roster had no choosing flag.
   delete s.room().rounds[1].seats[s.teams[0].playerId].choosing;
   s.restartWorker();
@@ -211,13 +207,14 @@ test('Extra Card is pooled before the shuffle and can occupy every position acro
   s.toShop();
   const targetId = s.teams[1].playerId;
   s.student(0, 'buy', { card: 'extra', targetId });
-  s.host('closeShop'); s.host('next');
-  const seat = s.room().rounds[6].seats[targetId];
+  s.host('closeShop');
+  const beforeNext = structuredClone(s.room());
   const seen = new Set(), correctSlots = new Set();
-  // Reconstruct the same pre-deal state while advancing the seeded RNG.
+  // Start question six from the same closed shop while advancing the seeded RNG.
   for (let i = 0; i < 100; i++) {
-    s.room().phase = 'question';
-    s.host('deal');
+    Object.assign(s.room(), structuredClone(beforeNext));
+    s.host('next');
+    const seat = s.room().rounds[6].seats[targetId];
     assert.equal(s.me(0).hand.length, 4);
     const hand = s.me(1).hand;
     assert.equal(hand.length, 5);
@@ -240,7 +237,7 @@ test('Flash waits for decoded art then provides one synchronized three-second pr
   const s = fixture(2);
   s.toShop();
   s.student(0, 'buy', { card:'flash', targetId:s.teams[1].playerId });
-  s.host('closeShop'); s.host('next'); s.host('deal');
+  s.host('closeShop'); s.host('next');
   assert.deepEqual(s.me(1).hand, []);
   s.tick(120000);
   s.student(1, 'ready');
@@ -263,9 +260,8 @@ test('Flash waits for decoded art then provides one synchronized three-second pr
 test('teacher can check live answers privately while pending teams can still play', () => {
   const s = fixture(3);
   const q = QUESTIONS[0];
-  s.host('start');
   rejects(() => s.review(1), 'NOT_SETTLED');
-  s.host('deal');
+  s.host('start');
   assert.equal(s.review(1).pending, 3);
   s.play(0, q.correctId, 3);
   s.play(1, q.options[0].id, 2);
@@ -310,7 +306,7 @@ test('teacher can check live answers privately while pending teams can still pla
 
 test('no speed advantage, countdown boundary, duplicate plays and single settlement with read-only review', () => {
   const s = fixture(4);
-  s.host('start'); s.host('deal');
+  s.host('start');
   const answer = QUESTIONS[0].correctId;
   s.tick(3000);
   s.play(0, answer, 3);
@@ -351,7 +347,6 @@ test('one purchase and one attack lock; shield survives across rounds and consum
   assert.equal(s.me(1).balance, 13);
   assert.equal(s.me(1).effect, 'raise');
   assert.equal(s.me(3).shield, true);
-  s.host('deal');
   assert.equal(s.me(0).hand.length, 4);
   assert.deepEqual(s.me(1).wagers.map(w=>w.actual), [2,3,4]);
   s.play(1, QUESTIONS[5].correctId, 3);
@@ -375,7 +370,7 @@ test('Raise the Bet caps base wagers, refunds an unaffordable target, charges bo
   rejects(() => s.student(3, 'buy', {card:'raise',targetId:id(1)}), 'TARGET_TAKEN');
   s.student(3, 'buy', {card:'raise',targetId:id(2)});
   s.student(4, 'buy', {card:'raise',targetId:id(5)});
-  s.host('closeShop'); s.host('next'); s.host('deal');
+  s.host('closeShop'); s.host('next');
   assert.equal(s.me(0).balance, 15);
   assert.equal(s.room().players[0].spent, 0);
   assert.equal(s.me(1).shield, true);
@@ -389,7 +384,6 @@ test('Raise the Bet caps base wagers, refunds an unaffordable target, charges bo
   assert.equal(s.me(2).balance, 0);
   s.host('next');
   for (let i = 0; i < 3; i++) assert.equal(s.me(2).balance, 1);
-  s.host('deal');
   assert.deepEqual(s.me(2).wagers, [{base:1, actual:1}]);
 });
 
@@ -397,7 +391,7 @@ test('reset retains identities, clears all gameplay, rejects stale requests and 
   const s = fixture(2);
   s.toShop();
   s.student(0, 'buy', {card:'flash',targetId:s.teams[1].playerId});
-  s.host('closeShop'); s.host('next'); s.host('deal'); s.host('countdown');
+  s.host('closeShop'); s.host('next'); s.host('countdown');
   const stale = { gameId:s.room().gameId, questionId:6 };
   const requestId = randomUUID();
   s.host('reset', {confirm:true,requestId,...stale});
@@ -412,7 +406,7 @@ test('reset retains identities, clears all gameplay, rejects stale requests and 
   assert.deepEqual(s.join(s.clients[1]), s.teams[1]);
   rejects(() => s.host('close', stale), 'STALE_ROUND');
   rejects(() => s.call(s.teams[0].playerToken, 'host:start'), 'FORBIDDEN');
-  s.host('start'); s.host('deal');
+  s.host('start');
   assert.equal(s.me(1).balance,10);
   assert.equal(s.me(1).hand.length,4);
 });
@@ -422,7 +416,6 @@ test('a full room rejects new clients and reconnects every existing identity', (
   rejects(() => s.join({name:'Lagi',clientId:randomUUID()}), 'ROOM_FULL');
   s.host('start');
   for (const [i, client] of s.clients.entries()) assert.deepEqual(s.join(client), s.teams[i]);
-  s.host('deal');
   for (let i = 0; i < 12; i++) s.play(i, QUESTIONS[0].correctId);
   assert.equal(s.view().submittedCount, 12);
   s.finish();

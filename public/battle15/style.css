@@ -263,6 +263,18 @@ dialog::backdrop { background:#031a15c9; }
 .shield-block { animation:shield-pulse .65s ease-out; }
 @keyframes shield-pulse { 40% { box-shadow:0 0 20px #f8cf79a8; } }
 .projector .masthead { min-height:78px; }.projector .question-layout { min-height:50vh; }.projector .question-text { font-size:clamp(2.2rem,4.5vw,5.6rem); }
+.projector.projector-fullscreen {
+  position:fixed;inset:0;height:100%;height:100dvh;min-height:0;
+  display:flex;flex-direction:column;overflow:hidden;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.projector-fullscreen .masthead { flex:none;min-height:56px;padding-block:.4rem; }
+.projector-fullscreen #table { flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain; }
+.projector-fullscreen [data-act="fullscreen"] { white-space:nowrap;touch-action:manipulation; }
+@media(max-width:620px) {
+  .projector-fullscreen .masthead { flex-wrap:wrap; }
+  .projector-fullscreen .header-tools { margin-left:auto; }
+}
 [hidden] { display:none!important; }
 body { position:relative; isolation:isolate; }
 body::before {

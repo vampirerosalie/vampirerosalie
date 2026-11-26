@@ -852,7 +852,9 @@ export default function Home() {
   const [paintballFrameUrl, setPaintballFrameUrl] = useState('/battle14/index.html?teacher=1&embedded=1');
   const [territoryFrameUrl, setTerritoryFrameUrl] = useState('/battle13/?teacher=1&embedded=1');
   const [treasureFrameUrl, setTreasureFrameUrl] = useState('/battle12/?teacher=1&embedded=1');
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [nativeFullscreen, setNativeFullscreen] = useState(false);
+  const [menitiExpanded, setMenitiExpanded] = useState(false);
+  const isFullscreen = nativeFullscreen || (route?.mode === 'meniti' && menitiExpanded);
   const [fullscreenError, setFullscreenError] = useState('');
   const frameRef = useRef<HTMLIFrameElement>(null);
   const routeRef = useRef<ShellRoute | null>(null);
@@ -1135,17 +1137,27 @@ export default function Home() {
   }, [route?.mode]);
 
   useEffect(() => {
-    const changed = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const changed = () => setNativeFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener('fullscreenchange', changed);
     return () => document.removeEventListener('fullscreenchange', changed);
   }, []);
 
   const toggleFullscreen = async () => {
+    const meniti = route?.mode === 'meniti';
+    if (meniti && menitiExpanded) {
+      setMenitiExpanded(false);
+      return;
+    }
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
+      // Let the page own the exit button on iPad, including Safari's desktop browsing mode.
+      else if (meniti && (navigator.maxTouchPoints > 0 || !document.fullscreenEnabled)) setMenitiExpanded(true);
       else await document.documentElement.requestFullscreen();
       setFullscreenError('');
-    } catch { setFullscreenError('Use your browser’s full-screen control.'); }
+    } catch {
+      if (meniti && !document.fullscreenElement) setMenitiExpanded(true);
+      else setFullscreenError('Use your browser’s full-screen control.');
+    }
   };
 
   const selectDemolition = () => {
@@ -1170,7 +1182,7 @@ export default function Home() {
   const isPaintball = route.mode === 'paintball';
   const standaloneStatus = isMeniti ? menitiStatus : isPaintball ? paintballStatus : isTerritory ? territoryStatus : isTreasure ? treasureStatus : isMuseum ? museumStatus : isLantern ? lanternStatus : isMarket ? marketStatus : demolitionStatus;
   const standaloneBattle = isMeniti ? 15 : isPaintball ? 14 : isTerritory ? 13 : isTreasure ? 12 : isMuseum ? 11 : isLantern ? 10 : isMarket ? 9 : 8;
-  if (route.mode === 'demolition' || isMarket || isLantern || isMuseum || isTreasure || isTerritory || isPaintball || isMeniti) return <main className="game-shell host-shell" data-meniti-in-play={isMeniti && !['lobby', 'ended'].includes(standaloneStatus.phase) || undefined} style={{ display: 'flex', flexDirection: 'column' }}>
+  if (route.mode === 'demolition' || isMarket || isLantern || isMuseum || isTreasure || isTerritory || isPaintball || isMeniti) return <main className="game-shell host-shell" data-meniti-in-play={isMeniti && !['lobby', 'ended'].includes(standaloneStatus.phase) || undefined} data-meniti-fullscreen={isMeniti && isFullscreen || undefined} style={{ display: 'flex', flexDirection: 'column' }}>
     <header className="host-topbar" style={{ flexShrink: 0 }}>
       <div className="game-logo"><span>★</span><strong>GRAMMAR</strong><em>BATTLE!</em></div>
       <div className="host-meta"><div className="pin-pill"><small>GAME PIN</small><strong>{standaloneStatus.pin || '•••••'}</strong></div><div className="online-pill"><span />{standaloneStatus.onlineCount}{(isPaintball || isMeniti) && standaloneStatus.onlineCount === 1 ? ' team online' : isLantern || isTreasure ? ' students online' : ' teams online'}</div><div className="connection-pill connected">{isMeniti ? 'BATTLE 15 · MENITI IMPIAN' : isPaintball ? 'BATTLE 14 · PAINTBALL SHOWDOWN' : isTerritory ? 'BATTLE 13 · TERRITORY WARS' : isTreasure ? 'BATTLE 12 · TREASURE RAID' : isMuseum ? 'BATTLE 11 · MUSEUM JEWEL' : isLantern ? 'BATTLE 10 · LANTERN KEEPER' : isMarket ? 'BATTLE 9 · ENGLISH BLACK MARKET' : 'BATTLE 8 · DEMOLITION DASH'}</div></div>
@@ -1181,7 +1193,7 @@ export default function Home() {
       <div><span>CHOOSE QUESTION SET</span><strong>Battle {standaloneBattle}{(isMeniti && !['lobby', 'ended'].includes(standaloneStatus.phase)) || ((isMuseum || isTerritory) && standaloneStatus.phase === 'active') || (isTreasure && ['questions', 'finalPlay', 'finalBank'].includes(standaloneStatus.phase)) ? ' is in progress' : ' is ready'}</strong></div>
       <BattleTabs selected={standaloneBattle} onSelect={battle => { if (battle !== standaloneBattle) window.location.href = battle === 5 ? '/grammar-room/battle5.html' : `/?battle=${battle}&teacher=1`; }} />
     </section>}
-    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isMeniti ? "Meniti Impian: Card Battle" : isPaintball ? "Battle Fourteen: Paintball Showdown" : isTerritory ? "Battle Thirteen: Territory Wars teacher game" : isTreasure ? "Battle Twelve: Treasure Raid teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isMeniti ? menitiFrameUrl : isPaintball ? paintballFrameUrl : isTerritory ? territoryFrameUrl : isTreasure ? treasureFrameUrl : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow={isMeniti ? "fullscreen; autoplay" : "fullscreen"} style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2 }} />}
+    {isMuseum ? <MuseumFrame frameRef={frameRef} /> : <iframe ref={frameRef} className="battle7-frame" key={standaloneBattle} title={isMeniti ? "Meniti Impian: Card Battle" : isPaintball ? "Battle Fourteen: Paintball Showdown" : isTerritory ? "Battle Thirteen: Territory Wars teacher game" : isTreasure ? "Battle Twelve: Treasure Raid teacher game" : isLantern ? "Battle Ten: The Lantern Keeper's Secret teacher game" : isMarket ? "Battle Nine: English Black Market teacher game" : "Battle Eight: Demolition Dash teacher game"} src={isMeniti ? menitiFrameUrl : isPaintball ? paintballFrameUrl : isTerritory ? territoryFrameUrl : isTreasure ? treasureFrameUrl : isLantern ? "/battle10/index.html?teacher=1" : isMarket ? "/battle9/index.html?teacher=1" : "/battle8/index.html?teacher=1"} allow={isMeniti ? "fullscreen; autoplay" : "fullscreen"} style={{ position: 'relative', inset: 'auto', display: 'block', flex: '1 1 640px', width: '100%', height: 'calc(100dvh - 200px)', minHeight: 640, maxWidth: 1780, margin: '0 auto', borderRadius: 16, zIndex: 2, ...(isMeniti && isFullscreen ? { flex: '1 1 0', height: 0, minHeight: 0, borderRadius: 0 } : {}) }} />}
   </main>;
 
   const teacher = route.role === 'teacher';
