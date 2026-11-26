@@ -64,11 +64,12 @@ function meta(s) {
 function scene(path, alt) {
   return `<figure class="scene-frame"><img src="${art(path)}" alt="${escape(alt)}"></figure>`;
 }
-export function board(s) {
+export function board(s, host=false) {
   if (s.phase==='ended') return finalBoard(s);
   if (s.showLeaderboard) return `<section class="screen-section">${ranking(s.players)}</section>`;
   if (s.phase==='shop'||s.phase==='shopClosed') return `<section class="screen-section shop-board"><p class="kicker">Selepas soalan ${s.questionId}</p><h1>${s.phase==='shop'?'Kedai sabotaj dibuka':'Kedai sabotaj ditutup'}</h1><p class="support">${s.phase==='shop'?'Pilih kad dan sasaran pada telefon pasukan anda. Satu pembelian bagi setiap pasukan.':'Bersedia untuk soalan berikutnya.'}</p>${s.phase==='shop'?powerCards(null):''}</section>`;
-  return `<section class="question-stage">${meta(s)}<div class="question-layout"><div><h1 class="question-text">${escape(s.question.prompt)}</h1><p class="status-line">${icon(s.phase==='closed'?'lock':'book')}${phaseNames[s.phase]}</p></div>${scene(s.question.scene,'Suasana dalam novel Meniti Impian')}</div>${s.phase==='reveal'&&s.reveal?reveal(s.reveal):''}</section>`;
+  const status=host&&s.phase==='answering'?'Students are answering':phaseNames[s.phase];
+  return `<section class="question-stage">${meta(s)}<div class="question-layout"><div><h1 class="question-text">${escape(s.question.prompt)}</h1><p class="status-line">${icon(s.phase==='closed'?'lock':'book')}${status}</p></div>${scene(s.question.scene,'Suasana dalam novel Meniti Impian')}</div>${s.phase==='reveal'&&s.reveal?reveal(s.reveal):''}</section>`;
 }
 function teacherRoster(s) {
   if(s.phase==='lobby'||s.phase==='ended') return '';

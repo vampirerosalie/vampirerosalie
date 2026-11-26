@@ -81,7 +81,7 @@ function renderTools(){
   if(lastTools!==html){tools.innerHTML=html;lastTools=html;}
 }
 function showWelcome(force=false) {
-  document.body.classList.remove('seated','round-table');
+  document.body.classList.remove('seated','round-table','teacher-answering');
   const id=[role,pin,key,busy].join('|');
   if(!force&&id===welcomeId)return;
   welcomeId=id;lastLayout='';renderTools();
@@ -99,11 +99,12 @@ function draw(){
   if(!state){showWelcome();return;}
   document.body.classList.toggle('seated',role==='student');
   document.body.classList.toggle('round-table',role==='student'&&['question','answering','closed'].includes(state.phase));
+  document.body.classList.toggle('teacher-answering',role==='host'&&['answering','closed'].includes(state.phase));
   let html;
   if(role==='student') {
     html=phone(state);
   }else {
-    html=(state.phase==='lobby'?lobby(state,role==='host'):board(state))+(role==='host'?controls(state):'');
+    html=(state.phase==='lobby'?lobby(state,role==='host'):board(state,role==='host'))+(role==='host'?controls(state):'');
   }
   if(html!==lastLayout){
     const focus=document.activeElement?.closest('[data-act]');
@@ -277,9 +278,14 @@ function confirmAction(mode) {
   const reset=mode==='reset',msg=reset?'Semua keputusan, pembelian dan cip akan ditetapkan semula. Pasukan yang berdaftar kekal di bilik ini.':'Pusingan terbuka akan ditanda dan keputusan semasa akan dimuktamadkan.';
   openDialog(mode,reset?'Tetapkan semula permainan?':'Tamatkan permainan?',`<p>${msg}</p><div class="actions modal-actions">${button('Batal','dismiss')}${button(reset?'Tetapkan Semula':'Tamatkan Permainan','confirmed',{cls:'primary'})}</div>`);
 }
+function showMusicState(){
+  renderTools();
+  const toggle=modal.querySelector('[data-act="toggle-music"]');
+  if(toggle)toggle.textContent=playing?'Hentikan Muzik':'Mainkan Muzik';
+}
 function stopMusic(){
   if(music)music.pause();
-  playing=false;renderTools();
+  playing=false;showMusicState();
 }
 async function startMusic(){
   if(role==='student'||!enabled||playing)return;
@@ -287,8 +293,10 @@ async function startMusic(){
   music.volume=volume;
   try{
     // Only one teacher/projector tab plays this room's music on this browser.
-    await music.play();playing=true;local.write('music-owner',uuid());renderTools();
-  }catch{playing=false;renderTools();}
+    await music.play();
+    if(music.paused||playing)return;
+    playing=true;local.write('music-owner',uuid());showMusicState();
+  }catch{playing=false;showMusicState();}
 }
 window.addEventListener('storage',event=>{if(event.key===prefix+'music-owner'&&playing)stopMusic();});
 function musicDialog(){
@@ -298,7 +306,7 @@ async function handle(action,el) {
   if(action==='create')return create();
   if(action==='rules')return openDialog('rules','Cara bermain',rules);
   if(action==='music')return musicDialog();
-  if(action==='toggle-music'){if(playing){enabled=false;stopMusic();}else{enabled=true;await startMusic();}local.write('music',enabled?'on':'off');return musicDialog();}
+  if(action==='toggle-music'){enabled=!playing;local.write('music',enabled?'on':'off');if(enabled)await startMusic();else stopMusic();return;}
   if(action==='dismiss'){closeDialog();return;}
   if(action==='fullscreen'){
     try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else if(document.documentElement.webkitRequestFullscreen)document.documentElement.webkitRequestFullscreen();else notice('Gunakan paparan kelas atau mod skrin penuh pelayar.');}catch{notice('Buka Paparan Kelas untuk menggunakan skrin penuh.');}

@@ -152,10 +152,12 @@ try {
   await host.goto(new URL('/battle15/index.html?host=' + pin, base).href);
   await host.waitForURL(menitiShell);
   await selected(/Meniti Impian/).waitFor();
+  await host.evaluate(()=>localStorage.setItem('meniti:music','off'));
   await host.reload();
   await shellPin.waitFor();
   const screen = await newPage({viewport:{width:1366,height:768}});
   await screen.goto(new URL('/battle15/index.html?screen=' + pin,base).href);
+  await host.bringToFront();
   await action(teacher,'start').click();
   await action(teacher,'deal').waitFor();
   await action(teacher,'music').click();
@@ -194,6 +196,7 @@ try {
   const desk = teacher.locator('.controls .tools-row').first();
   const labels = ['Review answers','Start 10-second countdown','Confirm results + reveal'];
   await desk.getByRole('button',{name:labels[0],exact:true}).waitFor();
+  await teacher.getByText('Students are answering',{exact:true}).waitFor();
   assert.deepEqual(await desk.getByRole('button').allTextContents(), labels);
   const roster = teacher.getByRole('region',{name:'Team status'});
   const extraSeat = roster.getByRole('row').filter({hasText:extra.name});

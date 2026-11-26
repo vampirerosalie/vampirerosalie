@@ -466,6 +466,20 @@ body.seated::before { background-image:linear-gradient(180deg,#12080133 0%,trans
 .side-seat-fan i:nth-child(3) { --angle:102deg;--spread:.59; }
 .table-wait h2,.table-wait p { max-width:72%; }
 .hand.long-hand .art-field { aspect-ratio:5/4; }
+@media(min-width:900px) {
+  .teacher-answering #table {
+    display:grid;grid-template-columns:minmax(0,1.06fr) minmax(24rem,1fr);
+    gap:clamp(1rem,2vw,2.3rem);align-items:start;padding-top:1rem;
+  }
+  .teacher-answering .question-layout { grid-template-columns:1fr;gap:1rem;min-height:0; }
+  .teacher-answering .question-text { font-size:clamp(1.65rem,2.8vw,3rem); }
+  .teacher-answering .question-layout .scene-frame { width:min(100%,340px);justify-self:center; }
+  .teacher-answering .controls { display:flex;flex-direction:column;gap:.7rem;margin:0; }
+  .teacher-answering .desk-actions { display:contents; }
+  .teacher-answering .desk-actions .tools-row:first-child { order:1; }
+  .teacher-answering .teacher-roster { order:2;width:100%;margin:0; }
+  .teacher-answering .desk-actions .tools-row + .tools-row { order:3;margin:0; }
+}
 @media(max-width:700px) {
   body.seated.round-table::before { position:absolute;background-position:center top; }
   .play-table:has(.long-hand) .phone-stage,.play-table:has(.five) .phone-stage { min-height:6rem; }

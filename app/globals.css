@@ -111,3 +111,24 @@ button:focus-visible,input:focus-visible,textarea:focus-visible { outline:4px so
 
 /* Additive Battle Seven shell: kitchen styles are isolated inside its same-origin frame. */
 .battle7-frame{position:fixed;inset:0;width:100%;height:100dvh;min-height:100%;border:0;background:#fff8ed;z-index:100}
+
+@media (min-width: 900px) {
+  .host-shell[data-meniti-in-play] > .battle-selector {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .host-shell[data-meniti-in-play] > .battle-selector > div:first-child {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .host-shell[data-meniti-in-play] > .battle-selector .battle-tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+  }
+  .host-shell[data-meniti-in-play] .battle-tabs button {
+    min-height: 44px;
+    padding: 3px 9px;
+  }
+}
