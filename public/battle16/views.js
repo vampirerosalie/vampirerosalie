@@ -3,6 +3,7 @@ const icons={
   book:'<path d="M3 4c3.5-.8 6.3-.2 9 1.5 2.7-1.7 5.5-2.3 9-1.5v14c-3.5-.8-6.3-.2-9 1.5C9.3 17.8 6.5 17.2 3 18zM12 6v13"/>',
   scan:'<path d="M3 8V3h5m8 0h5v5m0 8v5h-5m-8 0H3v-5M4 12h16"/>',
   full:'<path d="M3 9V3h6m6 0h6v6m0 6v6h-6m-6 0H3v-6"/>',
+  music:'<path d="M9 17V6l11-3v11M9 9l11-3"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="15" rx="3" ry="2"/>',
   print:'<path d="M7 8V3h10v5M7 17H3V9h18v8h-4M7 14h10v7H7z"/>',
   screen:'<path d="M2 4h20v13H2zM12 17v4m-5 0h10"/>',
   check:'<path d="m4 12 5 5L20 6"/>',write:'<path d="m4 16 12-12 4 4L8 20l-5 1zM13 7l4 4"/>',

@@ -13,10 +13,19 @@ const engine = process.argv[3] || 'chrome';
 assert.ok(['chrome', 'webkit'].includes(engine));
 const browser = engine === 'chrome' ? await chromium.launch({ channel:'chrome' }) : await webkit.launch();
 const errors = [];
+const soundtrack = '/battle16/audio/morning.mp3';
 const note = message => console.log(engine, message);
 
 async function pageFor(device) {
   const context = await browser.newContext({ ...device });
+  await context.addInitScript(() => {
+    window.playedMedia = new Set();
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function(...args) {
+      window.playedMedia.add(this);
+      return play.apply(this,args);
+    };
+  });
   const page = await context.newPage();
   page.setDefaultTimeout(20000);
   page.on('pageerror', error => errors.push(error.message));
@@ -26,6 +35,23 @@ async function pageFor(device) {
   return page;
 }
 const act = (page, key) => page.locator('[data-act="' + key + '"]').first();
+async function expectMusic(frame) {
+  await frame.waitForFunction(path => [...window.playedMedia].some(audio =>
+    audio.loop && !audio.paused && !audio.muted && audio.volume > 0 && audio.currentTime > 0.1 &&
+    audio.currentSrc && new URL(audio.currentSrc).pathname === path), soundtrack);
+  assert.equal(await frame.evaluate(() => window.playedMedia.size), 1, 'Overlapping classroom tracks');
+}
+const expectQuiet = frame => frame.waitForFunction(() => [...window.playedMedia].every(audio => audio.paused || audio.muted));
+async function pretendHidden(frame, hidden) {
+  // Real device visibility events aren't available in Playwright's iPad emulation.
+  await frame.evaluate(value => {
+    for (const [key, state] of [['hidden',value],['visibilityState',value ? 'hidden' : 'visible']]) {
+      if (value) Object.defineProperty(document,key,{value:state, configurable:true});
+      else delete document[key];
+    }
+    document.dispatchEvent(new Event('visibilitychange'));
+  },hidden);
+}
 async function readyToWrite(page) {
   await page.waitForFunction(() => document.querySelector('.novel-art')?.naturalWidth > 200);
   await act(page, 'next-line').click();
@@ -39,11 +65,22 @@ const updated = 'Nilai kerjasama ditunjukkan apabila Zahar dan para pelatih baha
 try {
   const host = await pageFor(devices['iPad (gen 7) landscape']);
   const phone = await pageFor(devices[engine === 'chrome' ? 'Pixel 7' : 'iPhone 13']);
+  const studentAudio = [];
+  phone.on('request', req => { if(new URL(req.url()).pathname === soundtrack) studentAudio.push(req.url()); });
   await host.goto(new URL('/?battle=12&teacher=1', base).href);
   await host.getByRole('tab', {name:/BATTLE 16/i}).click();
   const frame = host.frameLocator('iframe[src*="battle16"]');
   await act(frame, 'create').click();
   await frame.locator('[data-set="persoalan"]').waitFor();
+  await frame.getByRole('link',{name:'Morning · Kevin MacLeod'}).waitFor();
+  await frame.getByRole('link',{name:'CC BY 4.0'}).waitFor();
+  let gameFrame = host.frames().find(f => new URL(f.url()).pathname.startsWith('/battle16/'));
+  await expectMusic(gameFrame);
+  await frame.locator('[data-set="persoalan"]').click();
+  await frame.locator('[data-set="nilai"]').click();
+  await expectMusic(gameFrame);
+  await act(frame,'music').click();
+  await expectQuiet(gameFrame);
   assert.equal(await frame.locator('[data-set]').count(), 3);
   await act(frame, 'fullscreen').click();
   await frame.getByRole('button',{name:'Exit full screen',exact:true}).click();
@@ -60,14 +97,30 @@ try {
   await host.waitForURL(url => url.searchParams.get('host') === pin);
   await host.reload();
   await frame.locator('[data-set="nilai"]').waitFor();
+  gameFrame = host.frames().find(f => new URL(f.url()).pathname.startsWith('/battle16/'));
   await phone.goto(links[0].href);
   await phone.locator('input[name="name"]').fill('Pasukan Delima');
   await phone.getByRole('button',{name:'Sertai bilik'}).click();
   await phone.getByRole('heading',{name:'Menunggu cikgu'}).waitFor();
   await act(frame,'start').click();
-  const pub = await pageFor({viewport:{width:1024,height:768}});
+  await frame.getByRole('heading',{name:/Latihan 1/}).waitFor();
+  await expectQuiet(gameFrame);
+  await act(frame,'music').click();
+  await expectMusic(gameFrame);
+  await pretendHidden(gameFrame,true);
+  await expectQuiet(gameFrame);
+  await pretendHidden(gameFrame,false);
+  await expectMusic(gameFrame);
+  const pub = await host.context().newPage();
   await pub.goto(new URL('/?battle=16&screen='+pin,base).href);
   await pub.getByRole('heading',{name:'Misi sedang berlangsung'}).waitFor();
+  await expectQuiet(pub);
+  await act(pub,'music').click();
+  await expectMusic(pub);
+  await expectQuiet(gameFrame);
+  await act(pub,'music').click();
+  await expectQuiet(pub);
+  note('Morning plays on teacher start, survives redraws, remembers mute, pauses when hidden and can be enabled separately on the projector.');
   note('Four printed codes decoded. Same-site teacher, projector, phone join, refresh and game fullscreen passed.');
 
   for (let n=1; n<=3; n++) {
@@ -128,6 +181,8 @@ try {
     }
   }
   assert.deepEqual(errors,[]);
+  assert.equal(await act(phone,'music').count(),0);
+  assert.deepEqual(studentAudio,[],'Student phones must stay silent and skip the soundtrack download.');
   note('All nine stations and repeat use of the same four QR cards across the three latihan passed.');
 } finally {
   await browser.close();

@@ -25,6 +25,59 @@ if(role==='student'&&valid(pin)&&requestedStation>=1&&requestedStation<=4&&reque
 let ui={step:'dialogue',beat:0,text:'',sceneId:'',compare:false};
 let pending=pin&&token?store.json('pending:'+role+':'+pin):null;
 let actionFlight=false,camera=null,scanFrame=0,cameraTicket=0,nextCameraFrame=0;
+let music=null,resumeMusic=false;
+const musicOwner=uuid();
+
+function showMusicState(){
+ const button=tools.querySelector('[data-act="music"]');
+ if(!button)return;
+ const playing=Boolean(music&&!music.paused);
+ button.setAttribute('aria-pressed',String(playing));
+ button.title=playing?'Jedakan Morning':'Mainkan Morning';
+}
+async function playMusic(explicit=false){
+ if(role==='student'||closed||document.hidden||(!explicit&&store.get('music')==='off'))return;
+ if(!music){
+   music=new Audio('/battle16/audio/morning.mp3');
+   music.loop=true;
+   music.volume=0.17;
+   music.addEventListener('play',showMusicState);
+   music.addEventListener('pause',showMusicState);
+ }
+ try{
+   await music.play();
+   if(!music.paused)store.put('music-owner',musicOwner);
+ }catch(error){
+   if(explicit&&error.name!=='AbortError')notify('Muzik belum dapat dimainkan. Tekan Muzik untuk mencuba lagi.');
+ }
+ showMusicState();
+}
+function toggleMusic(){
+ if(role==='student')return;
+ resumeMusic=false;
+ if(music&&!music.paused){
+   store.put('music','off');
+   music.pause();
+ }else{
+   store.put('music','on');
+   void playMusic(true);
+ }
+}
+function suspendMusic(){
+ if(music&&!music.paused){resumeMusic=true;music.pause();}
+}
+function restoreMusic(){
+ if(!resumeMusic||document.hidden||closed)return;
+ resumeMusic=false;
+ const owner=store.get('music-owner');
+ if(!owner||owner===musicOwner)void playMusic();
+}
+window.addEventListener('storage',event=>{
+ if(event.key==='sastera:music-owner'&&event.newValue!==musicOwner){
+   resumeMusic=false;
+   music?.pause();
+ }
+});
 function route(){
  if(role==='host')history.replaceState(null,'','/battle16/?teacher=1'+(embedded?'&embedded=1':'')+(pin?'&host='+pin:''));
  if(role==='student'){
@@ -57,8 +110,9 @@ function signal(type,extra={}){
 }
 function draw(){
  const toolbar=(pin?`<span class="pin-label">PIN <strong>${esc(pin)}</strong></span>`:'')+
+ (role!=='student'?btn('Muzik','music',{cls:'top-btn',icon:'music',attrs:'aria-label="Muzik latar · Morning" aria-pressed="false"'}):'')+
  (role!=='student'?btn('Full screen','fullscreen',{cls:'top-btn',icon:'full',attrs:'data-game-fullscreen-control'}):'');
- if(toolbar!==toolLayout){tools.innerHTML=toolbar;toolLayout=toolbar;}
+ if(toolbar!==toolLayout){tools.innerHTML=toolbar;toolLayout=toolbar;showMusicState();}
  let html;
  if(!state&&(role==='public'||token))html='<div class="loading">Membuka bilik latihan…</div>';
  else if(!state)html=welcome(role,pin,store.get('name'));
@@ -233,9 +287,10 @@ document.addEventListener('click',event=>{
  const el=event.target.closest('[data-act]');if(!el||el.disabled)return;
  const act=el.dataset.act;
  switch(act){
- case 'create':void create();break;
+ case 'music':toggleMusic();break;
+ case 'create':void playMusic();void create();break;
  case 'set':selected=el.dataset.set;draw();break;
- case 'start':queue('start',{setId:selected});break;
+ case 'start':void playMusic();queue('start',{setId:selected});break;
  case 'cards':openDialog('cards');break;
  case 'new-room':openDialog('new');break;
  case 'confirm-new':if(!pending&&!busy){closeDialog();pin='';token='';state=null;store.del('host-room');signal('sastera:unavailable');route();void create();}break;
@@ -266,9 +321,12 @@ document.addEventListener('click',event=>{
 });
 dialog.addEventListener('cancel',()=>{stopCamera();modal=null;dialog.classList.remove('cards-dialog');});
 dialog.addEventListener('click',e=>{if(e.target===dialog)closeDialog();});
-window.addEventListener('pagehide',()=>{closed=true;stopCamera();});
-window.addEventListener('pageshow',()=>{closed=false;if(token)void refresh();});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();else if(camera)closeDialog();});
+window.addEventListener('pagehide',()=>{closed=true;suspendMusic();stopCamera();});
+window.addEventListener('pageshow',()=>{closed=false;restoreMusic();if(token)void refresh();});
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){suspendMusic();if(camera)closeDialog();}
+ else {restoreMusic();void refresh();}
+});
 window.addEventListener('online',()=>void refresh());
 if(role==='host'&&!embedded){location.replace('/?battle=16&teacher=1'+(valid(params.get('host'))?'&host='+pin:''));}
 else{

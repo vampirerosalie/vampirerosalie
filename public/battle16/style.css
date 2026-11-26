@@ -208,6 +208,23 @@ button:focus-visible,a:focus-visible,summary:focus-visible {
   min-height: 42px;
 }
 
+.top-btn[data-act="music"][aria-pressed="true"] {
+  background: #efd38b;
+  color: #18352f;
+}
+
+.music-credit {
+  display: none;
+  text-align: center;
+  padding: .75rem 1rem;
+  font-size: .85rem;
+  color: var(--muted);
+}
+
+.host .music-credit,.public .music-credit {
+  display: block;
+}
+
 .kicker {
   color: #806233;
   font: bold .74rem/1.4 system-ui,sans-serif;
@@ -1151,6 +1168,8 @@ blockquote {
 
   #tools {
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .top-btn {
@@ -1338,7 +1357,7 @@ blockquote {
     min-height: 0!important;
   }
 
-  body>.mast,#game,#notice,#link-status,#game-presentation-bar {
+  body>.mast,body>.music-credit,#game,#notice,#link-status,#game-presentation-bar {
     display: none!important;
   }
 
