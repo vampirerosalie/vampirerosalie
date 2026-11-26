@@ -112,9 +112,9 @@ try {
   await teacher.getByRole('button',{name:/create.*room|new game/i}).first().click();
   const created=await (await creation).json();
   await teacher.getByRole('heading',{name:'Ready room'}).waitFor();
-  if(!await teacher.locator('img[src*="qr"]').count())await teacher.locator('[data-act="qr"]').click();
-  const qr=teacher.locator('img[src*="qr"]').first();
+  const qr=teacher.locator('#room-entrance .scan-code img');
   await qr.waitFor();
+  assert.ok((await qr.boundingBox()).width>=270,'Joining QR is large on the teacher screen');
   const encoded=new URL(await qr.getAttribute('src'),base);
   const joinLink=encoded.searchParams.get('text');
   assert.ok(joinLink&&new URL(joinLink).searchParams.get('join'));

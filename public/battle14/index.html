@@ -18,7 +18,15 @@
       <small>♫ <a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200079" target="_blank" rel="noopener">Electrodoodle</a> · Kevin MacLeod · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></small>
       <small role="status"></small>
     </section>
-    <section id="stage"><div id="stage-visual" hidden></div><div id="content"></div></section>
+    <section id="stage">
+      <aside id="room-entrance" class="panel start-panel" aria-labelledby="scan-heading" hidden>
+        <h2 id="scan-heading">Scan to join</h2>
+        <button class="scan-code" type="button" data-act="qr" aria-label="Enlarge joining QR code"><img alt="QR code to join this Paintball room"></button>
+        <span>Room PIN</span><strong class="entrance-pin"></strong>
+        <button class="btn dark fullrow" type="button" data-act="copy">Copy group link</button>
+      </aside>
+      <div id="stage-visual" hidden></div><div id="content"></div>
+    </section>
   </main>
   <dialog id="dialog"></dialog>
   <div id="notice" role="status" aria-live="polite" hidden></div>

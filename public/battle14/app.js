@@ -32,6 +32,7 @@ const updateMusic = host() ? mountTeacherMusic($('teacher-music')) : null;
 const player = () => mode === 'team';
 const me = () => state?.teams.find(t=>t.id===state.teamId);
 const joinLink = () => new URL('/battle14/index.html?join='+pin,location.origin).href;
+const joinQR = () => '/api/paintball/qr?text='+encodeURIComponent(joinLink());
 const projectorLink = () => new URL('/battle14/index.html?projector='+pin+'#'+encodeURIComponent(get('projection:'+pin)),location.origin).href;
 function notice(message) { $('notice').textContent=message; $('notice').hidden=false;clearTimeout(notice.timer);notice.timer=setTimeout(()=>{$('notice').hidden=true;},5800); }
 async function api(path,body) {
@@ -175,7 +176,7 @@ function teamRoster({devices=false}={}){
 function lobby(){
   if(player())return `<section class="panel start-panel"><div class="kicker">Team lobby</div><h1>${esc(me()?.name)}</h1><p>${state.canControl?'You control this team’s robot.':'You are watching this team. Your teacher can give you control.'}</p><div class="status-note">Waiting for the teacher to start Question 1.</div></section>`;
   return `<section class="panel start-panel"><div class="kicker">Room lobby</div><div class="heading-line"><h1>Ready room</h1><span class="badge">${state.teams.length} / 12 teams</span></div>
-    <div class="join-display"><img src="/api/paintball/qr?text=${encodeURIComponent(joinLink())}" alt="Scan to join this Paintball room"><div><h3>Scan to join</h3><strong>${esc(pin)}</strong>${btn('Copy group link','copy','tiny')}</div></div>${teamRoster({devices:true})}
+    ${teamRoster({devices:true})}
     ${host()?`<div class="buttons actions">${btn('Start game','start','sun',!state.teams.length)}${btn('Manage teams','teams','',!state.teams.length)}</div><div class="buttons actions">${btn('End game','end-game','tiny danger')}</div>`:''}</section>`;
 }
 function questionPanel(){
@@ -228,6 +229,15 @@ function render(){
   document.body.classList.toggle('player-shoot',direct);
   document.body.classList.toggle('student-quiz',inQuiz&&player());
   $('stage').className=direct?'direct shoot':live?'studio shoot':preview?'studio splash-preview':'';
+  const entrance=$('room-entrance');
+  const showEntrance=phase==='lobby'&&!player();
+  $('stage').classList.toggle('with-entrance',showEntrance);
+  entrance.hidden=!showEntrance;
+  if(showEntrance&&entrance.dataset.pin!==pin){
+    entrance.querySelector('img').src=joinQR();
+    entrance.querySelector('.entrance-pin').textContent=pin;
+    entrance.dataset.pin=pin;
+  }
   visual(preview?'preview':live?'live':'');
   $('content').className=phase==='quiz'&&player()?'phone-wrap':'';
   $('content').innerHTML=!state?welcome():phase==='lobby'?lobby():inQuiz?(host()?`<div class="quiz-grid">${questionPanel()}${controls()}</div>`:questionPanel()):phase==='roundReady'?roundReady():live?livePanel():results();
@@ -254,7 +264,7 @@ function refreshDialog(){
       <div class="buttons">${btn('Finalize answers','finalize','primary',state.finalized)}</div>`;
       break;
     case 'qr':
-      title='Scan to join';body=`<img class="qr-image" src="/api/paintball/qr?text=${encodeURIComponent(joinLink())}" alt="QR code to join this room"><div class="large-pin">${esc(pin)}</div><p class="code-link">${esc(joinLink())}</p>${btn('Copy group link','copy','primary fullrow')}`;break;
+      title='Scan to join';body=`<img class="qr-image" src="${joinQR()}" alt="QR code to join this room"><div class="large-pin">${esc(pin)}</div><p class="code-link">${esc(joinLink())}</p>${btn('Copy group link','copy','primary fullrow')}`;break;
     case 'teams':
       title='Manage teams';body=state.teams.map(t=>`<div class="review-row"><div class="team-name">${dot(t)}<strong>${esc(t.name)}</strong></div>
       ${state.phase==='lobby'?`<form data-rename="${esc(t.id)}"><label class="field">Team name<input name="name" value="${esc(t.name)}" maxlength="28" required></label><label class="field">Team colour<select name="color">${state.colors.map(c=>`<option value="${c.color}" ${c.color===t.color?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label><button class="btn tiny" type="submit">Save team</button></form>`:''}
