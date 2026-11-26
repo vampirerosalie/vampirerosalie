@@ -35,7 +35,7 @@ async function assertGameFillsViewport(page) {
 async function checkGame(page, battle, tablet) {
   await page.goto(new URL('/?battle=' + battle + '&teacher=1',base).href, {waitUntil:'domcontentloaded'});
   const frame = page.frameLocator('iframe.battle7-frame');
-  if (battle >= 12) {
+  if (battle >= 12 && tablet) {
     const create = frame.locator('button[data-action="create"], button[data-act="create"]').first();
     await create.click();
     await create.waitFor({state:'hidden'});
@@ -75,10 +75,15 @@ async function checkGame(page, battle, tablet) {
   console.log('PASS',engine,tablet?'iPad':'desktop','game-only fullscreen, Battle',battle);
 }
 
+let ownedRooms;
+let kitchenRoom;
 try {
   for (const tablet of [true,false]) {
-    const context = await browser.newContext(tablet ? devices['iPad (gen 7) landscape'] : {viewport:{width:1280,height:800}});
+    const context = await browser.newContext(tablet ? devices['iPad (gen 7) landscape']
+      : {viewport:{width:1280,height:800},storageState:ownedRooms});
     try {
+      // Crazy Kitchen remembers the teacher's active room in the tab as well as local storage.
+      if (kitchenRoom) await context.addInitScript(pin => sessionStorage.setItem('crazy-kitchen:last-host',pin),kitchenRoom);
       await context.addInitScript(() => {
         window.nativeFullscreenRequests = 0;
         for (const method of ['requestFullscreen','webkitRequestFullscreen']) {
@@ -93,6 +98,10 @@ try {
       page.setDefaultTimeout(20000);
       for (const battle of (tablet ? [7,8,9,10,11,12,13,14,15] : [7,11,15])) {
         await checkGame(page,battle,tablet);
+      }
+      if (tablet) {
+        ownedRooms = await context.storageState();
+        kitchenRoom = await page.evaluate(() => sessionStorage.getItem('crazy-kitchen:last-host'));
       }
     } finally { await context.close(); }
   }
