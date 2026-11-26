@@ -1,4 +1,4 @@
-import {button,back,escape} from './views.js';
+import {button,back,escape,sideSeatFans} from './views.js';
 
 const cache = new Map();
 let clock = () => Date.now();
@@ -27,7 +27,6 @@ function loadImage(url) {
 }
 export function warmImages(view) {
   const wanted = new Set([...(view.preload??[]),...['back','frame','chip-1','chip-2','chip-3'].map(file=>'/battle15/art/'+file+'.webp')]);
-  if(view.me)wanted.add('/battle15/art/table-seated.webp');
   for(const url of cache.keys()) if(!wanted.has(url)) cache.delete(url);
   for (const url of wanted) loadImage(url);
 }
@@ -70,7 +69,7 @@ export function renderHand(s) {
     flashCardHeight=draft.width===innerWidth?draft.flashCardHeight??0:0;dealing=true;
   }
   if(!root.firstElementChild) {
-    root.innerHTML='<div class="wager-row"><div class="foil-label"><i></i><b>Pilih taruhan</b><i></i></div><div class="wager-options" id="wagers"></div></div><div class="phone-stage"><div id="slot"></div><div id="confirm-play" class="confirmation"></div></div><div id="hand-message" class="hand-status" role="status"></div><div class="hand-tray"><div id="hand" class="hand"></div></div>';
+    root.innerHTML='<div class="wager-row"><div class="foil-label"><i></i><b>Pilih taruhan</b><i></i></div><div class="wager-options" id="wagers"></div></div><div class="phone-stage">'+sideSeatFans+'<div id="slot"></div><div id="confirm-play" class="confirmation"></div></div><div id="hand-message" class="hand-status" role="status"></div><div class="hand-tray"><div id="hand" class="hand"></div></div>';
     handKey='';lastButtons='';lastStage='';
   }
   const flash=m.effect==='flash', face=faceState(s);

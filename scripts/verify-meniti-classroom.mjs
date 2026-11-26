@@ -96,6 +96,27 @@ async function decodedHand(page) {
   })), 'Each card has a decoded illustration and caption');
 }
 
+async function checkSideSeats(page) {
+  const scenery = page.locator('.side-seat-fans[aria-hidden="true"]');
+  await scenery.waitFor();
+  const rendered = await scenery.evaluate(layer => {
+    const box = layer.getBoundingClientRect();
+    const fans = [...layer.querySelectorAll('.side-seat-fan')].map(fan => fan.getBoundingClientRect());
+    return {
+      centers: fans.map(fan => (fan.left + fan.right) / 2).sort((a,b) => a-b),
+      middle: (box.left + box.right) / 2,
+      intersectsTable: fans.every(fan => fan.width > 0 && fan.height > 0 &&
+        fan.right > box.left && fan.left < box.right && fan.bottom > box.top && fan.top < box.bottom),
+      passesTaps: [layer, ...layer.querySelectorAll('*')].every(el => getComputedStyle(el).pointerEvents === 'none'),
+      controls: layer.querySelectorAll('a,button,input,select,textarea,[tabindex]').length,
+    };
+  });
+  assert.equal(rendered.centers.length,2);
+  assert.ok(rendered.centers[0] < rendered.middle && rendered.middle < rendered.centers[1]);
+  assert.ok(rendered.intersectsTable && rendered.passesTaps);
+  assert.equal(rendered.controls,0);
+}
+
 try {
   const host = await newPage({viewport:{width:1440,height:900}});
   await host.goto(new URL('/?battle=15&teacher=1', base).href);
@@ -105,6 +126,7 @@ try {
   ({ pin, hostToken:teacherToken } = await (await created).json());
   const qr = teacher.locator('img[src$="/qr.svg"]').first();
   await qr.waitFor();
+  await qr.evaluate(image => image.decode());
   const buffer = await qr.screenshot();
   const png = await sharp(buffer).resize(480,480).ensureAlpha().raw().toBuffer({ resolveWithObject:true });
   const url = jsQR(new Uint8ClampedArray(png.data), png.info.width, png.info.height)?.data;
@@ -138,6 +160,7 @@ try {
   await extra.page.bringToFront();
   await waitHand(extra.page,4);
   await decodedHand(extra.page);
+  await checkSideSeats(extra.page);
   const confirm = action(extra.page,'submit');
   assert.ok(!await confirm.isVisible() || await confirm.isDisabled());
   const visible = await ids(extra.page);
@@ -151,6 +174,7 @@ try {
   assert.equal((await api('state',extra.key)).me.actualWager,3);
   await extra.page.reload();
   await extra.page.getByText('Kad telah dimainkan',{exact:true}).waitFor();
+  await checkSideSeats(extra.page);
   await action(teacher,'close-answer').click();
   await action(teacher,'review').click();
   const review = teacher.locator('dialog[open]');
@@ -215,6 +239,7 @@ try {
   await extra.page.bringToFront();
   await waitHand(extra.page,5);
   await decodedHand(extra.page);
+  await checkSideSeats(extra.page);
   const five = await ids(extra.page);
   const traits = await cards(extra.page).evaluateAll(nodes=>nodes.map(n=>({
     width:n.offsetWidth,height:n.offsetHeight,cls:n.className,
@@ -232,6 +257,7 @@ try {
   assert.deepEqual(await ids(extra.page),five);
   note('All five answer cards shared dimensions, frame, animation and delay. Reload and wager changes preserved the complete hand.');
 
+  await host.bringToFront();
   await teacher.locator('#seconds').selectOption('5');
   await action(teacher,'countdown').click();
   await action(teacher,'review').waitFor();

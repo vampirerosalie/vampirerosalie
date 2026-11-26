@@ -14,8 +14,8 @@ test('every story scene, answer face and table illustration ships as a local Web
     assert.equal(new Set(q.options.map(option => option.art)).size, 5, 'Distinct faces for question ' + q.id);
     assert.ok(!q.options.some(option => option.art === q.scene), 'Question scene must differ from answer art');
   }
-  for (const name of ['table', 'table-phone', 'table-seated', 'hero', 'flash', 'extra', 'raise', 'shield',
-    'back', 'frame', 'victory', 'chip-1', 'chip-2', 'chip-3', 'seat-left', 'seat-right']) {
+  for (const name of ['table', 'table-phone', 'hero', 'flash', 'extra', 'raise', 'shield',
+    'back', 'frame', 'victory', 'chip-1', 'chip-2', 'chip-3']) {
     referenced.add('/battle15/art/' + name + '.webp');
   }
   for (const path of referenced) {

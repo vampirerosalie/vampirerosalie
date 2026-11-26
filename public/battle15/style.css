@@ -242,7 +242,7 @@ body::before {
 .back { background:#642635 url("./art/back.webp") center / 100% 100% no-repeat; }
 .back .medallion, .back::before { opacity:0; }
 .lobby-join { display:flex;align-items:center;gap:1rem;margin:1.2rem 0; }
-.lobby-join img { width:clamp(95px,10vw,152px);max-width:45%;border:3px solid #d9c992;border-radius:6px; }
+.lobby-join img { width:clamp(148px,14vw,200px);max-width:45%;border:3px solid #d9c992;border-radius:6px; }
 .lobby-join .support { margin-top:.45rem; }
 .panel h2 small { color:var(--muted);font:500 .95rem var(--sans); }
 .play-table { padding:clamp(.4rem,1.3vw,1.5rem);background:linear-gradient(180deg,#082d24ab,#0b302633);border-radius:.55rem; }
@@ -373,7 +373,6 @@ body.seated::before { background-image:linear-gradient(180deg,#12080133 0%,trans
   .hand.five .answer-card { grid-column:span 2; }
   .hand.five .answer-card:nth-child(4) { grid-column:2 / span 2; }
   .hand.long-hand .answer-card,.hand.five .answer-card { width:100%;max-width:none;transform:translateY(var(--lift)) rotate(calc(var(--tilt) * .42)); }
-  .hand.long-hand:not(.five) .art-field { aspect-ratio:1.48; }
   .hand.five .art-field { aspect-ratio:1.08; }
   .hand.long-hand .caption,.hand.five .caption { padding:.32rem .46rem .6rem;font-size:clamp(.84rem,2.9vw,1rem); }
   .play-table:has(.long-hand) .phone-question,.play-table:has(.five) .phone-question { padding-top:clamp(.55rem,2.1svh,1.5rem); }
@@ -403,15 +402,32 @@ body.seated::before { background-image:linear-gradient(180deg,#12080133 0%,trans
 @media(max-height:650px) and (max-width:700px) {
   .play-table:has(.short-hand:not(.five)) .hand-tray { padding-bottom:2.65rem; }
 }
-/* The other hands belong to the painted table, including when one team plays alone. */
-body.seated.round-table::before {
-  background-image:linear-gradient(180deg,#12080133 0%,transparent 23%,#09231710 38%,#041b1260 100%),url("./art/table-seated.webp");
+.round-table .phone-stage,.table-wait { position:relative;isolation:isolate; }
+.table-wait { min-height:clamp(180px,38svh,340px);align-content:center; }
+.side-seat-fans {
+  position:absolute;inset:0 calc(-1 * clamp(.9rem,3vw,2rem));z-index:-1;
+  overflow:hidden;pointer-events:none;user-select:none;
 }
-@media(min-width:701px) and (orientation:landscape) {
-  body.seated.round-table::before {
-    background-image:linear-gradient(180deg,#061b161a,#04251b33),url("./art/seat-left.webp"),url("./art/seat-right.webp"),url("./art/table.webp");
-    background-size:cover,clamp(100px,13vw,162px) auto,clamp(100px,13vw,162px) auto,cover;
-    background-position:center,left -32px top 58%,right -32px top 58%,center;
-    background-repeat:no-repeat;
-  }
+.side-seat-fan {
+  --card-width:clamp(38px,11.4vw,66px);
+  position:absolute;left:0;top:45%;width:17%;height:1px;
+}
+.side-seat-fan:last-child { left:auto;right:0;transform:scaleX(-1); }
+.side-seat-fan i {
+  --angle:78deg;--spread:-.59;--reach:.25;
+  position:absolute;top:0;left:calc(var(--card-width) * var(--reach));
+  width:var(--card-width);aspect-ratio:2/3;
+  background:#472632 url('./art/back.webp') center / 100% 100% no-repeat;
+  border:1px solid #a28b5f;border-radius:5% / 3.4%;
+  box-shadow:1px 2px 0 #725834,1px 4px 5px #05180ecc;
+  filter:brightness(.79) saturate(.85);
+  transform:translate(-50%,calc(-50% + var(--card-width) * var(--spread))) rotate(var(--angle));
+}
+.side-seat-fan i:nth-child(2) { --angle:90deg;--spread:0;--reach:.38; }
+.side-seat-fan i:nth-child(3) { --angle:102deg;--spread:.59; }
+.table-wait h2,.table-wait p { max-width:72%; }
+.hand.long-hand .art-field { aspect-ratio:5/4; }
+@media(max-width:700px) {
+  body.seated.round-table::before { position:absolute;background-position:center top; }
+  .play-table:has(.long-hand) .phone-stage,.play-table:has(.five) .phone-stage { min-height:6rem; }
 }

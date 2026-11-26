@@ -19,6 +19,7 @@ const glyphs = {
 export const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${glyphs[name] ?? ''}</svg>`;
 export const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const back = (cls = '') => `<span aria-hidden="true" class="back ${cls}"><i class="medallion"></i></span>`;
+export const sideSeatFans = '<div class="side-seat-fans" aria-hidden="true" inert><span class="side-seat-fan"><i></i><i></i><i></i></span><span class="side-seat-fan"><i></i><i></i><i></i></span></div>';
 export const button = (label, action, {cls = '', disabled = false, attrs = '', symbol = ''} = {}) =>
   `<button type="button" data-act="${action}" class="${cls}" ${disabled ? 'disabled' : ''} ${attrs}>${iconIf(symbol)}${escape(label)}</button>`;
 function iconIf(name) { return name ? icon(name) : ''; }
@@ -129,7 +130,7 @@ export function phone(s) {
     content=`<section class="phone-question"><div class="question-number"><i></i><span>Soalan ${s.questionId} / ${s.questionCount}</span><i></i></div><h1 class="question-text">${escape(s.question.prompt)}</h1><span data-clock class="clock" ${s.phase==='answering'&&s.deadline?'':'hidden'}>${icon('clock')}<span></span></span></section>${attackNotice(s)}${
       s.phase==='reveal'?reveal(s.reveal,s.me.result):
       s.phase==='answering'&&!s.me.submitted?'<div id="play-area"></div>':
-      `<div class="waiting">${back(s.me.submitted?'single-card':'mini-deck')}<h2>${s.me.submitted?'Kad telah dimainkan':s.phase==='closed'?'Jawapan ditutup':'Bersedia di meja'}</h2><p class="support">${reason}${s.me.submitted?` Taruhan: ${s.me.actualWager} cip.`:''}</p></div>`}`;
+      `<div class="waiting table-wait">${sideSeatFans}${back(s.me.submitted?'single-card':'mini-deck')}<h2>${s.me.submitted?'Kad telah dimainkan':s.phase==='closed'?'Jawapan ditutup':'Bersedia di meja'}</h2><p class="support">${reason}${s.me.submitted?` Taruhan: ${s.me.actualWager} cip.`:''}</p></div>`}`;
   }
   return `<article class="play-table" data-phase="${s.phase}">${hud}${content}</article>`;
 }
