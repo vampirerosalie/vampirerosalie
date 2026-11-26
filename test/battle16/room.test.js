@@ -130,8 +130,14 @@ async function setup() {
   return { request, json, prefix, pin, hostToken, state, join, action, host, links, scans, scan, reset };
 }
 
-test('four printable QR codes decode to distinct signed station URLs for this room, reusable after exercise changes', async () => {
+test('four printable QR codes decode to the same station URLs in every room', async () => {
   const g = await setup();
+  const other = await setup();
+  assert.deepEqual(g.links, other.links);
+  const { playerToken: otherTeam } = await other.join();
+  await other.host('start',{setId:'nilai'});
+  assert.equal((await other.action(otherTeam,'scan',g.scans[0])).state.me.activeStation,1);
+  assert.equal((await g.action(otherTeam,'scan',g.scans[0],401)).code,'UNAUTHORIZED');
   assert.equal(g.links.length, 4);
   for (const link of g.links) {
     const response = await g.request(link.qrUrl);
@@ -139,11 +145,17 @@ test('four printable QR codes decode to distinct signed station URLs for this ro
     const { data, info } = await sharp(Buffer.from(await response.text())).resize(450,450).ensureAlpha().raw().toBuffer({resolveWithObject:true});
     assert.equal(decodeQR(new Uint8ClampedArray(data),info.width,info.height)?.data, origin + link.href);
     const url = new URL(link.href, origin);
-    assert.equal(url.searchParams.get('join'), g.pin);
+    assert.equal(url.searchParams.has('join'), false);
     assert.equal(url.searchParams.get('station'), String(link.station));
     assert.equal(url.searchParams.get('code').length, 32);
   }
-  assert.equal(new Set(g.scans.map(x => x.code)).size, 4);
+  // These exact identifiers are already on physical classroom cards.
+  assert.deepEqual(g.scans.map(x => x.code), [
+    '68d8e7043f4fd3e73c24566f2ee26d1d',
+    '8b25fd88f39ce005d0f95067bfe8b963',
+    '5f5e132f010ae835cb933f4947568aa9',
+    '513aa9435b3303f051a1ff854470a620',
+  ]);
   const clients = await Promise.all(Array.from({length:12}, (_, i) => g.join(randomUUID(), 'Meja ' + i)));
   assert.equal(new Set(clients.map(team => team.playerId)).size, 12);
   const before = await g.state(g.hostToken);
@@ -162,6 +174,27 @@ test('four printable QR codes decode to distinct signed station URLs for this ro
   assert.equal((await g.action(who,'scan',{...g.scans[0],gameId:before.gameId},409)).code,'STALE_GAME');
   await g.host('start',{setId:'persoalan'});
   assert.equal((await g.scan(who,2)).state.setId,'persoalan');
+});
+
+test('previously printed room codes remain usable only with their original room', async () => {
+  let serial = 0;
+  const game = new SasteraGame({ random: () => ++serial });
+  const first = game.create();
+  const second = game.create();
+  const oldCode = game.stationCode(game.room(first.pin), 2);
+  const response = await handleSasteraRequest(new Request(origin + '/api/sastera/rooms/' + first.pin + '/stations/2/qr.svg?code=' + oldCode));
+  const { data, info } = await sharp(Buffer.from(await response.text())).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+  const link = new URL(decodeQR(new Uint8ClampedArray(data),info.width,info.height).data);
+  assert.equal(link.searchParams.get('join'),first.pin);
+  assert.equal(link.searchParams.get('code'),oldCode);
+  for (const {pin,hostToken} of [first, second]) {
+    const gameId = game.room(pin).gameId;
+    const { playerToken } = game.join(pin,{clientId:randomUUID(),name:'Meja ujian'});
+    game.action(pin,hostToken,{type:'start',setId:'nilai',gameId});
+    const scan = () => game.action(pin,playerToken,{type:'scan',station:2,code:oldCode,gameId});
+    if (pin === first.pin) assert.equal(scan().state.me.activeStation,2);
+    else assert.throws(scan, {code:'BAD_STATION'});
+  }
 });
 
 for (const setId of ['nilai','pengajaran','persoalan']) {

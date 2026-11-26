@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 
 import { GameError } from '../rooms/error.js';
 import { CONTENT_EDITION, EXERCISES } from '../../public/battle16/content.js';
 import { MODEL_ANSWERS } from './models.js';
+import { PRINTED_STATION_CODES, printedStationLinks } from './station-cards.js';
 import previousTasks from './previous-tasks.json' with { type: 'json' };
 
 const stations = [1, 2, 3];
@@ -81,7 +82,10 @@ export class SasteraGame {
   join(pin, { clientId, name } = {}) {
     const room = this.room(pin);
     if (typeof clientId !== 'string' || !/^[-a-zA-Z0-9]{20,100}$/.test(clientId)) fail('Identiti peranti tidak sah.', 'BAD_IDENTITY', 400);
-    const playerToken = mac(this.secret, 'sastera:team:' + pin + ':' + room.createdAt + ':' + clientId);
+    // A new class can reuse a phone and PIN. Tokens issued to the previous
+    // class must stay revoked even after that phone registers again.
+    const registration = room.registrationId ?? room.createdAt;
+    const playerToken = mac(this.secret, 'sastera:team:' + pin + ':' + registration + ':' + clientId);
     const existing = room.players.find(player => player.clientId === clientId);
     if (existing) return { playerId: existing.id, playerToken };
     const teamName = clean(name).replace(/\s+/g, ' ');
@@ -104,7 +108,7 @@ export class SasteraGame {
   }
 
   stationCode(room, station) {
-    // Include the room identity, but keep printed QR cards valid between latihan.
+    // Cards printed before the permanent set keep working in their original room.
     return mac(this.secret, 'sastera:station:' + room.pin + ':' + room.createdAt + ':' + station).slice(0, 32);
   }
 
@@ -122,10 +126,7 @@ export class SasteraGame {
     const result = { role: actor.role, pin: room.pin, phase: room.phase, gameId: room.gameId, setId: room.setId,
       version: room.version, teamCount: room.players.length, onlineCount: room.players.filter(online).length, winnerCount: winners.length, winners };
     if (actor.role === 'host') {
-      result.stationLinks = [1, 2, 3, 4].map(station => {
-        const code = this.stationCode(room, station);
-        return { station, href: stationHref(room.pin, station, code), qrUrl: '/api/sastera/rooms/' + room.pin + '/stations/' + station + '/qr.svg?code=' + code };
-      });
+      result.stationLinks = printedStationLinks();
       result.teams = room.players.map(player => ({ id: player.id, name: player.name, online: online(player), won: player.won,
         entries: player.entries.map(entry => displayEntry(room.setId, entry)) }));
       result.models = MODEL_ANSWERS[room.setId];
@@ -159,7 +160,9 @@ export class SasteraGame {
 
   scan(room, player, { station, code, edition }) {
     if (![1, 2, 3, 4].includes(station) || typeof code !== 'string' || !/^[a-f0-9]{32}$/.test(code)
-      || !same(code, this.stationCode(room, station))) fail('Imbas kod QR stesen bagi bilik ini.', 'BAD_STATION', 400);
+      || (code !== PRINTED_STATION_CODES[station - 1] && !same(code, this.stationCode(room, station)))) {
+      fail('Imbas kod QR stesen Meniti Impian yang sah.', 'BAD_STATION', 400);
+    }
     if (station === 4) {
       const items = player.entries.map(({ station, status, feedback, revision }) => ({ station, status, feedback, revision }));
       player.won = items.every(item => item.status === 'correct');
@@ -232,10 +235,15 @@ export class SasteraGame {
       room.setId = body.setId;
       room.phase = 'playing';
     } else if (body.type === 'reset') {
-      for (const player of room.players) Object.assign(player, freshProgress());
+      room.gameId = randomBytes(12).toString('hex');
+      if (body.freshTeams === true) {
+        room.players = [];
+        room.registrationId = room.gameId;
+      } else {
+        for (const player of room.players) Object.assign(player, freshProgress());
+      }
       room.phase = 'lobby';
       room.contentEdition = CONTENT_EDITION;
-      room.gameId = randomBytes(12).toString('hex');
       room.receipts = {};
     } else {
       if (room.phase !== 'playing') fail('Tunggu sehingga cikgu memulakan latihan.', 'WRONG_PHASE');

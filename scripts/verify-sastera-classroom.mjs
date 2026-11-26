@@ -36,6 +36,65 @@ async function pageFor(device) {
   return page;
 }
 const act = (page, key) => page.locator('[data-act="' + key + '"]').first();
+async function decodePrintedQR(src) {
+  const response = await fetch(src);
+  assert.ok(response.ok, 'QR image could not be fetched');
+  const {data,info} = await sharp(Buffer.from(await response.arrayBuffer())).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+  const scan = jsQR(new Uint8ClampedArray(data), info.width, info.height);
+  assert.ok(scan, 'The printed QR image did not decode');
+  return new URL(scan.data);
+}
+async function readStationCards(frame) {
+  await act(frame,'cards').click();
+  const codes = await frame.locator('.print-sheet .qr-code').evaluateAll(images => images.map(i => i.src));
+  assert.equal(codes.length,4);
+  const links = await Promise.all(codes.map(decodePrintedQR));
+  assert.deepEqual(links.map(l=>l.searchParams.get('station')),['1','2','3','4']);
+  for (const link of links) {
+    assert.equal(link.origin,base.origin);
+    assert.equal(link.searchParams.has('join'),false,'Station card contains a room PIN');
+    assert.equal(link.searchParams.has('room'),false,'Station card contains a room PIN');
+    assert.ok(link.searchParams.get('code'),'Station card has no station credential');
+  }
+  await act(frame,'dismiss').click();
+  return links;
+}
+async function register(phone,pin,name) {
+  const form = phone.locator('#join-form');
+  await form.locator('[name="pin"]').fill(pin);
+  await form.locator('[name="name"]').fill(name);
+  await form.locator('button[type="submit"]').click();
+  await form.waitFor({state:'hidden'});
+}
+async function readEntrance(frame,pin) {
+  const image = frame.locator('img[src$="/rooms/'+pin+'/qr.svg"]').first();
+  await image.waitFor();
+  const href = await decodePrintedQR(await image.evaluate(img=>img.src));
+  assert.equal(href.searchParams.get('join')??href.searchParams.get('room'),pin);
+  assert.equal(href.searchParams.has('station'),false);
+  return href;
+}
+// Supply a frame of the actual printed SVG to Chromium's in-game camera decoder.
+async function scanPrintedImage(phone,imageSource) {
+  await phone.evaluate(async src => {
+    const picture = new Image();
+    picture.src = src;
+    await picture.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 480;
+    const brush = canvas.getContext('2d');
+    const draw = () => brush.drawImage(picture,0,0,canvas.width,canvas.height);
+    draw();
+    Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async () => {
+      const stream = canvas.captureStream(10);
+      const timer = setInterval(()=>{if(stream.active)draw();else clearInterval(timer);},100);
+      return stream;
+    }});
+  },imageSource);
+  await act(phone,'scanner').click();
+  await phone.locator('.portrait-slot.active').waitFor();
+  assert.equal(await phone.locator('#overlay').isVisible(),false);
+}
 async function expectMusic(frame) {
   await frame.waitForFunction(path => [...window.playedMedia].some(audio =>
     audio.loop && !audio.paused && !audio.muted && audio.volume > 0 && audio.currentTime > 0.1 &&
@@ -101,23 +160,16 @@ try {
   assert.equal(await frame.locator('[data-set]').count(), 3);
   await act(frame, 'fullscreen').click();
   await frame.getByRole('button',{name:'Exit full screen',exact:true}).click();
-  await act(frame, 'cards').click();
-  const codes = await frame.locator('.qr-code').evaluateAll(images => images.map(i => i.src));
-  assert.equal(codes.length,4);
-  const links = await Promise.all(codes.map(async url => {
-    const {data,info} = await sharp(Buffer.from(await (await fetch(url)).arrayBuffer())).ensureAlpha().raw().toBuffer({resolveWithObject:true});
-    return new URL(jsQR(new Uint8ClampedArray(data),info.width,info.height).data);
-  }));
-  assert.deepEqual(links.map(l=>l.searchParams.get('station')),['1','2','3','4']);
-  await act(frame, 'dismiss').click();
-  const pin = links[0].searchParams.get('join');
-  await host.waitForURL(url => url.searchParams.get('host') === pin);
+  const links = await readStationCards(frame);
+  await host.waitForURL(url => /^\d{5}$/.test(url.searchParams.get('host')??''));
+  const pin = new URL(host.url()).searchParams.get('host');
+  const entrance = await readEntrance(frame,pin);
   await host.reload();
   await frame.locator('[data-set="nilai"]').waitFor();
   gameFrame = host.frames().find(f => new URL(f.url()).pathname.startsWith('/battle16/'));
   await phone.goto(links[0].href);
-  await phone.locator('input[name="name"]').fill('Pasukan Delima');
-  await phone.getByRole('button',{name:'Sertai bilik'}).click();
+  assert.equal(await phone.locator('input[name="pin"]').inputValue(),'');
+  await register(phone,pin,'Pasukan Delima');
   await phone.getByRole('heading',{name:'Menunggu cikgu'}).waitFor();
   await act(frame,'start').click();
   await frame.getByRole('heading',{name:/Latihan 1/}).waitFor();
@@ -191,6 +243,7 @@ try {
     await act(frame,'reset').click();
     await act(frame,'confirm-reset').click();
     await frame.locator('[data-set="'+key+'"]').click();
+    await frame.getByText('Pasukan Delima',{exact:true}).waitFor();
     await act(frame,'start').click();
     await frame.getByRole('heading',{name:new RegExp(label)}).waitFor();
     for(const link of links.slice(0,3)) {
@@ -200,6 +253,89 @@ try {
       assert.ok(await phone.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1),'Phone horizontally overflows');
     }
   }
+  await phone.locator('#answer').fill('Draf kumpulan sebelum pertukaran nama.');
+  await act(frame,'reset').click();
+  await act(frame,'reset-teams').click();
+  await frame.locator('[data-set="nilai"]').waitFor();
+  assert.equal(await frame.getByText('Pasukan Delima',{exact:true}).count(),0,'Reset kept the old team in the roster');
+  await phone.locator('#join-form').waitFor();
+  assert.equal(await phone.locator('input[name="name"]').inputValue(),'');
+  assert.equal(await phone.locator('input[name="pin"]').inputValue(),pin);
+  await register(phone,pin,'Pasukan Intan');
+  await frame.getByText('Pasukan Intan',{exact:true}).waitFor();
+  await act(frame,'start').click();
+  await phone.goto(links[3].href);
+  await phone.getByText('Perenggan belum dihantar',{exact:true}).first().waitFor();
+  assert.equal(await phone.getByText('Perenggan belum dihantar',{exact:true}).count(),3);
+  assert.equal(await act(phone,'toggle-compare').count(),0,'Fresh team inherited an unlocked final QR');
+  await phone.goto(links[2].href);
+  await readyToWrite(phone);
+  assert.equal(await phone.locator('#answer').inputValue(),'','New name inherited an old draft');
+  await phone.locator('#answer').fill('Draf di dalam bilik pertama.');
+  note('Reset can keep the earlier team or ask the same phone for a new name and three fresh paragraphs.');
+
+  await act(frame,'new-room').click();
+  await act(frame,'confirm-new').click();
+  await host.waitForURL(url=>{
+    const next=url.searchParams.get('host');
+    return /^\d{5}$/.test(next??'') && next!==pin;
+  });
+  const nextPin = new URL(host.url()).searchParams.get('host');
+  const secondEntrance = await readEntrance(frame,nextPin);
+  assert.notEqual(secondEntrance.href,entrance.href);
+  const secondPrint = await readStationCards(frame);
+  assert.deepEqual(secondPrint.map(url=>url.href),links.map(url=>url.href),'Printed stations changed across rooms');
+  await phone.goto(secondEntrance.href);
+  await phone.locator('#join-form').waitFor();
+  assert.equal(await phone.locator('input[name="pin"]').inputValue(),nextPin);
+  await register(phone,nextPin,'Pasukan Melur');
+  await frame.getByText('Pasukan Melur',{exact:true}).waitFor();
+  assert.equal(await frame.getByText('Pasukan Intan',{exact:true}).count(),0);
+  await act(frame,'start').click();
+  if(engine==='chrome') {
+    await scanPrintedImage(phone,new URL('/api/sastera/stations/1/qr.svg',base).href);
+    note('The in-game camera decoded the printed station image in the new room.');
+  }
+  // The system Camera may open a new tab without the original tab's sessionStorage.
+  const cameraTab = await phone.context().newPage();
+  await cameraTab.goto(links[2].href);
+  const resume = act(cameraTab,'resume-room');
+  await resume.waitFor();
+  assert.ok((await resume.innerText()).includes(nextPin));
+  let releaseScan;
+  const scanGate=new Promise(resolve=>{releaseScan=resolve;});
+  const scanRoute='**/api/sastera/rooms/*/action';
+  await cameraTab.route(scanRoute,async route=>{
+    if(route.request().postDataJSON()?.type==='scan')await scanGate;
+    await route.continue();
+  });
+  try {
+    await Promise.all([
+      cameraTab.waitForRequest(req=>new URL(req.url()).pathname.endsWith('/action') && req.postDataJSON()?.type==='scan'),
+      resume.click(),
+    ]);
+    assert.equal(await cameraTab.getByText('Stesen 1',{exact:true}).isVisible(),false,
+      'A pending native Camera scan showed the previous station');
+  } finally {releaseScan();}
+  await cameraTab.locator('.scene-banner').getByText('Stesen 3',{exact:true}).waitFor();
+  await cameraTab.unroute(scanRoute);
+  await readyToWrite(cameraTab);
+  assert.equal(await cameraTab.locator('#answer').inputValue(),'','First room draft reached the new room');
+  await cameraTab.locator('#answer').fill('Perenggan kumpulan di dalam bilik kedua.');
+  await act(cameraTab,'submit').click();
+  await cameraTab.getByRole('heading',{name:'Perenggan dihantar'}).waitFor();
+  await frame.locator('button[data-act="read"][data-station="3"]').click();
+  await frame.getByText('Perenggan kumpulan di dalam bilik kedua.',{exact:true}).waitFor();
+  await act(frame,'dismiss').click();
+  await cameraTab.goto(links[3].href);
+  await cameraTab.getByText('Menunggu semakan cikgu',{exact:true}).waitFor();
+  assert.equal(await cameraTab.getByText('Perenggan belum dihantar',{exact:true}).count(),2);
+  await act(cameraTab,'switch-room').click();
+  await register(cameraTab,pin,'Pasukan Intan');
+  await cameraTab.goto(links[2].href);
+  assert.equal(await cameraTab.locator('#answer').inputValue(),'Draf di dalam bilik pertama.','Changing PIN did not restore the earlier room');
+  await cameraTab.close();
+  note('The same four printed QR codes work in two rooms. The entrance QR and PIN select the room, and phone drafts and final checks stay with that room.');
   assert.deepEqual(errors,[]);
   assert.equal(await act(phone,'music').count(),0);
   assert.deepEqual(studentAudio,[],'Student phones must stay silent and skip the soundtrack download.');

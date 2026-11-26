@@ -189,6 +189,28 @@ button:focus-visible,a:focus-visible,summary:focus-visible {
   gap: 14px;
 }
 
+.room-entrance {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 3vw, 30px);
+  margin-block: 12px;
+  padding: clamp(12px, 2vw, 24px);
+  color: #153d33;
+  background: #fbf2d9;
+  border: 1px solid #ad9567;
+}
+.room-entrance img {
+  width: clamp(110px, 20vw, 200px);
+  height: auto;
+  background: white;
+}
+.room-entrance strong {
+  display: block;
+  font-size: clamp(1.1rem, 3vw, 2rem);
+}
+.room-entrance p:last-child { margin: .5em 0 0; }
+.public-page .room-entrance img { width: clamp(170px, 24vw, 340px); }
+
 .pin-label {
   color: #d3d6bf;
   font-size: .78rem;
@@ -1187,10 +1209,8 @@ blockquote {
     grid-column: 1/-1;
   }
 
-  .desk:has(.set-picker) .roster,.desk:has(.set-picker) .room-tools {
-    grid-column: 1/-1;
-    margin: 0;
-  }
+  .desk:has(.set-picker) .room-tools { grid-column: 1/-1; margin: 0; }
+  .desk:has(.set-picker) .roster,.desk:has(.set-picker) .room-entrance { margin: 0; }
 
   .student #game>.student-home:first-child .student-cover {
     min-height: 370px;
