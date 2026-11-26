@@ -392,3 +392,26 @@ body.seated::before { background-image:linear-gradient(180deg,#12080133 0%,trans
 .shield-block .sabotage-token { animation:shield-flare .58s ease-out both; }
 @keyframes power-travel { from { opacity:0;transform:translate(50vw,-50px) rotate(28deg) scale(.65); } 70% { opacity:1; } to { transform:translate(0) rotate(0) scale(1); } }
 @keyframes shield-flare { 45% { transform:scale(1.28);filter:drop-shadow(0 0 11px #ffca65); } }
+.phone-stage { width:100%; }
+@media(max-width:700px) {
+  .ceramic-chip { width:clamp(59px,17.3vw,72px); }
+  .ceramic-chip strong { font-size:clamp(1.55rem,5.4vw,1.95rem); }
+  .wager-options { gap:clamp(.48rem,2.7vw,.9rem); }
+  .wager-row { margin-top:clamp(.8rem,2.3svh,1.45rem); }
+  .play-table:has(.short-hand:not(.five)) .hand-tray { padding-bottom:clamp(4.1rem,12.5svh,7.25rem); }
+}
+@media(max-height:650px) and (max-width:700px) {
+  .play-table:has(.short-hand:not(.five)) .hand-tray { padding-bottom:2.65rem; }
+}
+/* The other hands belong to the painted table, including when one team plays alone. */
+body.seated.round-table::before {
+  background-image:linear-gradient(180deg,#12080133 0%,transparent 23%,#09231710 38%,#041b1260 100%),url("./art/table-seated.webp");
+}
+@media(min-width:701px) and (orientation:landscape) {
+  body.seated.round-table::before {
+    background-image:linear-gradient(180deg,#061b161a,#04251b33),url("./art/seat-left.webp"),url("./art/seat-right.webp"),url("./art/table.webp");
+    background-size:cover,clamp(100px,13vw,162px) auto,clamp(100px,13vw,162px) auto,cover;
+    background-position:center,left -32px top 58%,right -32px top 58%,center;
+    background-repeat:no-repeat;
+  }
+}

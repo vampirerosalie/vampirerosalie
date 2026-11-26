@@ -132,6 +132,32 @@ test('32 supplied answer keys, every fifth distractor, and student and projector
   assert.deepEqual(s.view().results, final.results);
 });
 
+test('opponents see the submission count without identifying which team played a card', () => {
+  const s = fixture(2);
+  s.host('start');
+  s.host('deal');
+  const views = () => [s.view(s.hostToken), s.view(), s.view(s.teams[1].playerToken)];
+  const before = views();
+  const ownCards = s.me(0).hand.map(c => c.id);
+  s.play(0, QUESTIONS[0].correctId, 3);
+  const after = views();
+  for (const [i, v] of after.entries()) {
+    assert.deepEqual(v.players, before[i].players);
+    assert.equal(v.submittedCount, 1);
+    assert.equal(v.reveal, null);
+    assert.equal(v.results, null);
+    assert.equal(v.players[0].balance, 10);
+    const wire = JSON.stringify(v);
+    for (const id of ownCards) assert.equal(wire.includes(id), false);
+    assert.equal(wire.includes('"actualWager":3'), false);
+    assert.equal(wire.includes('"baseWager":3'), false);
+  }
+  s.finish();
+  s.host('next');
+  s.host('deal');
+  for (const v of views()) assert.equal(v.submittedCount, 0);
+});
+
 test('Extra Card is pooled before the shuffle and can occupy every position across repeated deals', () => {
   const s = fixture(2);
   s.toShop();

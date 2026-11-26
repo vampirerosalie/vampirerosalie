@@ -27,6 +27,7 @@ function loadImage(url) {
 }
 export function warmImages(view) {
   const wanted = new Set([...(view.preload??[]),...['back','frame','chip-1','chip-2','chip-3'].map(file=>'/battle15/art/'+file+'.webp')]);
+  if(view.me)wanted.add('/battle15/art/table-seated.webp');
   for(const url of cache.keys()) if(!wanted.has(url)) cache.delete(url);
   for (const url of wanted) loadImage(url);
 }

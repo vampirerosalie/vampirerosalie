@@ -78,7 +78,7 @@ function renderTools(){
   if(lastTools!==html){tools.innerHTML=html;lastTools=html;}
 }
 function showWelcome(force=false) {
-  document.body.classList.remove('seated');
+  document.body.classList.remove('seated','round-table');
   const id=[role,pin,key,busy].join('|');
   if(!force&&id===welcomeId)return;
   welcomeId=id;lastLayout='';renderTools();
@@ -95,6 +95,7 @@ function renderClock(){
 function draw(){
   if(!state){showWelcome();return;}
   document.body.classList.toggle('seated',role==='student');
+  document.body.classList.toggle('round-table',role==='student'&&['question','answering','closed'].includes(state.phase));
   let html;
   if(role==='student') {
     html=phone(state);
@@ -113,9 +114,7 @@ function draw(){
       replacement?.focus({preventScroll:true});
     }
   }
-  if(role==='student'){
-    renderHand(state);
-  }
+  if(role==='student')renderHand(state);
   table.setAttribute('aria-busy','false');
   renderClock();renderTools();
 }
