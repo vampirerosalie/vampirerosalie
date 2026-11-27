@@ -170,8 +170,25 @@ function welcome(){
 }
 function teamRoster({devices=false}={}){
   if(!state.teams.length)return '<p class="small">Teams appear here as they scan the joining QR.</p>';
-  return `<div class="roster">${state.teams.map(t=>`<div class="team-row"><div class="team-name">${dot(t)}<span><strong>${esc(t.name)}</strong><small>${t.online?'Online':'Disconnected'}${state.phase==='quiz'?' · '+esc(t.answerStatus):''}</small></span></div>
-    <span class="small">${devices&&host()?esc(t.devices?.length||0)+' device(s)':state.phase==='roundReady'&&t.startingAmmo!==undefined?t.startingAmmo+' paintballs':esc(t.colorName)}</span></div>`).join('')}</div>`;
+  const showTotals=host()&&(state.phase==='quiz'||state.phase==='roundReady');
+  const rows=state.teams.map(t=>{
+    const status=[t.online?'Online':'Disconnected'];
+    if(state.phase==='quiz')status.push(t.answerStatus);
+    if(showTotals)status.push(t.colorName);
+    const name=`<div class="team-name">${dot(t)}<span><strong>${esc(t.name)}</strong><small>${esc(status.join(' · '))}</small></span></div>`;
+    if(showTotals)return `<tr class="team-row"><th scope="row">${name}</th><td class="score">${esc(t.score)} pts</td><td class="ammo">${esc(t.nextRoundAmmo??t.startingAmmo??'–')}</td></tr>`;
+    const detail=devices&&host()?(t.devices?.length||0)+' device(s)':t.colorName;
+    return `<div class="team-row">${name}<span class="small">${esc(detail)}</span></div>`;
+  });
+  if(showTotals)return `<table class="roster roster-totals" aria-label="Team totals for the upcoming shootout"><thead><tr><th scope="col">Team</th><th scope="col">Shooting points</th><th scope="col">Paintballs</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  return `<div class="roster">${rows.join('')}</div>`;
+}
+function teamTotals(team){
+  const ready=state.phase==='roundReady';
+  return `<div class="team-totals">
+    <div class="team-points">${icon('cup')}<span>Your shooting points</span><strong>${esc(team.score)}</strong></div>
+    <div class="team-ammo"><i class="paintball-icon" aria-hidden="true"></i><span>${ready?'Starting paintballs':'Next shootout paintballs'}</span><strong>${esc(team.nextRoundAmmo??team.startingAmmo??'–')}</strong></div>
+  </div>`;
 }
 function lobby(){
   if(player())return `<section class="panel start-panel"><div class="kicker">Team lobby</div><h1>${esc(me()?.name)}</h1><p>${state.canControl?'You control this team’s robot.':'You are watching this team. Your teacher can give you control.'}</p><div class="status-note">Waiting for the teacher to start Question 1.</div></section>`;
@@ -181,7 +198,9 @@ function lobby(){
 }
 function questionPanel(){
   const q=state.question, canAnswer=player()&&state.canControl&&!state.closed&&!state.ownAnswer;
+  const ownTeam=me();
   return `<section class="panel question-sheet"><div class="question-copy"><div class="heading-line"><div class="kicker">Question ${q.number} / 20</div><span class="badge">Stage ${state.round} / 4</span></div>
+    ${ownTeam?teamTotals(ownTeam):''}
     <h1>${esc(q.prompt).replace('______','<span class="blank" aria-label="blank">______</span>')}</h1></div>
     <div class="question-responses"><div class="options">${Object.entries(q.options).map(([id,text])=>{
       const chosen=player()&&selected===id, css=(chosen?' chosen':'')+(state.revealed===id?' revealed':'');
@@ -201,7 +220,7 @@ function controls(){
 }
 function roundReady(){
   const t=me();return `<section class="panel start-panel"><div class="kicker">Shootout ${state.round} / 4</div><h1>Ready to play</h1><p>60 seconds. Score 3 for your first hit on each opponent and 1 for each drone.</p>
-  ${player()?`<div class="stat"><small>Your starting paintballs</small><b>${t.startingAmmo}</b></div><div class="status-note">${state.canControl?'Move with your left thumb. Drag FIRE with your right thumb to aim, then release to shoot.':'Your team controller will play. You can watch here.'}</div>`:teamRoster()}
+  ${player()?`${teamTotals(t)}<div class="status-note">${state.canControl?'Move with your left thumb. Drag FIRE with your right thumb to aim, then release to shoot.':'Your team controller will play. You can watch here.'}</div>`:teamRoster()}
   ${host()?`<div class="buttons actions">${btn('Start shootout','start-round','sun')}${btn('Manage teams','teams')}${btn('End game','end-game','tiny danger')}</div>`:''}</section>`;
 }
 function livePanel(){

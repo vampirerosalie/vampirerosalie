@@ -74,11 +74,19 @@ function correct(s, teamId, questions) {
   return questions.filter(q => s.quizzes[q.id]?.finalized && s.quizzes[q.id].entries[teamId]?.decision === 'accept').length;
 }
 
+function roundQuestions(s) {
+  return QUESTIONS.slice(5*(s.round-1), 5*s.round);
+}
+
+function startingAmmo(s, teamId, questions) {
+  return 5 + 2 * correct(s, teamId, questions);
+}
+
 function startRound(s) {
-  const block = QUESTIONS.slice(5*(s.round-1), 5*s.round);
+  const block = roundQuestions(s);
   requireRule(block.every(q => s.quizzes[q.id]?.finalized), 'Finalize all five questions first.');
   const teams = s.teams.map(t => ({
-    id:t.id, name:t.name, color:t.color, ammo:5+2*correct(s,t.id,block), score:t.score, stats:{...t.stats},
+    id:t.id, name:t.name, color:t.color, ammo:startingAmmo(s,t.id,block), score:t.score, stats:{...t.stats},
   }));
   s.phase = 'shootout';
   s.paused = false;
@@ -258,9 +266,14 @@ export function sessionView(s, actor, {now = Date.now(), onlineDeviceIds = []} =
       return {teamId:t.id,answer:entry?.answer??null,suggestion:entry?.answer === answer?'accept':'reject',decision:entry?.decision??'reject'};
     })};
   }
-  if (s.phase === 'roundReady') {
-    const block = QUESTIONS.slice(5*(s.round-1),5*s.round);
-    for (const t of teams) if (host || t.id === actor.teamId) t.startingAmmo = 5+2*correct(s,t.id,block);
+  if ((s.phase === 'quiz' || s.phase === 'roundReady') && (host || actor.role === 'team')) {
+    const block = roundQuestions(s);
+    // Teachers may project their roster. Keep the current mark private on both screens until reveal or advancement.
+    const visible = s.phase === 'quiz' && !r.revealed ? block.filter(question => question.number < q.number) : block;
+    const field = s.phase === 'quiz' ? 'nextRoundAmmo' : 'startingAmmo';
+    for (const t of teams) {
+      if (host || t.id === actor.teamId) t[field] = startingAmmo(s,t.id,visible);
+    }
   }
   if (s.phase === 'roundResults' || s.phase === 'finished') view.history = structuredClone(s.history);
   if (host && s.phase === 'lobby') view.colors = COLORS.map((color, i) => ({color,name:COLOR_NAMES[i]}));

@@ -104,6 +104,40 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
 .kicker {color: #084e91}
 :is(.start-panel,.question-sheet,.winner) .kicker {color: #7df5f4}
 .heading-line .kicker {margin: 0}
+.team-totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 400px;
+  margin: 0 0 12px;
+}
+.team-points, .team-ammo {
+  --stat-accent: var(--yellow);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "icon value" "label label";
+  align-items: center;
+  gap: 2px 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--stat-accent);
+  border-radius: 8px;
+  background: #182554;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.team-ammo {--stat-accent: #7df5f4}
+.team-totals span {grid-area: label}
+.team-totals strong {grid-area: value; color: var(--stat-accent); font-size: 21px; line-height: 1; font-variant-numeric: tabular-nums}
+.team-totals .icon, .paintball-icon {grid-area: icon; color: var(--stat-accent)}
+.paintball-icon {width: 14px; height: 14px; border: 1px solid #9ffaf0; border-radius: 50%; background: radial-gradient(circle at 32% 28%, white 8%, #61f5d9 25%, #168fa9 75%)}
+.roster-totals {display: table; width: 100%; border-collapse: collapse; table-layout: fixed}
+.roster-totals .team-row {display: table-row}
+.roster-totals th, .roster-totals td {padding: 8px 2px; text-align: right; vertical-align: middle}
+.roster-totals th:first-child {width: 46%; text-align: left}
+.roster-totals thead th {border-bottom: 1px solid var(--muted); color: var(--muted); font-size: 12px}
+.roster-totals tbody th {font-weight: inherit}
+.roster-totals :is(.score,.ammo) {font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap}
 :is(.start-panel,.question-sheet,.winner) .badge {background: #a6f9f0;color: #0b3c4f}
 .question-sheet .badge.clock {background: var(--yellow);color: #493000}
 .blank {border-bottom-color: var(--yellow)}

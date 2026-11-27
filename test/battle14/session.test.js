@@ -104,11 +104,46 @@ test('moderation stays private until explicit reveal; countdown uses server time
   assert.equal(view(teams[0]).revealed,'A');
 });
 
+test('quiz ammo follows finalized teacher decisions only after reveal or advance and is private to each team',()=>{
+  const {session,teams,admin,act,view}=fixture();
+  const [blue,red]=teams;
+  const watcher={role:'team',...joinSession(session,{deviceId:'watcher',teamId:blue.teamId})};
+  const ammo = actor => view(actor).teams.map(t=>t.nextRoundAmmo);
+  admin('start');
+  assert.deepEqual(ammo(host),[5,5]);
+  act(blue,'student:submit',{answer:'B'});
+  act(red,'student:submit',{answer:'A'});
+  admin('decision',{teamId:blue.teamId,decision:'accept'});
+  admin('decision',{teamId:red.teamId,decision:'reject'});
+  admin('finalize');
+  assert.deepEqual(ammo(host),[5,5]);
+  assert.deepEqual(ammo(blue),[5,undefined]);
+  assert.deepEqual(view(host).review.entries.map(t=>t.decision),['accept','reject']);
+  admin('finalize');
+  admin('reveal');
+  admin('reveal');
+  assert.deepEqual(ammo(host),[7,5]);
+  assert.deepEqual(ammo(blue),[7,undefined]);
+  assert.deepEqual(ammo(watcher),[7,undefined]);
+  assert.deepEqual(ammo(red),[undefined,5]);
+  assert(view(projector).teams.every(t=>!('nextRoundAmmo' in t)));
+  admin('next');
+  act(red,'student:submit',{answer:QUESTIONS[1].answer});
+  admin('finalize');
+  assert.deepEqual(ammo(host),[7,5]);
+  admin('next');
+  assert.deepEqual(ammo(host),[7,7]);
+  assert.deepEqual(ammo(red),[undefined,7]);
+  const restored=JSON.parse(JSON.stringify(session));
+  assert.equal(sessionView(restored,red).teams[1].nextRoundAmmo,7);
+});
+
 test('all four teacher-started rounds derive fresh ammo from their own five questions and display cumulative shooting winners',()=>{
   const {session,teams,admin,act,view}=fixture();
   admin('start');
   const accuracy=[5,0,4,2], stats={firstHits:0,drones:0,stolen:0,lost:0};
   for(let round=1;round<=4;round++){
+    assert.deepEqual(view(host).teams.map(t=>t.nextRoundAmmo),[5,5]);
     for(let i=0;i<5;i++){
       const q=QUESTIONS[5*(round-1)+i];
       assert.equal(view(teams[0]).question.id,q.id);
@@ -117,9 +152,13 @@ test('all four teacher-started rounds derive fresh ammo from their own five ques
       admin('finalize'); admin('next');
     }
     assert.equal(session.phase,'roundReady');
+    const expectedAmmo=[5+2*accuracy[round-1],5];
+    assert.deepEqual(view(host).teams.map(t=>t.startingAmmo),expectedAmmo);
+    assert.deepEqual(view(teams[0]).teams.map(t=>t.startingAmmo),[expectedAmmo[0],undefined]);
+    assert(view(projector).teams.every(t=>!('startingAmmo' in t)));
     const start={type:'host:start-round',round,requestId:'start-round-'+round};
     const {startRound}=quizCommand(session,host,start,10000);
-    assert.deepEqual(startRound.teams.map(t=>t.ammo),[5+2*accuracy[round-1],5]);
+    assert.deepEqual(startRound.teams.map(t=>t.ammo),expectedAmmo);
     assert.deepEqual(startRound.teams.map(t=>t.score),[round-1,3*(round-1)]);
     assert.deepEqual(quizCommand(session,host,start,10001),{replayed:true});
     assert.throws(()=>quizCommand(session,host,{...start,type:'host:resume'},10001));

@@ -151,6 +151,10 @@ try {
   await quizFits(projector);
   await projector.screenshot({path:out+'/projector-question.png'});
   await phone.getByText(/The principal insisted/).first().waitFor();
+  assert.equal(await phone.locator('.team-points strong').textContent(),'0');
+  assert.equal(await phone.locator('.team-ammo strong').textContent(),'5');
+  assert.deepEqual(await teacher.locator('.roster .score').allTextContents(),Array(7).fill('0 pts'));
+  assert.deepEqual(await teacher.locator('.roster .ammo').allTextContents(),Array(7).fill('5'));
   await phone.bringToFront();
   await quizFits(phone);
   await phone.screenshot({path:out+'/student-question-portrait.png'});
@@ -189,12 +193,13 @@ try {
       await review.locator('[data-act="finalize"]').click();
       await teacher.locator('[data-act="reveal"]').click();
       await phone.getByText('Correct answer · A · on',{exact:true}).waitFor();
+      assert.equal(await phone.locator('.team-ammo strong').textContent(),'7');
       await projector.getByText('Correct answer · A · on',{exact:true}).waitFor();
     }else await teacher.locator('#content [data-act="finalize"]').click();
     await teacher.locator('[data-act="next"]').click();
   }
-  await phone.getByText('Your starting paintballs',{exact:true}).waitFor();
-  assert.equal(await phone.locator('.stat b').textContent(),'15');
+  await phone.getByText('Starting paintballs',{exact:true}).waitFor();
+  assert.equal(await phone.locator('.team-ammo strong').textContent(),'15');
   await host.bringToFront();
   await teacher.locator('[data-act="fullscreen"]').click();
   // Pause the authoritative round as soon as it starts so software-WebGL
@@ -268,6 +273,16 @@ try {
   await teacher.locator('[data-act="end-round"]').click();
   await teacher.locator('[data-act="end-round-confirm"]').click();
   await phone.getByRole('heading',{name:'Shootout 1 complete'}).waitFor();
+  const totals=await phone.locator('.leader-table tbody tr').evaluateAll(rows=>
+    Object.fromEntries(rows.map(row=>[row.cells[0].textContent.trim(),row.cells[2].textContent.trim()])));
+  await teacher.locator('[data-act="continue"]').click();
+  await phone.getByText('Question 6 / 20',{exact:true}).waitFor();
+  assert.equal(await phone.locator('.team-points strong').textContent(),totals['Lime Rockets']);
+  assert.equal(await phone.locator('.team-ammo strong').textContent(),'5');
+  for(const [name,total] of Object.entries(totals)){
+    const team=teacher.locator('.roster .team-row').filter({hasText:name});
+    assert.equal(await team.locator('.score').textContent(),total+' pts');
+  }
   await teacher.locator('[data-act="end-game"]').click();
   await teacher.locator('dialog [data-act="finish"]').click();
   await phone.getByText('Final standings',{exact:true}).waitFor();
